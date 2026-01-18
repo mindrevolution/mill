@@ -12,8 +12,12 @@ cli/obj/
 # OS
 .DS_Store
 
-# MILL outputs (this repo is MILL itself, not a target project)
-spec/
+# MILL dogfooding — using MILL to develop MILL itself
+# These artifacts are generated when running mill init/model/loop on this repo.
+# Kept out of version control to maintain a clean source tree while we iterate.
+spec/                 # Context, memory, drafts, standards
+.mill/                # Worktrees for loop execution (ephemeral sandboxes)
+CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 
 # Claude Code local settings
 .claude/
