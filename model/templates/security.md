@@ -1,13 +1,6 @@
-# Security: {{TITLE}}
+# {{TITLE}}
 
 > {{ONE_SENTENCE_DESCRIPTION}}
-
-## Type
-Security
-
-## GitHub Labels
-- security
-- {{additional labels}}
 
 ## Status
 Draft | Ready | In Progress | Verified | Disclosed

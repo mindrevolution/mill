@@ -20,7 +20,6 @@ type: feature|bug|security|task
 title: Human-readable title
 slug: lowercase-hyphenated
 summary: one-line
-github_labels: [enhancement|bug|security|chore, ...]
 status: classifying|eliciting|reviewing|complete
 created: ISO8601
 updated: ISO8601
@@ -51,8 +50,8 @@ fields_pending: [acceptance_criteria, scope, verification]
 |------|---------|-------|
 | Security | risk, vulnerability, threat | `security` |
 | Bug | broken, error, wrong | `bug` |
-| Feature | add, create, new | `enhancement` |
-| Task | refactor, update, migrate | `chore` |
+| Feature | add, create, new | `feature` |
+| Task | refactor, update, migrate | `task` |
 
 Task validation: no user-facing change, nothing broken, no security implication.
 
@@ -141,7 +140,7 @@ approve and create issue? [y/n]
 
 GitHub is source of truth. No local spec files.
 
-1. Create issue: `gh issue create --title "[{Type}] {Title}" --body "{spec}" --label "{label}"`
+1. Create issue: `gh issue create --title "{Title}" --body "{spec}" --label "{type}"`
 2. Delete draft
 3. Output exactly:
    ```

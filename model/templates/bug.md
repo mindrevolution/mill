@@ -1,13 +1,6 @@
-# Bug: {{TITLE}}
+# {{TITLE}}
 
 > {{ONE_SENTENCE_DESCRIPTION}}
-
-## Type
-Bug
-
-## GitHub Labels
-- bug
-- {{additional labels}}
 
 ## Status
 Draft | Ready | In Progress | Verified

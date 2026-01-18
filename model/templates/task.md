@@ -1,13 +1,6 @@
-# Task: {{TITLE}}
+# {{TITLE}}
 
 > {{ONE_SENTENCE_DESCRIPTION}}
-
-## Type
-Task
-
-## GitHub Labels
-- chore
-- {{additional labels}}
 
 ## Status
 Draft | Ready | In Progress | Complete

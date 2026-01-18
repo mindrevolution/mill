@@ -52,10 +52,10 @@ static partial class Mill
         "blocked",
         "ready-for-review",
         // Intent type labels
-        "enhancement",
+        "feature",
         "bug",
         "security",
-        "chore"
+        "task"
     ];
 
     public static async Task<int> Init()

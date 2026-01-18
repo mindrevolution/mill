@@ -1,13 +1,6 @@
-# Feature: {{TITLE}}
+# {{TITLE}}
 
 > {{ONE_SENTENCE_DESCRIPTION}}
-
-## Type
-Feature
-
-## GitHub Labels
-- enhancement
-- {{additional labels}}
 
 ## Status
 Draft | Ready | In Progress | Complete
