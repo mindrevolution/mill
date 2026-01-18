@@ -110,6 +110,11 @@ Use template from `model/templates/{type}.md`. Fill ALL fields.
 If any fail, elicit missing info.
 
 ### 6. Confirm
+
+**MANDATORY GATE — DO NOT PROCEED WITHOUT EXPLICIT USER APPROVAL**
+
+Present the spec and STOP. Wait for user response.
+
 ```
 spec ready for review:
 
@@ -121,10 +126,18 @@ validation:
   ✓ verification defined
   ✓ scope clear
 
-approve? [y/n]
+approve and create issue? [y/n]
 ```
 
+**STOP HERE.** Do not call `gh issue create` or proceed to step 7 until user responds.
+
+- If user says `y`, `yes`, or `approve` → proceed to step 7
+- If user says `n`, `no`, or provides feedback → incorporate changes and repeat step 6
+- If user adds new information → update spec, repeat step 6
+
 ### 7. Finalize
+
+**Only after explicit user approval in step 6.**
 
 GitHub is source of truth. No local spec files.
 
@@ -153,3 +166,4 @@ Fallback: if `gh` fails, write to `spec/{type}/{slug}.md`.
 8. Scope creep → separate spec
 9. End cleanly — after finalize, stop
 10. Never use built-in plan mode, TodoWrite, or other Claude Code features — only MILL workflow
+11. **NEVER create GitHub issue without explicit user approval** — step 6 confirmation is mandatory
