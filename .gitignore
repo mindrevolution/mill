@@ -1,0 +1,19 @@
+# Build outputs
+bin/
+obj/
+cli/bin/
+cli/obj/
+
+# IDE
+.vs/
+.idea/
+*.user
+
+# OS
+.DS_Store
+
+# MILL outputs (this repo is MILL itself, not a target project)
+spec/
+
+# Claude Code local settings
+.claude/

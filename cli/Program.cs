@@ -1,0 +1,927 @@
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+
+return args switch
+{
+    ["init"] => await Mill.Init(),
+    ["model", ..] => await Mill.RunModel(),
+    ["loop", var spec, ..] => await Mill.RunLoop(spec, args),
+    ["loop"] => Mill.ListAvailableIssues(),
+    _ => ShowHelp()
+};
+
+static int ShowHelp()
+{
+    Console.WriteLine("""
+        mill - model-driven iterative limit loop
+
+        usage:
+          mill init               initialize repo for MILL
+          mill model              create specification → GitHub issue
+          mill loop               list available issues
+          mill loop #123          run work loop on GitHub issue
+        """);
+    return 0;
+}
+
+/// <summary>
+/// Standardized console output helpers. Minimal, uniform, hacker style.
+/// </summary>
+static class Out
+{
+    public static void Warn(string msg) => Console.WriteLine($"  ! {msg}");
+    public static void Ok(string msg) => Console.WriteLine($"  ✓ {msg}");
+    public static void Detail(string msg) => Console.WriteLine($"    ↳ {msg}");
+    public static void Step(string msg) => Console.WriteLine($"  > {msg}");
+    public static void Error(string msg) => Console.Error.WriteLine($"  x {msg}");
+    public static void Line() => Console.WriteLine("  ---");
+    public static void Blank() => Console.WriteLine();
+}
+
+static partial class Mill
+{
+    const string ContextFile = "spec/.context.md";
+    const string DraftsDir = "spec/drafts";
+
+    static readonly string[] RequiredLabels =
+    [
+        // Workflow labels
+        "in-progress",
+        "blocked",
+        "ready-for-review",
+        // Intent type labels
+        "enhancement",
+        "bug",
+        "security",
+        "chore"
+    ];
+
+    public static async Task<int> Init()
+    {
+        Out.Blank();
+
+        // Check for existing setup
+        if (File.Exists(ContextFile))
+        {
+            Out.Warn("existing MILL setup detected (spec/.context.md)");
+            Out.Detail("continuing will regenerate all context");
+            Out.Blank();
+            Console.Write("  continue? [y/n] ");
+            var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
+            if (confirm != "y")
+            {
+                Out.Blank();
+                Out.Warn("aborted");
+                Out.Blank();
+                return 0;
+            }
+            Out.Blank();
+
+            // Remove existing context to force regeneration
+            File.Delete(ContextFile);
+        }
+
+        // Check git repo
+        Out.Step("verifying git repo...");
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+        Out.Ok("git repo");
+
+        // Check gh auth
+        Out.Step("verifying gh auth...");
+        var (authExit, _) = Gh("auth", "status");
+        if (authExit != 0)
+        {
+            Out.Error("gh not authenticated — run: gh auth login");
+            return 1;
+        }
+        Out.Ok("gh authenticated");
+
+        // Create labels
+        Out.Step("verifying labels...");
+        var (_, existing) = GetExistingLabels();
+        var created = 0;
+        var existed = 0;
+
+        foreach (var label in RequiredLabels)
+        {
+            if (existing.Contains(label))
+            {
+                existed++;
+            }
+            else
+            {
+                var color = label switch
+                {
+                    "in-progress" => "FFA500",
+                    "blocked" => "D93F0B",
+                    "ready-for-review" => "0E8A16",
+                    "enhancement" => "A2EEEF",
+                    "bug" => "D73A4A",
+                    "security" => "EE0701",
+                    "chore" => "666666",
+                    _ => "CCCCCC"
+                };
+                Gh("label", "create", label, "--color", color, "--force");
+                created++;
+            }
+        }
+        Out.Ok($"labels ({existed} exist, {created} created)");
+
+        // Create directories
+        Out.Step("creating directories...");
+        Directory.CreateDirectory("spec");
+        Directory.CreateDirectory("spec/drafts");
+        Directory.CreateDirectory("spec/standards");
+        Directory.CreateDirectory("spec/.memory");
+        Out.Ok("spec/ structure");
+
+        // Add .mill/ to gitignore (worktrees shouldn't be committed)
+        Out.Step("updating .gitignore...");
+        var gitignore = File.Exists(".gitignore") ? File.ReadAllText(".gitignore") : "";
+        if (!gitignore.Contains(".mill/"))
+        {
+            File.AppendAllText(".gitignore", "\n# MILL worktrees\n.mill/\n");
+            Out.Ok(".mill/ added to .gitignore");
+        }
+        else
+        {
+            Out.Detail(".mill/ already in .gitignore");
+        }
+
+        // Run context warmup (also generates AGENTS.md if missing)
+        Out.Blank();
+        Out.Step("building context...");
+        Out.Blank();
+
+        var warmupPrompt = Path.Combine(FindMillHome(), "model/prompts/context-warmup.md");
+        if (!File.Exists(warmupPrompt))
+        {
+            Out.Error($"warmup prompt not found: {warmupPrompt}");
+            Out.Detail("check MILL_HOME environment variable or installation");
+            return 1;
+        }
+
+        var exitCode = await RunClaudeStreaming(warmupPrompt);
+        if (exitCode != 0)
+        {
+            Out.Blank();
+            Out.Error("context warmup failed");
+            return 1;
+        }
+
+        // Create CLAUDE.md shim if AGENTS.md exists but CLAUDE.md doesn't
+        if (File.Exists("AGENTS.md") && !File.Exists("CLAUDE.md"))
+        {
+            await File.WriteAllTextAsync("CLAUDE.md", "@AGENTS.md\n");
+            Out.Ok("CLAUDE.md shim created");
+        }
+
+        Out.Blank();
+        Out.Line();
+        Out.Blank();
+        Out.Ok("ready — run: mill model");
+        Out.Blank();
+
+        return 0;
+    }
+
+    static (bool Success, HashSet<string> Labels) GetExistingLabels()
+    {
+        var (exit, output) = Gh("label", "list", "--json", "name", "-q", ".[].name");
+        if (exit != 0) return (false, []);
+        return (true, output.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet());
+    }
+
+    public static bool IsInitialized()
+    {
+        var (success, existing) = GetExistingLabels();
+        return success && RequiredLabels.All(existing.Contains);
+    }
+
+    public static async Task<int> RunModel()
+    {
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        var (needsWarmup, reason) = CheckContextStaleness();
+        var hasUncommitted = HasUncommittedChanges();
+
+        if (needsWarmup)
+        {
+            Out.Warn(reason.ToLower());
+            if (hasUncommitted)
+                Out.Warn("uncommitted changes (not in context)");
+
+            Out.Blank();
+            Out.Step("building context...");
+            Out.Blank();
+
+            var exitCode = await RunClaudeStreaming("model/prompts/context-warmup.md");
+            if (exitCode != 0) return exitCode;
+
+            Out.Blank();
+            Out.Line();
+            Out.Blank();
+        }
+
+        Out.Ok($"context loaded ({GetContextInfo()})");
+        if (hasUncommitted)
+            Out.Detail("uncommitted changes read on demand");
+        Out.Blank();
+
+        // Check for existing drafts
+        var selectedDraft = PromptForDraft();
+
+        return RunClaudeInteractive("model/prompts/spec-draft.md", selectedDraft);
+    }
+
+    static string? PromptForDraft()
+    {
+        if (!Directory.Exists(DraftsDir))
+            return null;
+
+        var drafts = Directory.GetFiles(DraftsDir, "*.md")
+            .Select(ParseDraft)
+            .Where(d => d != null)
+            .OrderByDescending(d => d!.Updated)
+            .ToList();
+
+        if (drafts.Count == 0)
+            return null;
+
+        Console.WriteLine("  drafts:");
+        for (var i = 0; i < drafts.Count; i++)
+        {
+            var d = drafts[i]!;
+            var progress = $"{d.FieldsComplete}/{d.FieldsComplete + d.FieldsPending}";
+            Console.WriteLine($"    {i + 1}. {d.Title} ({d.Type}, {progress})");
+        }
+        Out.Blank();
+        Console.Write($"  [1-{drafts.Count}] or enter for new: ");
+
+        var input = Console.ReadLine()?.Trim();
+        if (string.IsNullOrEmpty(input))
+            return null;
+
+        if (int.TryParse(input, out var choice) && choice >= 1 && choice <= drafts.Count)
+            return drafts[choice - 1]!.Path;
+
+        return null;
+    }
+
+    static DraftInfo? ParseDraft(string path)
+    {
+        try
+        {
+            var lines = File.ReadLines(path).Take(20).ToList();
+            if (lines.Count < 3 || lines[0] != "---")
+                return null;
+
+            var endIdx = lines.Skip(1).ToList().FindIndex(l => l == "---");
+            if (endIdx < 0) return null;
+
+            var yaml = lines.Skip(1).Take(endIdx).ToList();
+            string? type = null, title = null, status = null;
+            DateTime updated = File.GetLastWriteTime(path);
+            int complete = 0, pending = 0;
+
+            foreach (var line in yaml)
+            {
+                if (line.StartsWith("type:")) type = line[5..].Trim();
+                else if (line.StartsWith("title:")) title = line[6..].Trim();
+                else if (line.StartsWith("status:")) status = line[7..].Trim();
+                else if (line.StartsWith("updated:") && DateTime.TryParse(line[8..].Trim(), out var u)) updated = u;
+                else if (line.StartsWith("fields_complete:")) complete = CountYamlList(lines, yaml.IndexOf(line) + 1);
+                else if (line.StartsWith("fields_pending:")) pending = CountYamlList(lines, yaml.IndexOf(line) + 1);
+            }
+
+            if (type == null || title == null) return null;
+
+            return new DraftInfo(path, type, title, status ?? "unknown", updated, complete, pending);
+        }
+        catch { return null; }
+    }
+
+    static int CountYamlList(List<string> lines, int startIdx)
+    {
+        var count = 0;
+        for (var i = startIdx + 1; i < lines.Count && lines[i].StartsWith("  - "); i++)
+            count++;
+        return count;
+    }
+
+    record DraftInfo(string Path, string Type, string Title, string Status, DateTime Updated, int FieldsComplete, int FieldsPending);
+
+    public static async Task<int> RunLoop(string spec, string[] args)
+    {
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        var maxIterations = int.TryParse(Environment.GetEnvironmentVariable("MILL_MAX_ITERATIONS"), out var n) ? n : 20;
+        const string token = "MILL_DONE";
+
+        // Check if spec is a GitHub issue number (#123 or 123)
+        var issueNumber = spec.TrimStart('#');
+        var isIssue = int.TryParse(issueNumber, out _);
+
+        string specContent;
+        string specRef;
+
+        if (isIssue)
+        {
+            Out.Step($"fetching issue #{issueNumber}...");
+            var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,state,labels");
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(output))
+            {
+                Out.Error($"failed to fetch issue #{issueNumber}");
+                return 1;
+            }
+
+            var issue = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
+            if (issue == null)
+            {
+                Out.Error("failed to parse issue");
+                return 1;
+            }
+
+            // Guard: check issue state and labels
+            if (issue.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
+            {
+                Out.Warn("issue is closed — work was merged");
+                return 0;
+            }
+
+            var labels = issue.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
+            if (labels.Contains("ready-for-review"))
+            {
+                Out.Warn("issue has 'ready-for-review' — remove label to re-run");
+                return 0;
+            }
+            if (labels.Contains("in-progress"))
+            {
+                Out.Warn("issue has 'in-progress' — already running?");
+                return 0;
+            }
+            if (labels.Contains("blocked"))
+            {
+                Out.Warn("issue has 'blocked' — resolve before running");
+                return 0;
+            }
+
+            specContent = issue.Body?.Trim() ?? "";
+            specRef = $"#{issueNumber}";
+            Out.Ok($"loaded issue #{issueNumber}");
+
+            // Add in-progress label
+            Out.Step("marking in-progress...");
+            Gh("issue", "edit", issueNumber, "--remove-label", "ready-for-review,blocked", "--add-label", "in-progress");
+        }
+        else
+        {
+            // Fallback: local file (for offline/gh-unavailable scenarios)
+            if (!File.Exists(spec))
+            {
+                Out.Error($"spec not found: {spec}");
+                return 1;
+            }
+            specContent = await File.ReadAllTextAsync(spec);
+            specRef = spec;
+        }
+
+        // Validate iteration prompt exists before starting
+        var iterationPrompt = Path.Combine(FindMillHome(), "loop/prompts/loop-iterate.md");
+        if (!File.Exists(iterationPrompt))
+        {
+            Out.Error($"iteration prompt not found: {iterationPrompt}");
+            Out.Detail("check MILL_HOME environment variable or installation");
+            return 1;
+        }
+
+        // Create isolated worktree for execution
+        var worktreeName = isIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(spec)}";
+        var worktreePath = Path.Combine(".mill", worktreeName);
+        var originalDir = Directory.GetCurrentDirectory();
+
+        Out.Step($"creating worktree {worktreePath}...");
+
+        // Ensure .mill directory exists
+        Directory.CreateDirectory(".mill");
+
+        // Remove existing worktree if present (from crashed run)
+        if (Directory.Exists(worktreePath))
+        {
+            var (rmExit, _, rmErr) = Git("worktree", "remove", "--force", worktreePath);
+            if (rmExit != 0)
+                Out.Warn($"failed to remove stale worktree: {rmErr.Trim()}");
+        }
+
+        var branchName = $"issue-{issueNumber}";
+
+        // Delete existing branch if present (from previous run)
+        Git("branch", "-D", branchName);
+        var (wtExit, _, wtErr) = Git("worktree", "add", "-b", branchName, worktreePath, "HEAD");
+        if (wtExit != 0)
+        {
+            Out.Error($"failed to create worktree: {wtErr.Trim()}");
+            return 1;
+        }
+        Out.Ok($"worktree created (branch: {branchName})");
+
+        var result = 1;
+        try
+        {
+            // Change to worktree directory
+            Directory.SetCurrentDirectory(Path.Combine(originalDir, worktreePath));
+
+            // Ensure context exists in worktree
+            var (needsWarmup, reason) = CheckContextStaleness();
+            if (needsWarmup)
+            {
+                Out.Warn(reason.ToLower());
+                Out.Step("building context...");
+                Out.Blank();
+
+                var warmupPrompt = Path.Combine(FindMillHome(), "model/prompts/context-warmup.md");
+                var warmupExit = await RunClaudeStreaming(warmupPrompt);
+                if (warmupExit != 0)
+                {
+                    Out.Error("warmup failed");
+                    return 1;
+                }
+                Out.Blank();
+                Out.Ok("context ready");
+            }
+
+            for (var i = 0; i < maxIterations; i++)
+            {
+                Out.Blank();
+                Out.Step($"iteration {i + 1}/{maxIterations}");
+                Out.Blank();
+
+                var template = await File.ReadAllTextAsync(iterationPrompt);
+                var rendered = template
+                    .Replace("{{SPEC_CONTENT}}", specContent)
+                    .Replace("{{SPEC_REF}}", specRef)
+                    .Replace("{{ISSUE_NUMBER}}", isIssue ? issueNumber : "")
+                    .Replace("{{ITERATION}}", (i + 1).ToString())
+                    .Replace("{{MAX_ITERATIONS}}", maxIterations.ToString())
+                    .Replace("{{COMPLETION_TOKEN}}", token);
+
+                var output = await RunClaudeBatch(rendered);
+
+                if (output.Contains(token))
+                {
+                    Out.Blank();
+                    Out.Ok(token);
+                    result = 0;
+                    break;
+                }
+            }
+
+            if (result != 0)
+            {
+                Out.Blank();
+                Out.Warn($"max iterations ({maxIterations}) reached");
+            }
+        }
+        finally
+        {
+            // Always clean up: return to original directory and remove worktree
+            Directory.SetCurrentDirectory(originalDir);
+
+            Out.Step("cleaning up worktree...");
+            var (cleanExit, _, cleanErr) = Git("worktree", "remove", "--force", worktreePath);
+            if (cleanExit != 0)
+                Out.Warn($"worktree cleanup failed: {cleanErr.Trim()}");
+            else
+                Out.Ok("done");
+        }
+
+        return result;
+    }
+
+    public static int ListAvailableIssues()
+    {
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        // Get repo info for URL
+        var (repoExit, repoUrl) = Gh("repo", "view", "--json", "url", "-q", ".url");
+        if (repoExit != 0)
+        {
+            Out.Error("failed to get repository info");
+            return 1;
+        }
+
+        // Fetch open issues with labels
+        var (exitCode, output) = Gh("issue", "list", "--state", "open", "--json", "number,title,labels,createdAt", "--limit", "100");
+        if (exitCode != 0)
+        {
+            Out.Error("failed to fetch issues");
+            return 1;
+        }
+
+        var issues = JsonSerializer.Deserialize(output, GhJsonContext.Default.ListGhIssue) ?? [];
+
+        // Filter out in-progress, blocked, ready-for-review
+        var excludeLabels = new[] { "in-progress", "blocked", "ready-for-review" };
+        var available = issues
+            .Where(i => !i.Labels.Any(l => excludeLabels.Contains(l.Name, StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+
+        if (available.Count == 0)
+        {
+            Out.Warn("no available issues");
+            return 0;
+        }
+
+        // Sort: impact:high → unlabeled → impact:low, oldest first within each tier
+        var sorted = available
+            .OrderBy(i => GetImpactTier(i.Labels))
+            .ThenBy(i => i.CreatedAt)
+            .ToList();
+
+        Out.Blank();
+        Console.WriteLine("  available:");
+        Out.Blank();
+
+        var shown = sorted.Take(10).ToList();
+        foreach (var issue in shown)
+        {
+            var impact = GetImpactLabel(issue.Labels);
+            var age = FormatAge(issue.CreatedAt);
+            var impactCol = impact != null ? $"[{impact}]".PadRight(7) : "       ";
+            var title = issue.Title.Length > 40 ? issue.Title[..37] + "..." : issue.Title;
+            Console.WriteLine($"  #{issue.Number,-4} {impactCol} {title,-40} {age}");
+        }
+
+        var remaining = sorted.Count - 10;
+        if (remaining > 0)
+        {
+            Out.Blank();
+            var filterQuery = Uri.EscapeDataString("is:open -label:in-progress -label:blocked -label:ready-for-review");
+            Console.WriteLine($"  +{remaining} more: {repoUrl.Trim()}/issues?q={filterQuery}");
+        }
+
+        Out.Blank();
+        Console.WriteLine("  mill loop #<number>");
+        Out.Blank();
+
+        return 0;
+    }
+
+    static int GetImpactTier(List<GhLabel> labels)
+    {
+        if (labels.Any(l => l.Name.Equals("impact:high", StringComparison.OrdinalIgnoreCase))) return 0;
+        if (labels.Any(l => l.Name.Equals("impact:low", StringComparison.OrdinalIgnoreCase))) return 2;
+        return 1; // unlabeled = middle tier
+    }
+
+    static string? GetImpactLabel(List<GhLabel> labels)
+    {
+        if (labels.Any(l => l.Name.Equals("impact:high", StringComparison.OrdinalIgnoreCase))) return "high";
+        if (labels.Any(l => l.Name.Equals("impact:low", StringComparison.OrdinalIgnoreCase))) return "low";
+        return null;
+    }
+
+    static string FormatAge(DateTime created)
+    {
+        var age = DateTime.UtcNow - created;
+        if (age.TotalDays >= 1) return $"{(int)age.TotalDays}d ago";
+        if (age.TotalHours >= 1) return $"{(int)age.TotalHours}h ago";
+        return $"{(int)age.TotalMinutes}m ago";
+    }
+
+    static (int ExitCode, string Output, string Error) Run(string exe, params string[] args)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = exe,
+                Arguments = string.Join(" ", args),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            }
+        };
+        process.Start();
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return (process.ExitCode, output, error);
+    }
+
+    static (int ExitCode, string Output) Gh(params string[] args)
+    {
+        var (exit, output, _) = Run("gh", args);
+        return (exit, output);
+    }
+
+    static bool IsGitRepo() => Git("rev-parse", "--git-dir").ExitCode == 0;
+
+    static (bool NeedsWarmup, string Reason) CheckContextStaleness()
+    {
+        if (!File.Exists(ContextFile))
+            return (true, "Context file missing");
+
+        var firstLine = File.ReadLines(ContextFile).FirstOrDefault() ?? "";
+        var match = HashPattern().Match(firstLine);
+
+        if (!match.Success)
+            return (true, "Context missing hash");
+
+        var contextHash = match.Groups[1].Value;
+        var currentHash = Git("rev-parse", "HEAD").Output.Trim();
+
+        return contextHash != currentHash
+            ? (true, "Context stale")
+            : (false, "");
+    }
+
+    static bool HasUncommittedChanges() =>
+        !string.IsNullOrWhiteSpace(Git("status", "--porcelain").Output);
+
+    static string GetContextInfo()
+    {
+        if (!File.Exists(ContextFile))
+            return "no context";
+
+        var firstLine = File.ReadLines(ContextFile).FirstOrDefault() ?? "";
+        var match = HashPattern().Match(firstLine);
+
+        if (!match.Success)
+            return "unknown commit";
+
+        var hash = match.Groups[1].Value[..7]; // Short hash
+        return $"commit {hash}";
+    }
+
+    /// <summary>
+    /// Run Claude in streaming mode - output goes directly to console.
+    /// Used for warmup where we want to see progress but don't need interactivity.
+    /// </summary>
+    static async Task<int> RunClaudeStreaming(string promptPath)
+    {
+        var fullPath = Path.Combine(FindMillHome(), promptPath);
+        if (!File.Exists(fullPath))
+        {
+            Out.Error($"prompt not found: {fullPath}");
+            return 1;
+        }
+
+        var template = await File.ReadAllTextAsync(fullPath);
+        var rendered = template.Replace("{{USER_PROMPT}}", "");
+        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                Arguments = "-p --dangerously-skip-permissions",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = false,  // Output goes directly to console
+                RedirectStandardError = false,
+                UseShellExecute = false
+            }
+        };
+
+        process.Start();
+        await process.StandardInput.WriteAsync(rendered);
+        process.StandardInput.Close();
+        await process.WaitForExitAsync();
+
+        return process.ExitCode;
+    }
+
+    /// <summary>
+    /// Run Claude in fully interactive mode - hands off to Claude completely.
+    /// Pre-loads context into system prompt so it's available before user speaks.
+    /// </summary>
+    static int RunClaudeInteractive(string promptPath, string? draftPath = null)
+    {
+        var fullPath = Path.Combine(FindMillHome(), promptPath);
+        if (!File.Exists(fullPath))
+        {
+            Out.Error($"prompt not found: {fullPath}");
+            return 1;
+        }
+
+        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+
+        // Build prompt with pre-loaded context
+        var prompt = new System.Text.StringBuilder();
+        prompt.AppendLine(File.ReadAllText(fullPath)
+            .Replace("{{USER_PROMPT}}", "")
+            .Replace("{{DRAFT_PATH}}", draftPath ?? ""));
+
+        // Pre-load context files into prompt
+        prompt.AppendLine("\n---\n# Pre-loaded Context\n");
+
+        if (File.Exists(ContextFile))
+        {
+            prompt.AppendLine("## spec/.context.md\n");
+            prompt.AppendLine(File.ReadAllText(ContextFile));
+        }
+
+        if (Directory.Exists("spec/standards"))
+        {
+            foreach (var file in Directory.GetFiles("spec/standards", "*.md"))
+            {
+                prompt.AppendLine($"\n## {file}\n");
+                prompt.AppendLine(File.ReadAllText(file));
+            }
+        }
+
+        if (File.Exists("spec/.memory/project.md"))
+        {
+            prompt.AppendLine("\n## spec/.memory/project.md\n");
+            prompt.AppendLine(File.ReadAllText("spec/.memory/project.md"));
+        }
+
+        // Add uncommitted changes
+        var status = Git("status", "--porcelain").Output;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            prompt.AppendLine("\n## Uncommitted Changes\n```");
+            prompt.AppendLine(status.Trim());
+            prompt.AppendLine("```");
+
+            var diff = Git("diff").Output;
+            if (!string.IsNullOrWhiteSpace(diff))
+            {
+                var lines = diff.Split('\n');
+                prompt.AppendLine("\n```diff");
+                prompt.AppendLine(lines.Length > 200
+                    ? string.Join("\n", lines.Take(200)) + $"\n... ({lines.Length - 200} lines truncated)"
+                    : diff.Trim());
+                prompt.AppendLine("```");
+            }
+        }
+
+        // Add resume instruction if draft selected
+        if (!string.IsNullOrEmpty(draftPath))
+        {
+            prompt.AppendLine($"\n---\n# Resume Mode\n");
+            prompt.AppendLine($"User selected draft: `{draftPath}`");
+            if (File.Exists(draftPath))
+            {
+                prompt.AppendLine("\n## Draft Content\n");
+                prompt.AppendLine(File.ReadAllText(draftPath));
+            }
+            prompt.AppendLine("\nContinue elicitation from where it left off.");
+        }
+
+        var promptContent = prompt.ToString();
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                UseShellExecute = false
+            }
+        };
+
+        // Use ArgumentList for proper escaping (cross-platform, no shell needed)
+        process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
+        process.StartInfo.ArgumentList.Add("--disable-slash-commands");
+        process.StartInfo.ArgumentList.Add("--append-system-prompt");
+        process.StartInfo.ArgumentList.Add(promptContent);
+
+        process.Start();
+        process.WaitForExit();
+        return process.ExitCode;
+    }
+
+    /// <summary>
+    /// Run Claude in batch mode with streaming output.
+    /// Uses --output-format stream-json for real-time display.
+    /// </summary>
+    static async Task<string> RunClaudeBatch(string input)
+    {
+        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+        var output = new System.Text.StringBuilder();
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                Arguments = "-p --dangerously-skip-permissions --verbose --output-format stream-json",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.Start();
+        await process.StandardInput.WriteAsync(input);
+        process.StandardInput.Close();
+
+        // Parse streaming JSON and extract text content
+        while (!process.StandardOutput.EndOfStream)
+        {
+            var line = await process.StandardOutput.ReadLineAsync();
+            if (string.IsNullOrEmpty(line)) continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                var root = doc.RootElement;
+
+                // Only process assistant messages with content
+                if (root.TryGetProperty("type", out var msgType) && msgType.GetString() == "assistant" &&
+                    root.TryGetProperty("message", out var message) &&
+                    message.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in content.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var type) && type.GetString() == "text" &&
+                            item.TryGetProperty("text", out var text))
+                        {
+                            var textValue = text.GetString() ?? "";
+                            Console.WriteLine(textValue);
+                            output.AppendLine(textValue);
+                        }
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Non-JSON line, print as-is
+                Console.WriteLine(line);
+                output.AppendLine(line);
+            }
+        }
+
+        await process.WaitForExitAsync();
+        return output.ToString();
+    }
+
+    static string FindMillHome()
+    {
+        var env = Environment.GetEnvironmentVariable("MILL_HOME");
+        if (!string.IsNullOrEmpty(env)) return env;
+
+        // Executable is in bin/, mill root is one level up
+        var exeDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+        var millRoot = Directory.GetParent(exeDir)?.FullName;
+
+        if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "model/prompts")))
+            return millRoot;
+
+        return exeDir;
+    }
+
+    static (int ExitCode, string Output, string Error) Git(params string[] args)
+    {
+        return Run("git", args);
+    }
+
+    [GeneratedRegex(@"mill-context-hash:\s*([a-f0-9]+)")]
+    private static partial Regex HashPattern();
+}
+
+record GhIssue(
+    [property: JsonPropertyName("number")] int Number,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("labels")] List<GhLabel> Labels,
+    [property: JsonPropertyName("createdAt")] DateTime CreatedAt);
+
+record GhIssueDetail(
+    [property: JsonPropertyName("body")] string? Body,
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("labels")] List<GhLabel> Labels);
+
+record GhLabel([property: JsonPropertyName("name")] string Name);
+
+[JsonSerializable(typeof(List<GhIssue>))]
+[JsonSerializable(typeof(GhIssueDetail))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+internal partial class GhJsonContext : JsonSerializerContext { }
