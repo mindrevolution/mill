@@ -19,6 +19,42 @@ The system doesn't "get smarter" implicitly. The **model gets better explicitly.
 
 **Key insight:** Keep work in a controlled loop until *objective criteria* are met.
 
+## Trajectory: Toward Autonomous Operation
+
+MILL is designed to evolve from human-driven to fully autonomous.
+
+```mermaid
+flowchart LR
+    subgraph Today
+        A[Human creates spec] --> B[Human triggers loop]
+    end
+
+    subgraph Tomorrow
+        C[MILL drafts specs] --> D[Human approves]
+        D --> E[MILL runs loops]
+    end
+
+    subgraph Future
+        F[Sources: meetings, tickets, monitoring] --> G[MILL generates specs]
+        G --> H[MILL prioritizes & executes]
+        H --> I[Human reviews PRs]
+    end
+```
+
+**The end state:**
+- MILL ingests work from multiple sources (meeting notes, support tickets, monitoring alerts)
+- MILL drafts specifications autonomously
+- MILL prioritizes and executes without prompting
+- Humans shift from *operators* to *supervisors* — reviewing, approving, intervening when needed
+
+**Why incremental:**
+- Each step validates assumptions before building the next
+- Human-in-the-loop today teaches MILL what good specs look like
+- Manual triggers today become automatic triggers tomorrow
+- The contracts and verification we build now are the foundation for trust in autonomous execution
+
+**Current phase:** Human-driven spec creation and loop execution, with structured contracts that will enable future automation.
+
 ## Loop Contract
 
 Every spec includes a contract that defines "done":
