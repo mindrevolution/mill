@@ -106,4 +106,4 @@ Completed specs live in GitHub Issues (single source of truth).
 
 ## License
 
-MIT
+[MIT](https://opensource.org/licenses/MIT) — use, modify, distribute freely. Keep the copyright notice.
