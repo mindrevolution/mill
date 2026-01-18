@@ -76,13 +76,13 @@ The contract decides completion, not the agent.
 mill init
 
 # 2. Create spec (interactive)
-mill model                    # → outputs: created: #42
+mill spec                     # → outputs: created: #42
 
 # 3. List available issues
-mill loop
+mill run
 
-# 4. Run work loop
-mill loop #42                 # runs in isolated worktree, cleans up after
+# 4. Execute work loop
+mill run #42                  # runs in isolated worktree, cleans up after
 ```
 
 ## Commands
@@ -90,9 +90,9 @@ mill loop #42                 # runs in isolated worktree, cleans up after
 | Command | Purpose |
 |---------|---------|
 | `mill init` | Initialize repo (labels, directories, AGENTS.md, context warmup) |
-| `mill model` | Interactive spec creation → GitHub issue |
-| `mill loop` | List available issues (sorted by impact) |
-| `mill loop #N` | Run execution loop on issue |
+| `mill spec` | Interactive spec creation → GitHub issue |
+| `mill run` | List available issues (sorted by impact) |
+| `mill run #N` | Execute work loop on issue |
 
 **Guards:** Loop won't run if issue is closed, `in-progress`, `blocked`, or `ready-for-review`.
 
@@ -121,16 +121,15 @@ On success, creates PR with `Fixes #N` (use branch protection for review require
 ```
 AGENTS.md            # Project instructions (cross-tool standard)
 CLAUDE.md            # Shim (@AGENTS.md) for Claude Code
-spec/
-├── .context.md      # Auto-generated project context
-├── .memory/         # Machine-generated learnings
+.mill/
+├── context.md       # Auto-generated project context
+├── memory/          # Machine-generated learnings
 ├── drafts/          # In-progress specs
-└── standards/       # Human-authored rules
-
-.mill/               # Worktrees (gitignored, ephemeral)
+├── standards/       # Human-authored rules
+└── work/            # Worktrees (gitignored, ephemeral)
 ```
 
-**Context is per-worktree:** Each `mill loop` builds fresh context matching the worktree's code state. This is intentional — reusing context from the parent repo could mislead execution when commits differ.
+**Context is per-worktree:** Each `mill run` builds fresh context matching the worktree's code state. This is intentional — reusing context from the parent repo could mislead execution when commits differ.
 
 Completed specs live in GitHub Issues (single source of truth).
 

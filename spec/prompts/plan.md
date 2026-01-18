@@ -3,10 +3,10 @@
 Construct a loop-ready implementation plan. Must be single-issue sized with Loop Contract.
 
 ## Preconditions
-- `spec/.context.md` must exist (run warmup if not)
+- `.mill/context.md` must exist (run warmup if not)
 - Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
 - If USER_PROMPT is `#<number>`, fetch issue via `gh issue view <number> --json body,title`
-- Feature must exist in `spec/features/`, model in `spec/model/` (stop if missing)
+- Feature must exist in `.mill/features/`, model in `.mill/model/` (stop if missing)
 
 ## Rules
 - If no USER_PROMPT, request and stop

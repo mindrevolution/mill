@@ -17,27 +17,28 @@ mill/
 │   └── Program.cs
 ├── bin/                    # Published binary
 │   └── mill
-├── model/                  # Spec creation
+├── spec/                   # Spec creation (prompts + templates)
 │   ├── prompts/
-│   │   ├── context-warmup.md   # Generates spec/.context.md
-│   │   └── spec-draft.md        # Interactive spec elicitation
+│   │   ├── context-warmup.md   # Generates .mill/context.md
+│   │   └── spec-draft.md       # Interactive spec elicitation
 │   └── templates/              # Spec output templates
 │       ├── feature.md
 │       ├── bug.md
 │       ├── security.md
 │       └── task.md
-├── loop/                   # Iterative execution
+├── run/                    # Iterative execution
 │   └── prompts/
 │       └── loop-iterate.md     # Single iteration prompt
 └── README.md
 
-spec/                       # Target repo's spec folder
-├── .context.md             # Hidden — auto-generated project context
-├── .memory/                # Hidden — machine-generated learnings
+.mill/                      # Target repo's MILL folder
+├── context.md              # Auto-generated project context
+├── memory/                 # Machine-generated learnings
 │   └── project.md
 ├── drafts/                 # In-progress specs (local, resumable)
 │   └── {slug}.md
-└── standards/              # Visible — human-authored rules
+├── standards/              # Human-authored rules
+└── work/                   # Worktrees (gitignored, ephemeral)
 
 # Completed specs live in GitHub Issues (single source of truth)
 ```
@@ -58,12 +59,12 @@ Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
 
 ```bash
 # spec creation (interactive) → creates GitHub issue
-mill model
+mill spec
 
 # work loop (in worktree) → runs against issue
 git worktree add .mill-sandbox HEAD
 cd .mill-sandbox
-mill loop #42
+mill run #42
 ```
 
 ## Intent Types
@@ -79,9 +80,9 @@ mill loop #42
 
 ```mermaid
 flowchart TD
-    A[User Intent] --> B["mill model<br>(classify, elicit, generate)"]
+    A[User Intent] --> B["mill spec<br>(classify, elicit, generate)"]
     B --> C["GitHub Issue #N"]
-    C --> D["mill loop #N<br>(iterate until verified)"]
+    C --> D["mill run #N<br>(iterate until verified)"]
     D --> E[MILL_DONE + memory]
 ```
 

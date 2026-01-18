@@ -9,9 +9,9 @@ Perform the analyses defined in "Workflow" and produce the "Report".
 ## Workflow
 - Run `git ls-files` to enumerate tracked files.
 - Read `README.md` for product and architecture context.
-- Read `spec/ROADMAP.md` if present.
-- Read all files under `spec/standards/` and summarize rules.
-- Read high-level architecture docs under `spec/backend/` and `spec/frontend/` as relevant.
+- Read `.mill/ROADMAP.md` if present.
+- Read all files under `.mill/standards/` and summarize rules.
+- Read high-level architecture docs under `.mill/backend/` and `.mill/frontend/` as relevant.
 - Scan recent history: `git log -n 20 --oneline`.
 
 ## Report

@@ -12,9 +12,9 @@ Guide user through architecting a system or subsystem. Build a complete architec
 - If USER_PROMPT is `#<number>`, fetch issue via `gh issue view <number> --json body,title`
 
 ## Output
-- `spec/backend/architecture.md` — backend
-- `spec/frontend/architecture.md` — frontend
-- `spec/architecture.md` — fullstack
+- `.mill/backend/architecture.md` — backend
+- `.mill/frontend/architecture.md` — frontend
+- `.mill/architecture.md` — fullstack
 
 ## Sections
 1. Philosophy

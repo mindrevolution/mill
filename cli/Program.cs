@@ -6,22 +6,22 @@ using System.Text.RegularExpressions;
 return args switch
 {
     ["init"] => await Mill.Init(),
-    ["model", ..] => await Mill.RunModel(),
-    ["loop", var spec, ..] => await Mill.RunLoop(spec, args),
-    ["loop"] => Mill.ListAvailableIssues(),
+    ["spec", ..] => await Mill.RunSpec(),
+    ["run", var issue, ..] => await Mill.Execute(issue, args),
+    ["run"] => Mill.ListAvailableIssues(),
     _ => ShowHelp()
 };
 
 static int ShowHelp()
 {
     Console.WriteLine("""
-        mill - model-driven iterative limit loop
+        mill - turning intent into verified deliverables, continuously.
 
         usage:
           mill init               initialize repo for MILL
-          mill model              create specification → GitHub issue
-          mill loop               list available issues
-          mill loop #123          run work loop on GitHub issue
+          mill spec               create specification → GitHub issue
+          mill run                list available issues
+          mill run #123           execute work loop on GitHub issue
         """);
     return 0;
 }
@@ -42,8 +42,8 @@ static class Out
 
 static partial class Mill
 {
-    const string ContextFile = "spec/.context.md";
-    const string DraftsDir = "spec/drafts";
+    const string ContextFile = ".mill/context.md";
+    const string DraftsDir = ".mill/drafts";
 
     static readonly string[] RequiredLabels =
     [
@@ -65,7 +65,7 @@ static partial class Mill
         // Check for existing setup
         if (File.Exists(ContextFile))
         {
-            Out.Warn("existing MILL setup detected (spec/.context.md)");
+            Out.Warn("existing MILL setup detected (.mill/context.md)");
             Out.Detail("continuing will regenerate all context");
             Out.Blank();
             Console.Write("  continue? [y/n] ");
@@ -135,23 +135,23 @@ static partial class Mill
 
         // Create directories
         Out.Step("creating directories...");
-        Directory.CreateDirectory("spec");
-        Directory.CreateDirectory("spec/drafts");
-        Directory.CreateDirectory("spec/standards");
-        Directory.CreateDirectory("spec/.memory");
-        Out.Ok("spec/ structure");
+        Directory.CreateDirectory(".mill");
+        Directory.CreateDirectory(".mill/drafts");
+        Directory.CreateDirectory(".mill/standards");
+        Directory.CreateDirectory(".mill/memory");
+        Out.Ok(".mill/ structure");
 
-        // Add .mill/ to gitignore (worktrees shouldn't be committed)
+        // Add .mill/work/ to gitignore (worktrees shouldn't be committed)
         Out.Step("updating .gitignore...");
         var gitignore = File.Exists(".gitignore") ? File.ReadAllText(".gitignore") : "";
-        if (!gitignore.Contains(".mill/"))
+        if (!gitignore.Contains(".mill/work/"))
         {
-            File.AppendAllText(".gitignore", "\n# MILL worktrees\n.mill/\n");
-            Out.Ok(".mill/ added to .gitignore");
+            File.AppendAllText(".gitignore", "\n# MILL worktrees\n.mill/work/\n");
+            Out.Ok(".mill/work/ added to .gitignore");
         }
         else
         {
-            Out.Detail(".mill/ already in .gitignore");
+            Out.Detail(".mill/work/ already in .gitignore");
         }
 
         // Run context warmup (also generates AGENTS.md if missing)
@@ -159,7 +159,7 @@ static partial class Mill
         Out.Step("building context...");
         Out.Blank();
 
-        var warmupPrompt = Path.Combine(FindMillHome(), "model/prompts/context-warmup.md");
+        var warmupPrompt = Path.Combine(FindMillHome(), "spec/prompts/context-warmup.md");
         if (!File.Exists(warmupPrompt))
         {
             Out.Error($"warmup prompt not found: {warmupPrompt}");
@@ -185,7 +185,7 @@ static partial class Mill
         Out.Blank();
         Out.Line();
         Out.Blank();
-        Out.Ok("ready — run: mill model");
+        Out.Ok("ready — run: mill spec");
         Out.Blank();
 
         return 0;
@@ -204,7 +204,7 @@ static partial class Mill
         return success && RequiredLabels.All(existing.Contains);
     }
 
-    public static async Task<int> RunModel()
+    public static async Task<int> RunSpec()
     {
         if (!IsGitRepo())
         {
@@ -231,7 +231,7 @@ static partial class Mill
             Out.Step("building context...");
             Out.Blank();
 
-            var exitCode = await RunClaudeStreaming("model/prompts/context-warmup.md");
+            var exitCode = await RunClaudeStreaming("spec/prompts/context-warmup.md");
             if (exitCode != 0) return exitCode;
 
             Out.Blank();
@@ -247,7 +247,7 @@ static partial class Mill
         // Check for existing drafts
         var selectedDraft = PromptForDraft();
 
-        return RunClaudeInteractive("model/prompts/spec-draft.md", selectedDraft);
+        return RunClaudeInteractive("spec/prompts/spec-draft.md", selectedDraft);
     }
 
     static string? PromptForDraft()
@@ -327,7 +327,7 @@ static partial class Mill
 
     record DraftInfo(string Path, string Type, string Title, string Status, DateTime Updated, int FieldsComplete, int FieldsPending);
 
-    public static async Task<int> RunLoop(string spec, string[] args)
+    public static async Task<int> Execute(string issue, string[] args)
     {
         if (!IsInitialized())
         {
@@ -338,14 +338,14 @@ static partial class Mill
         var maxIterations = int.TryParse(Environment.GetEnvironmentVariable("MILL_MAX_ITERATIONS"), out var n) ? n : 20;
         const string token = "MILL_DONE";
 
-        // Check if spec is a GitHub issue number (#123 or 123)
-        var issueNumber = spec.TrimStart('#');
-        var isIssue = int.TryParse(issueNumber, out _);
+        // Check if issue is a GitHub issue number (#123 or 123)
+        var issueNumber = issue.TrimStart('#');
+        var isGhIssue = int.TryParse(issueNumber, out _);
 
         string specContent;
         string specRef;
 
-        if (isIssue)
+        if (isGhIssue)
         {
             Out.Step($"fetching issue #{issueNumber}...");
             var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,state,labels");
@@ -355,21 +355,21 @@ static partial class Mill
                 return 1;
             }
 
-            var issue = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
-            if (issue == null)
+            var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
+            if (issueDetail == null)
             {
                 Out.Error("failed to parse issue");
                 return 1;
             }
 
             // Guard: check issue state and labels
-            if (issue.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
+            if (issueDetail.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
             {
                 Out.Warn("issue is closed — work was merged");
                 return 0;
             }
 
-            var labels = issue.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
+            var labels = issueDetail.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
             if (labels.Contains("ready-for-review"))
             {
                 Out.Warn("issue has 'ready-for-review' — remove label to re-run");
@@ -386,7 +386,7 @@ static partial class Mill
                 return 0;
             }
 
-            specContent = issue.Body?.Trim() ?? "";
+            specContent = issueDetail.Body?.Trim() ?? "";
             specRef = $"#{issueNumber}";
             Out.Ok($"loaded issue #{issueNumber}");
 
@@ -397,17 +397,17 @@ static partial class Mill
         else
         {
             // Fallback: local file (for offline/gh-unavailable scenarios)
-            if (!File.Exists(spec))
+            if (!File.Exists(issue))
             {
-                Out.Error($"spec not found: {spec}");
+                Out.Error($"spec not found: {issue}");
                 return 1;
             }
-            specContent = await File.ReadAllTextAsync(spec);
-            specRef = spec;
+            specContent = await File.ReadAllTextAsync(issue);
+            specRef = issue;
         }
 
         // Validate iteration prompt exists before starting
-        var iterationPrompt = Path.Combine(FindMillHome(), "loop/prompts/loop-iterate.md");
+        var iterationPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-iterate.md");
         if (!File.Exists(iterationPrompt))
         {
             Out.Error($"iteration prompt not found: {iterationPrompt}");
@@ -416,14 +416,14 @@ static partial class Mill
         }
 
         // Create isolated worktree for execution
-        var worktreeName = isIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(spec)}";
-        var worktreePath = Path.Combine(".mill", worktreeName);
+        var worktreeName = isGhIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(issue)}";
+        var worktreePath = Path.Combine(".mill/work", worktreeName);
         var originalDir = Directory.GetCurrentDirectory();
 
         Out.Step($"creating worktree {worktreePath}...");
 
-        // Ensure .mill directory exists
-        Directory.CreateDirectory(".mill");
+        // Ensure .mill/work directory exists
+        Directory.CreateDirectory(".mill/work");
 
         // Remove existing worktree if present (from crashed run)
         if (Directory.Exists(worktreePath))
@@ -459,7 +459,7 @@ static partial class Mill
                 Out.Step("building context...");
                 Out.Blank();
 
-                var warmupPrompt = Path.Combine(FindMillHome(), "model/prompts/context-warmup.md");
+                var warmupPrompt = Path.Combine(FindMillHome(), "spec/prompts/context-warmup.md");
                 var warmupExit = await RunClaudeStreaming(warmupPrompt);
                 if (warmupExit != 0)
                 {
@@ -480,7 +480,7 @@ static partial class Mill
                 var rendered = template
                     .Replace("{{SPEC_CONTENT}}", specContent)
                     .Replace("{{SPEC_REF}}", specRef)
-                    .Replace("{{ISSUE_NUMBER}}", isIssue ? issueNumber : "")
+                    .Replace("{{ISSUE_NUMBER}}", isGhIssue ? issueNumber : "")
                     .Replace("{{ITERATION}}", (i + 1).ToString())
                     .Replace("{{MAX_ITERATIONS}}", maxIterations.ToString())
                     .Replace("{{COMPLETION_TOKEN}}", token);
@@ -585,7 +585,7 @@ static partial class Mill
         }
 
         Out.Blank();
-        Console.WriteLine("  mill loop #<number>");
+        Console.WriteLine("  mill run #<number>");
         Out.Blank();
 
         return 0;
@@ -742,23 +742,23 @@ static partial class Mill
 
         if (File.Exists(ContextFile))
         {
-            prompt.AppendLine("## spec/.context.md\n");
+            prompt.AppendLine("## .mill/context.md\n");
             prompt.AppendLine(File.ReadAllText(ContextFile));
         }
 
-        if (Directory.Exists("spec/standards"))
+        if (Directory.Exists(".mill/standards"))
         {
-            foreach (var file in Directory.GetFiles("spec/standards", "*.md"))
+            foreach (var file in Directory.GetFiles(".mill/standards", "*.md"))
             {
                 prompt.AppendLine($"\n## {file}\n");
                 prompt.AppendLine(File.ReadAllText(file));
             }
         }
 
-        if (File.Exists("spec/.memory/project.md"))
+        if (File.Exists(".mill/memory/project.md"))
         {
-            prompt.AppendLine("\n## spec/.memory/project.md\n");
-            prompt.AppendLine(File.ReadAllText("spec/.memory/project.md"));
+            prompt.AppendLine("\n## .mill/memory/project.md\n");
+            prompt.AppendLine(File.ReadAllText(".mill/memory/project.md"));
         }
 
         // Add uncommitted changes
@@ -893,7 +893,7 @@ static partial class Mill
         var exeDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
         var millRoot = Directory.GetParent(exeDir)?.FullName;
 
-        if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "model/prompts")))
+        if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "spec/prompts")))
             return millRoot;
 
         return exeDir;

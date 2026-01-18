@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-description: Generate a Ralph-ready implementation plan with a loop contract and store it in spec/plans/.
+description: Generate a Ralph-ready implementation plan with a loop contract and store it in .mill/plans/.
 argument-hint: [user prompt]
 model: claude-opus-4-5
 ---
@@ -18,7 +18,7 @@ The plan must be sized for a single GitHub issue and include a Loop Contract tha
 
 ## Variables
 USER_PROMPT: $1
-PLAN_DIRECTORY: "./spec/plans/"
+PLAN_DIRECTORY: "./.mill/plans/"
 GITHUB_ISSUE_NUMBER: [github issue number if provided in USER_PROMPT]
 
 ## Instructions

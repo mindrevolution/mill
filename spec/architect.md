@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-description: Guide architecture design and store it under spec/backend/ or spec/frontend/.
+description: Guide architecture design and store it under .mill/backend/ or .mill/frontend/.
 argument-hint: [system or subsystem description]
 model: claude-opus-4-5
 ---
@@ -19,7 +19,7 @@ Ensure the documentation is technically precise, implementation-aware, and free 
 
 ## Variables
 USER_PROMPT: $1
-SPEC_DIRECTORY: "./spec/"
+SPEC_DIRECTORY: "./.mill/"
 TARGET_AREA: [backend|frontend|fullstack; ask user, default backend]
 ARCHITECTURE_FILENAME: "architecture.md"
 GITHUB_ISSUE_NUMBER: [optional GitHub issue number]
@@ -33,9 +33,9 @@ ARCHITECTURE_STYLE: [default: Modular Monolith, override only if user specifies]
 3. Assume Modular Monolith unless explicitly changed.
 4. Proceed section-by-section, asking targeted questions.
 5. Save to:
-   - `./spec/backend/architecture.md` if TARGET_AREA is backend.
-   - `./spec/frontend/architecture.md` if TARGET_AREA is frontend.
-   - `./spec/architecture.md` if TARGET_AREA is fullstack.
+   - `./.mill/backend/architecture.md` if TARGET_AREA is backend.
+   - `./.mill/frontend/architecture.md` if TARGET_AREA is frontend.
+   - `./.mill/architecture.md` if TARGET_AREA is fullstack.
 6. After all sections, output a brief report with the resolved file path and summary.
 
 ## Sections (in order)

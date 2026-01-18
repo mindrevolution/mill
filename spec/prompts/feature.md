@@ -3,16 +3,16 @@
 Turn a concept into a bounded, feasible feature spec.
 
 ## Preconditions
-- `spec/.context.md` must exist
+- `.mill/context.md` must exist
 - Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
 
 ## Rules
-- Read relevant concept in `spec/concepts/`
+- Read relevant concept in `.mill/concepts/`
 - If concept has open questions, stop and resolve
 - Define scope, constraints, success signals
 - If too large, split and stop
 
-## Output: `spec/features/<name>.md`
+## Output: `.mill/features/<name>.md`
 
 ```md
 # Feature: <title>

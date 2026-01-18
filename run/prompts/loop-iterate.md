@@ -10,8 +10,8 @@ Execute one iteration against the spec. Honor standards and Loop Contract.
 ## Workflow
 
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md). If neither exists and you need to create one: create `AGENTS.md` with content, and `CLAUDE.md` containing only `@AGENTS.md`
-2. Verify `spec/.context.md` exists (run warmup if not)
-3. Read `spec/standards/` and architecture docs
+2. Verify `.mill/context.md` exists (run warmup if not)
+3. Read `.mill/standards/` and architecture docs
 4. Verify Loop Contract present (stop if missing)
 5. Identify success criteria and verification commands
 
@@ -68,7 +68,7 @@ If push or PR creation fails, do NOT output `{{COMPLETION_TOKEN}}`. Instead, rep
 
 ## Memory
 
-Write to `spec/.memory/issue-{{ISSUE_NUMBER}}#iter-{{ITERATION}}.md` **only** if discovered:
+Write to `.mill/memory/issue-{{ISSUE_NUMBER}}#iter-{{ITERATION}}.md` **only** if discovered:
 - Constraint not in spec
 - Invalidated assumption
 - Required decomposition

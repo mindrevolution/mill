@@ -1,6 +1,6 @@
 # Warmup
 
-Build project context, write `spec/.context.md`, and generate `AGENTS.md` if missing.
+Build project context, write `.mill/context.md`, and generate `AGENTS.md` if missing.
 
 ## Progress Markers
 Emit each marker on its own line BEFORE starting that step:
@@ -21,10 +21,10 @@ Emit each marker on its own line BEFORE starting that step:
 2. `git ls-files`
 3. Detect monorepo (see below)
 4. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
-5. Read `README.md`, `spec/ROADMAP.md` if present
-6. Read `spec/standards/`, `spec/backend/`, `spec/frontend/`
+5. Read `README.md`, `.mill/ROADMAP.md` if present
+6. Read `.mill/standards/`, `.mill/backend/`, `.mill/frontend/`
 7. `git log -n 20 --oneline`
-8. Write `spec/.context.md`
+8. Write `.mill/context.md`
 9. If no `AGENTS.md` exists: generate it (see below)
 
 ## Monorepo Detection
@@ -32,7 +32,7 @@ Signs: multiple `package.json`/`.csproj`/`go.mod` files, `packages/`/`apps/`/`se
 
 If monorepo: identify each module, read its README/entry files, note inter-module dependencies.
 
-## Output: `spec/.context.md`
+## Output: `.mill/context.md`
 
 ```markdown
 <!-- mill-context-hash: {GIT_COMMIT_HASH} -->
@@ -100,7 +100,7 @@ If `AGENTS.md` does not exist, create it based on your analysis. This file provi
 Keep it concise and factual. Only include what you can infer from the codebase.
 
 ## Report
-Confirm `spec/.context.md` written. If `AGENTS.md` was created, confirm that too.
+Confirm `.mill/context.md` written. If `AGENTS.md` was created, confirm that too.
 
 ## Input
 {{USER_PROMPT}}

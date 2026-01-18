@@ -81,18 +81,18 @@ Present the spec and ask:
 
 ## Output
 
-Write the spec to: `spec/{type}/{slug}.md`
+Write the spec to: `.mill/{type}/{slug}.md`
 
 Example paths:
-- `spec/feature/user-invitations.md`
-- `spec/bug/login-button-mobile.md`
-- `spec/security/api-rate-limiting.md`
-- `spec/task/upgrade-node-20.md`
+- `.mill/feature/user-invitations.md`
+- `.mill/bug/login-button-mobile.md`
+- `.mill/security/api-rate-limiting.md`
+- `.mill/task/upgrade-node-20.md`
 
 ## Completion
 
 When the spec is written and confirmed:
-> "Spec created: `spec/{type}/{slug}.md`
+> "Spec created: `.mill/{type}/{slug}.md`
 >
 > Next steps:
 > - Review the Loop Contract

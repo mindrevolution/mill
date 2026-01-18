@@ -8,7 +8,7 @@ Create a concise, actionable GitHub issue that is ready for a Ralph loop. This i
 
 ## Important Rules
 - No code creation, no code editing, no file modifications of any kind.
-- Ground content in the repository and `spec/` structure.
+- Ground content in the repository and `.mill/` structure.
 - Keep it compact and implementable by another engineer.
 
 ## Analysis Workflow
@@ -16,7 +16,7 @@ Create a concise, actionable GitHub issue that is ready for a Ralph loop. This i
    - Run `git ls-files` to understand the layout.
 2. Read
    - Inspect `README.md`.
-   - Inspect relevant files under `spec/standards/`, `spec/backend/`, and `spec/frontend/`.
+   - Inspect relevant files under `.mill/standards/`, `.mill/backend/`, and `.mill/frontend/`.
    - Read the provided issue (URL or `#123`) via `gh issue view`.
 3. Clarify
    - Ask targeted questions until the outcome and acceptance criteria are clear.

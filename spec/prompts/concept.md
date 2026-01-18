@@ -7,14 +7,14 @@ Develop a concept for SaaS, mobile, or software platforms from USER_PROMPT.
 
 ## Rules
 - Determine: new product, new product area, or feature in existing product
-- For features: ensure `spec/.context.md` exists (run warmup if not)
+- For features: ensure `.mill/context.md` exists (run warmup if not)
 - Guide with structured questions to expand concept
 - Avoid technical implementation details
 - Gather user details first, suggest only after direction is clear
 - If USER_PROMPT is `#<number>`, fetch issue via `gh issue view <number> --json body,title`
 
 ## Output
-Save to `spec/concepts/<shortname>.md` (append `#<number>` if from issue).
+Save to `.mill/concepts/<shortname>.md` (append `#<number>` if from issue).
 
 ```md
 # Concept: <title><#ISSUE if applicable>

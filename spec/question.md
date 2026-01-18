@@ -8,7 +8,7 @@ Answer the user's question by examining the repository structure, specs, and sta
 
 ## Important Rules
 - No code creation, no code editing, no file modifications of any kind.
-- Ground responses in what exists in the repository and `spec/` structure.
+- Ground responses in what exists in the repository and `.mill/` structure.
 - If the question implies changes, describe conceptually what would be needed, never implement.
 
 ## Analysis Workflow
@@ -16,7 +16,7 @@ Answer the user's question by examining the repository structure, specs, and sta
    - Run `git ls-files` to understand the layout.
 2. Read
    - Inspect `README.md`.
-   - Inspect `spec/standards/` and any relevant docs under `spec/backend/` or `spec/frontend/`.
+   - Inspect `.mill/standards/` and any relevant docs under `.mill/backend/` or `.mill/frontend/`.
 3. Map to Question
    - Identify files/modules that relate to the question.
    - Explain how they connect to the topic.

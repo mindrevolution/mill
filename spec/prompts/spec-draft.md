@@ -2,17 +2,17 @@
 
 Transform user intent into a complete, loop-ready specification.
 
-**CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`spec/drafts/`) as defined below.
+**CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/drafts/`) as defined below.
 
 ## Context
-Pre-loaded: `spec/.context.md`, `spec/standards/*.md`, `spec/.memory/project.md`, uncommitted changes.
+Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, uncommitted changes.
 
 **Resume Mode:** If `# Resume Mode` section exists, continue from that draft.
 **New Session:** User's first message IS their intent. Proceed directly — don't ask "what would you like to build?"
 
 ## Draft Persistence
 
-Save to `spec/drafts/{slug}.md` after EACH field captured.
+Save to `.mill/drafts/{slug}.md` after EACH field captured.
 
 ```yaml
 ---
@@ -39,7 +39,7 @@ fields_pending: [acceptance_criteria, scope, verification]
 
 ### 1. Understand Context
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
-2. Check `spec/drafts/*.md` for similar work — offer to continue if found
+2. Check `.mill/drafts/*.md` for similar work — offer to continue if found
 3. Search codebase for relevant files
 4. Read key files
 5. Summarize findings (2-3 lines)
@@ -146,19 +146,19 @@ GitHub is source of truth. No local spec files.
    ```
    created: #{number}
 
-   mill loop #{number}
+   mill run #{number}
 
    /exit
    ```
 4. END SESSION. No follow-ups.
 
-Fallback: if `gh` fails, write to `spec/{type}/{slug}.md`.
+Fallback: if `gh` fails, write to `.mill/{type}/{slug}.md`.
 
 ## Rules
 1. Detective mindset — dig layer by layer
 2. One question at a time
 3. Offer 2-4 options + "or just type"
-4. Save draft after EVERY answer — to `spec/drafts/`, NOT `/plan` or any other location
+4. Save draft after EVERY answer — to `.mill/drafts/`, NOT `/plan` or any other location
 5. No placeholders
 6. Security always wins classification
 7. Force decisions — no "it depends"

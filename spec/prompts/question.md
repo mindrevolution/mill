@@ -6,12 +6,12 @@ Answer user's question by examining repo structure, specs, and standards. No cod
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
 2. `git ls-files` — understand layout
 3. Read `README.md`
-4. Read `spec/standards/`, `spec/backend/`, `spec/frontend/`
+4. Read `.mill/standards/`, `.mill/backend/`, `.mill/frontend/`
 5. Map question to specific files/modules
 
 ## Rules
 - No code creation or editing
-- Ground responses in repo and `spec/`
+- Ground responses in repo and `.mill/`
 - If question implies changes, describe conceptually — never implement
 
 ## Response

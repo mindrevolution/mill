@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-description: Develop a product or feature concept and store it under spec/concepts/.
+description: Develop a product or feature concept and store it under .mill/concepts/.
 argument-hint: [initial idea prompt]
 model: claude-opus-4-5
 ---
@@ -21,12 +21,12 @@ Use USER_PROMPT as the starting point to develop a concept for SaaS, mobile, or 
 - Do not propose improvements early; gather user details first.
 - After several rounds, summarize the concept.
 - Introduce sparse, optional suggestions only after the user's direction is clear.
-- Save the final concept to `spec/concepts/<concept_shortname>.md`.
+- Save the final concept to `.mill/concepts/<concept_shortname>.md`.
 - If GITHUB_ISSUE_NUMBER is provided, append `#<number>` to the filename.
 
 ## Variables
 USER_PROMPT: $1
-CONCEPTS_DIRECTORY: "./spec/concepts/"
+CONCEPTS_DIRECTORY: "./.mill/concepts/"
 GITHUB_ISSUE_NUMBER: [issue number if extracted]
 
 ## Instructions
