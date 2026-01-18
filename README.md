@@ -1,6 +1,6 @@
 # MILL
 
-**Model-Driven · Iterative · Limit · Loop**
+**Turning intent into verified deliverables, continuously.**
 
 MILL turns conversations into specifications, then executes them in bounded loops until verification passes — not until the AI thinks it's done.
 

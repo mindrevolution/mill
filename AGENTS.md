@@ -1,6 +1,6 @@
 # MILL
 
-Model-Driven · Iterative · Limit · Loop
+Turning intent into verified deliverables, continuously.
 
 ## Overview
 
@@ -17,7 +17,7 @@ mill/
 │   └── Program.cs
 ├── bin/                    # Published binary
 │   └── mill
-├── model/                  # Model creation (the M in MILL)
+├── model/                  # Spec creation
 │   ├── prompts/
 │   │   ├── context-warmup.md   # Generates spec/.context.md
 │   │   └── spec-draft.md        # Interactive spec elicitation
@@ -26,7 +26,7 @@ mill/
 │       ├── bug.md
 │       ├── security.md
 │       └── task.md
-├── loop/                   # Iterative Limit Loop (the ILL in MILL)
+├── loop/                   # Iterative execution
 │   └── prompts/
 │       └── loop-iterate.md     # Single iteration prompt
 └── README.md
