@@ -104,5 +104,4 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 
 ---
 
-*Created: {{DATE}}*
-*Source: Chat elicitation*
+*Built from intent with MILL*

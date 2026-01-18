@@ -107,5 +107,4 @@ Then: {{should NOT exhibit bug behavior}}
 
 ---
 
-*Created: {{DATE}}*
-*Source: Chat elicitation*
+*Built from intent with MILL*

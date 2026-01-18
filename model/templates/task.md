@@ -102,5 +102,4 @@ High | Medium | Low
 
 ---
 
-*Created: {{DATE}}*
-*Source: Chat elicitation*
+*Built from intent with MILL*

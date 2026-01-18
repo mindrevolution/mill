@@ -183,6 +183,4 @@ Expected: {{attack fails, appropriate response}}
 
 ---
 
-*Created: {{DATE}}*
-*Source: Chat elicitation*
-*Reviewed by: {{security reviewer if applicable}}*
+*Built from intent with MILL*
