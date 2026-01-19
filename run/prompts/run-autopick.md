@@ -4,7 +4,7 @@ Select the highest-value issue based on project health and priorities.
 
 ## Inputs
 
-- `{{LABEL_MAP}}` — Contents of `.mill/label-map.yaml` (or empty if not exists)
+- `{{CONFIG}}` — MILL configuration JSON (`.mill/config.json`)
 - `{{OPEN_ISSUES}}` — Open issues JSON
 
 ## Workflow
@@ -32,44 +32,44 @@ gh issue list --state open --label blocked --json number,title
 
 | Condition | Status | Action |
 |-----------|--------|--------|
-| WIP > 2 | **WARN** | "N issues in-progress — consider finishing first" |
+| WIP > `config.health.maxWip` | **WARN** | "N issues in-progress — consider finishing first" |
 | Blocked > 0 | **WARN** | "N issues blocked — may need attention" |
 
-If **BLOCK**: stop, report reason, output `BLOCKED`. Do not pick.
+If **BLOCK** and `config.health.blockOnCiFailure` is true: stop, report reason, output `BLOCKED`.
 If **WARN**: display warnings, continue.
 
 ### 2. Score Candidates
 
-Exclude issues with labels: `in-progress`, `blocked`, `ready-for-review`, or any in `{{LABEL_MAP}}.exclude`.
+Exclude issues with labels: `in-progress`, `blocked`, `ready-for-review`, or any in `config.exclude`.
 
 For each remaining issue:
 
-#### a) Type Score (100-400)
+#### a) Type Score
 
-Detect from labels (using `{{LABEL_MAP}}.type_mapping`) or infer from title/body:
+Use scores from `config.scoring.types` or infer from title/body:
 
-| Type | Score | Signals |
-|------|-------|---------|
+| Type | Default Score | Signals |
+|------|---------------|---------|
 | security | 400 | vulnerability, CVE, auth bypass, injection, XSS |
 | bug | 300 | broken, error, crash, fails, doesn't work |
 | feature | 200 | add, new, implement, create, support |
 | task | 100 | refactor, update, migrate, cleanup, docs |
 
-#### b) Impact Score (0-100)
+#### b) Impact Score
 
-From labels (using `{{LABEL_MAP}}.impact_mapping`) or infer:
+Use scores from `config.scoring.impact` or infer:
 
-| Impact | Score | Signals |
-|--------|-------|---------|
+| Impact | Default Score | Signals |
+|--------|---------------|---------|
 | critical | 100 | blocks release, data loss, security, production down |
 | high | 75 | significant user impact, key workflow broken |
 | normal | 50 | standard priority, unlabeled |
 | low | 0 | nice-to-have, cosmetic, minor |
 
-#### c) Age Score (0-50)
+#### c) Age Score
 
 ```
-age_score = min(50, days_since_created × 0.5)
+age_score = min(config.scoring.ageMax, days_since_created × config.scoring.ageFactor)
 ```
 
 Older issues gradually bubble up.
@@ -85,8 +85,6 @@ Estimate from issue body:
 | 5+ criteria, multiple components | 3 | -30 |
 | Architectural, cross-cutting | 4 | -40 |
 | Major refactor, unknown scope | 5 | -50 |
-
-Also check `{{LABEL_MAP}}.complexity_mapping` for size labels.
 
 #### e) Blocker Bonus (+30)
 
@@ -170,12 +168,6 @@ blocked:
   #29 — "needs design review"
 ```
 Output: `FULL`
-
-**No label map:**
-Proceed without it. Infer types from issue content. Note:
-```
-  ! no label map — run `mill init` to improve detection
-```
 
 ## Output Tokens
 

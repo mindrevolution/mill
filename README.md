@@ -92,7 +92,7 @@ mill run #42                  # runs in isolated worktree, cleans up after
 
 | Command | Purpose |
 |---------|---------|
-| `mill init` | Initialize repo (labels, directories, AGENTS.md, label-map, context) |
+| `mill init` | Initialize repo (labels, directories, config, AGENTS.md, context) |
 | `mill spec` | Interactive spec creation → GitHub issue |
 | `mill run` | List available issues (sorted by impact) |
 | `mill run --auto` | Autopick: health check, score candidates, recommend best issue |
@@ -126,8 +126,8 @@ On success, creates PR with `Fixes #N` (use branch protection for review require
 AGENTS.md            # Project instructions (cross-tool standard)
 CLAUDE.md            # Shim (@AGENTS.md) for Claude Code
 .mill/
+├── config.json      # Project configuration (scoring, excludes)
 ├── context.md       # Auto-generated project context
-├── label-map.yaml   # Label mappings for autopick scoring
 ├── memory/          # Machine-generated learnings
 ├── drafts/          # In-progress specs
 ├── standards/       # Human-authored rules

@@ -20,8 +20,7 @@ mill/
 ├── spec/                   # Spec creation (prompts + templates)
 │   ├── prompts/
 │   │   ├── context-warmup.md   # Generates .mill/context.md
-│   │   ├── spec-draft.md       # Interactive spec elicitation
-│   │   └── labelmap-generate.md # Generate .mill/label-map.yaml
+│   │   └── spec-draft.md       # Interactive spec elicitation
 │   └── templates/              # Spec output templates
 │       ├── feature.md
 │       ├── bug.md
@@ -34,8 +33,8 @@ mill/
 └── README.md
 
 .mill/                      # Target repo's MILL folder
+├── config.json             # Project configuration (scoring, excludes)
 ├── context.md              # Auto-generated project context
-├── label-map.yaml          # Label mappings for autopick scoring
 ├── memory/                 # Machine-generated learnings
 │   └── project.md
 ├── drafts/                 # In-progress specs (local, resumable)
@@ -54,7 +53,6 @@ Format: `[subject]-[verb].md`
 |------|---------|------|---------|
 | `context-warmup.md` | context | warmup | Build project context |
 | `spec-draft.md` | spec | draft | Interactive spec elicitation with persistence |
-| `labelmap-generate.md` | labelmap | generate | Map repo labels for autopick |
 | `loop-iterate.md` | loop | iterate | Execute one iteration |
 | `run-autopick.md` | run | autopick | Intelligent issue selection |
 
