@@ -89,10 +89,10 @@ High | Medium | Low
 ## Loop Contract
 
 - **Success Criteria:** All acceptance criteria met; no regressions; verification passes
+- **Test Command:** `{{test runner command}}` — must pass before PR
+- **Verification Commands:** {{additional checks}}
 - **Completion Promise:** `MILL_DONE`
-- **Verification Commands:** {{list commands}}
 - **Stop Conditions:** {{max iterations}} iterations
-- **Rollback Strategy:** {{how to revert if needed}}
 
 ---
 

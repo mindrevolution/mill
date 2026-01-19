@@ -72,12 +72,13 @@ Every spec includes a contract that defines "done":
 ```markdown
 ## Loop Contract
 - Success Criteria: <machine-checkable>
+- Test Command: <required — must pass before PR>
+- Verification Commands: <additional checks>
 - Completion Promise: MILL_DONE
-- Verification Commands: <commands>
 - Stop Conditions: <max iterations>
 ```
 
-The contract decides completion, not the agent.
+The contract decides completion, not the agent. **No PR without passing tests.**
 
 ## Quick Start
 

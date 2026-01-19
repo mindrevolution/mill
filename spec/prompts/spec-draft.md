@@ -86,6 +86,7 @@ One question at a time. Layer by layer:
 | User story | Environment | Attack vector | Scope |
 | Acceptance | Regression test | Mitigation | Acceptance |
 | Scope | Verification | Verification | Guardrails |
+| Test command | Test command | Test command | Test command |
 
 Reject vague criteria:
 - "faster" → "< Xms"
@@ -101,10 +102,13 @@ Use template from `model/templates/{type}.md`. Fill ALL fields.
 ```
 [ ] success criteria testable
 [ ] each criterion verifiable
+[ ] test command specified (or explicit "none: <reason>")
 [ ] verification commands runnable
 [ ] scope clear (in/out)
 [ ] no placeholders
 ```
+
+**Test Command is required.** Ask: "What command runs the tests?" Common: `npm test`, `dotnet test`, `pytest`, `go test ./...`. If no tests exist, require explicit reason.
 
 If any fail, elicit missing info.
 

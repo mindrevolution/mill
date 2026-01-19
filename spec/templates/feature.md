@@ -91,10 +91,10 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 ## Loop Contract
 
 - **Success Criteria:** All acceptance criteria pass; all verification commands succeed
+- **Test Command:** `{{test runner command}}` — must pass before PR
+- **Verification Commands:** {{additional checks}}
 - **Completion Promise:** `MILL_DONE`
-- **Verification Commands:** {{list commands}}
-- **Stop Conditions:** {{max iterations}} iterations or {{time limit}}
-- **Rollback Strategy:** {{how to revert if needed}}
+- **Stop Conditions:** {{max iterations}} iterations
 
 ---
 

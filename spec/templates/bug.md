@@ -94,10 +94,10 @@ Then: {{should NOT exhibit bug behavior}}
 ## Loop Contract
 
 - **Success Criteria:** Bug no longer reproducible; regression test passes; all existing tests pass
+- **Test Command:** `{{test runner command}}` — must pass before PR
+- **Verification Commands:** {{additional checks}}
 - **Completion Promise:** `MILL_DONE`
-- **Verification Commands:** {{test commands}}
 - **Stop Conditions:** {{max iterations}} iterations
-- **Rollback Strategy:** Revert commit if fix introduces new issues
 
 ---
 

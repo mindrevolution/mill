@@ -28,7 +28,9 @@ Trivial issues: one line. Complex work: be explicit.
 - Check: slice complete? Note deferrals.
 
 ### Verify
-- Run validation commands
+- Run the **Test Command** from the Loop Contract — tests must pass
+- Run additional verification commands
+- If tests fail → fix and retry (do NOT proceed to PR)
 - If all criteria met → output `{{COMPLETION_TOKEN}}`
 - If not → output progress report + next intent
 

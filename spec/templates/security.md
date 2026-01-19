@@ -169,10 +169,10 @@ Expected: {{attack fails, appropriate response}}
 ## Loop Contract
 
 - **Success Criteria:** Attack vector closed; security test passes; no regressions
-- **Completion Promise:** `MILL_DONE`
+- **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{security test commands}}
+- **Completion Promise:** `MILL_DONE`
 - **Stop Conditions:** {{max iterations}} iterations
-- **Rollback Strategy:** Revert and escalate if fix incomplete
 - **Escalation:** Immediately if Critical/High and blocked
 
 ---
