@@ -20,7 +20,8 @@ mill/
 ├── spec/                   # Spec creation (prompts + templates)
 │   ├── prompts/
 │   │   ├── context-warmup.md   # Generates .mill/context.md
-│   │   └── spec-draft.md       # Interactive spec elicitation
+│   │   ├── spec-draft.md       # Interactive spec elicitation
+│   │   └── labelmap-generate.md # Generate .mill/label-map.yaml
 │   └── templates/              # Spec output templates
 │       ├── feature.md
 │       ├── bug.md
@@ -28,11 +29,13 @@ mill/
 │       └── task.md
 ├── run/                    # Iterative execution
 │   └── prompts/
-│       └── loop-iterate.md     # Single iteration prompt
+│       ├── loop-iterate.md     # Single iteration prompt
+│       └── run-autopick.md     # Intelligent issue selection
 └── README.md
 
 .mill/                      # Target repo's MILL folder
 ├── context.md              # Auto-generated project context
+├── label-map.yaml          # Label mappings for autopick scoring
 ├── memory/                 # Machine-generated learnings
 │   └── project.md
 ├── drafts/                 # In-progress specs (local, resumable)
@@ -51,7 +54,9 @@ Format: `[subject]-[verb].md`
 |------|---------|------|---------|
 | `context-warmup.md` | context | warmup | Build project context |
 | `spec-draft.md` | spec | draft | Interactive spec elicitation with persistence |
+| `labelmap-generate.md` | labelmap | generate | Map repo labels for autopick |
 | `loop-iterate.md` | loop | iterate | Execute one iteration |
+| `run-autopick.md` | run | autopick | Intelligent issue selection |
 
 Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
 
@@ -61,9 +66,13 @@ Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
 # spec creation (interactive) → creates GitHub issue
 mill spec
 
-# work loop (in worktree) → runs against issue
-git worktree add .mill-sandbox HEAD
-cd .mill-sandbox
+# list available issues
+mill run
+
+# autopick best issue (option 0)
+mill run --auto
+
+# work specific issue
 mill run #42
 ```
 
@@ -82,8 +91,11 @@ mill run #42
 flowchart TD
     A[User Intent] --> B["mill spec<br>(classify, elicit, generate)"]
     B --> C["GitHub Issue #N"]
-    C --> D["mill run #N<br>(iterate until verified)"]
-    D --> E[MILL_DONE + memory]
+    C --> D{"mill run"}
+    D -->|"#N"| E["mill run #N<br>(iterate until verified)"]
+    D -->|"autopick"| F["score & select<br>(health, priority, theme)"]
+    F --> E
+    E --> G[MILL_DONE + memory]
 ```
 
 ## Requirements
