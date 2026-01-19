@@ -45,9 +45,33 @@ static class Out
 
 static partial class Mill
 {
-    const string ContextFile = ".mill/context.md";
-    const string DraftsDir = ".mill/drafts";
-    const string ConfigFile = ".mill/config.json";
+    // Parent git root - cached at startup, never changes (used for config, standards, drafts)
+    static string? _parentGitRoot;
+    static string ParentGitRoot => _parentGitRoot ??= ResolveGitRoot();
+
+    // Current git root - dynamic, can change when cd'ing to worktree (used for context, memory)
+    static string CurrentGitRoot => ResolveGitRoot();
+
+    static string ResolveGitRoot()
+    {
+        var (exit, output, _) = Git("rev-parse", "--show-toplevel");
+        return exit == 0 ? output.Trim() : Directory.GetCurrentDirectory();
+    }
+
+    // Parent .mill/ paths - project-level, inherited by worktrees
+    static string ParentMillDir => Path.Combine(ParentGitRoot, ".mill");
+    static string ConfigFile => Path.Combine(ParentMillDir, "config.json");
+    static string StandardsDir => Path.Combine(ParentMillDir, "standards");
+    static string DraftsDir => Path.Combine(ParentMillDir, "drafts");
+
+    // Current .mill/ paths - can be worktree-local
+    static string CurrentMillDir => Path.Combine(CurrentGitRoot, ".mill");
+    static string ContextFile => Path.Combine(CurrentMillDir, "context.md");
+    static string MemoryDir => Path.Combine(CurrentMillDir, "memory");
+
+    // Convenience - for init and other parent-only operations
+    static string GitRoot => ParentGitRoot;
+    static string MillDir => ParentMillDir;
 
     static readonly string[] RequiredLabels =
     [
@@ -141,10 +165,10 @@ static partial class Mill
 
         // Create directories
         Out.Step("creating directories...");
-        Directory.CreateDirectory(".mill");
-        Directory.CreateDirectory(".mill/drafts");
-        Directory.CreateDirectory(".mill/standards");
-        Directory.CreateDirectory(".mill/memory");
+        Directory.CreateDirectory(MillDir);
+        Directory.CreateDirectory(DraftsDir);
+        Directory.CreateDirectory(StandardsDir);
+        Directory.CreateDirectory(MemoryDir);
         Out.Ok(".mill/ structure");
 
         // Create default config if not exists
@@ -161,10 +185,11 @@ static partial class Mill
 
         // Add .mill/work/ to gitignore (worktrees shouldn't be committed)
         Out.Step("updating .gitignore...");
-        var gitignore = File.Exists(".gitignore") ? File.ReadAllText(".gitignore") : "";
+        var gitignorePath = Path.Combine(GitRoot, ".gitignore");
+        var gitignore = File.Exists(gitignorePath) ? File.ReadAllText(gitignorePath) : "";
         if (!gitignore.Contains(".mill/work/"))
         {
-            File.AppendAllText(".gitignore", "\n# MILL worktrees\n.mill/work/\n");
+            File.AppendAllText(gitignorePath, "\n# MILL worktrees\n.mill/work/\n");
             Out.Ok(".mill/work/ added to .gitignore");
         }
         else
@@ -194,9 +219,11 @@ static partial class Mill
         }
 
         // Create CLAUDE.md shim if AGENTS.md exists but CLAUDE.md doesn't
-        if (File.Exists("AGENTS.md") && !File.Exists("CLAUDE.md"))
+        var agentsMd = Path.Combine(GitRoot, "AGENTS.md");
+        var claudeMd = Path.Combine(GitRoot, "CLAUDE.md");
+        if (File.Exists(agentsMd) && !File.Exists(claudeMd))
         {
-            await File.WriteAllTextAsync("CLAUDE.md", "@AGENTS.md\n");
+            await File.WriteAllTextAsync(claudeMd, "@AGENTS.md\n");
             Out.Ok("CLAUDE.md shim created");
         }
 
@@ -435,13 +462,14 @@ static partial class Mill
 
         // Create isolated worktree for execution
         var worktreeName = isGhIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(issue)}";
-        var worktreePath = Path.Combine(".mill/work", worktreeName);
+        var workDir = Path.Combine(MillDir, "work");
+        var worktreePath = Path.Combine(workDir, worktreeName);
         var originalDir = Directory.GetCurrentDirectory();
 
         Out.Step($"creating worktree {worktreePath}...");
 
         // Ensure .mill/work directory exists
-        Directory.CreateDirectory(".mill/work");
+        Directory.CreateDirectory(workDir);
 
         // Remove existing worktree if present (from crashed run)
         if (Directory.Exists(worktreePath))
@@ -469,13 +497,16 @@ static partial class Mill
             // Change to worktree directory
             Directory.SetCurrentDirectory(Path.Combine(originalDir, worktreePath));
 
-            // Ensure context exists in worktree
+            // Ensure context exists in worktree (uses CurrentMillDir which resolves to worktree)
             var (needsWarmup, reason) = CheckContextStaleness();
             if (needsWarmup)
             {
                 Out.Warn(reason.ToLower());
                 Out.Step("building context...");
                 Out.Blank();
+
+                // Ensure worktree's .mill directory exists (may not if .mill/ wasn't committed)
+                Directory.CreateDirectory(CurrentMillDir);
 
                 var warmupPrompt = Path.Combine(FindMillHome(), "spec/prompts/context-warmup.md");
                 var warmupExit = await RunClaudeStreaming(warmupPrompt);
@@ -908,19 +939,20 @@ static partial class Mill
             prompt.AppendLine(File.ReadAllText(ContextFile));
         }
 
-        if (Directory.Exists(".mill/standards"))
+        if (Directory.Exists(StandardsDir))
         {
-            foreach (var file in Directory.GetFiles(".mill/standards", "*.md"))
+            foreach (var file in Directory.GetFiles(StandardsDir, "*.md"))
             {
-                prompt.AppendLine($"\n## {file}\n");
+                prompt.AppendLine($"\n## {Path.GetRelativePath(GitRoot, file)}\n");
                 prompt.AppendLine(File.ReadAllText(file));
             }
         }
 
-        if (File.Exists(".mill/memory/project.md"))
+        var projectMemory = Path.Combine(MemoryDir, "project.md");
+        if (File.Exists(projectMemory))
         {
             prompt.AppendLine("\n## .mill/memory/project.md\n");
-            prompt.AppendLine(File.ReadAllText(".mill/memory/project.md"));
+            prompt.AppendLine(File.ReadAllText(projectMemory));
         }
 
         // Add uncommitted changes

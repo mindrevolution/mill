@@ -145,7 +145,7 @@ CLAUDE.md            # Shim (@AGENTS.md) for Claude Code
 └── work/            # Worktrees (gitignored, ephemeral)
 ```
 
-**Context is per-worktree:** Each `mill run` builds fresh context matching the worktree's code state. This is intentional — reusing context from the parent repo could mislead execution when commits differ.
+**Worktree inheritance:** Config and standards are read from the parent repo (project-level). Context and memory are per-worktree (isolated). Context is only rebuilt if stale or missing.
 
 Completed specs live in GitHub Issues (single source of truth).
 

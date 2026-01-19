@@ -112,7 +112,7 @@ flowchart TD
 2. **Contracts over conversation** — No "done" without verification
 3. **Limits are mandatory** — Bounded work prevents runaway loops
 4. **Learning is explicit** — Memory improves the model, not the agent
-5. **Context per worktree** — Each loop builds fresh context for its worktree state; reusing parent context would risk stale guidance when code differs
+5. **Hybrid worktree inheritance** — Config and standards are shared from parent; context and memory are per-worktree (rebuilt only if stale)
 6. **Humans own the merge button** — PRs are coordination points (releases, support, dependencies), not just code review; automation stops at the gate
 
 ## Development Notes
