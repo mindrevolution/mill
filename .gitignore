@@ -21,3 +21,6 @@ CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 
 # Claude Code local settings
 .claude/
+
+# MILL worktrees
+.mill/work/
