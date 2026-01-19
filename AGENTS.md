@@ -93,7 +93,10 @@ flowchart TD
     D -->|"#N"| E["mill run #N<br>(iterate until verified)"]
     D -->|"autopick"| F["score & select<br>(health, priority, theme)"]
     F --> E
-    E --> G[MILL_DONE + memory]
+    E --> G[MILL_DONE → PR]
+    G --> H{Human reviews}
+    H -->|approve| I[Merge → Deploy]
+    H -->|request changes| E
 ```
 
 ## Requirements
@@ -110,6 +113,7 @@ flowchart TD
 3. **Limits are mandatory** — Bounded work prevents runaway loops
 4. **Learning is explicit** — Memory improves the model, not the agent
 5. **Context per worktree** — Each loop builds fresh context for its worktree state; reusing parent context would risk stale guidance when code differs
+6. **Humans own the merge button** — PRs are coordination points (releases, support, dependencies), not just code review; automation stops at the gate
 
 ## Development Notes
 

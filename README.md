@@ -55,6 +55,16 @@ flowchart LR
 
 **Current phase:** Human-driven spec creation and loop execution, with structured contracts that will enable future automation.
 
+## The Merge Gate
+
+Even at full autonomy, **humans own the merge button**.
+
+> A well-governed system preserves human ownership of the merge button while raising the baseline quality of every PR.
+
+Shipping affects the whole organization — support, marketing, customers. The merge decision is "is everyone ready?", not just "is the code ready?"
+
+MILL automates everything *up to* the merge. Humans control the flow.
+
 ## Loop Contract
 
 Every spec includes a contract that defines "done":
