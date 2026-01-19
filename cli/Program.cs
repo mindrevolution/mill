@@ -679,6 +679,29 @@ static partial class Mill
     }
 
     /// <summary>
+    /// Resolve CLI executable, handling Windows .cmd wrappers.
+    /// </summary>
+    static string ResolveCli()
+    {
+        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+
+        // On Windows, npm installs create .cmd wrappers
+        if (OperatingSystem.IsWindows() && !cli.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) && !cli.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            // Check if .cmd version exists in PATH
+            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(';') ?? [];
+            foreach (var dir in pathDirs)
+            {
+                var cmdPath = Path.Combine(dir, cli + ".cmd");
+                if (File.Exists(cmdPath))
+                    return cmdPath;
+            }
+        }
+
+        return cli;
+    }
+
+    /// <summary>
     /// Run Claude in streaming mode - output goes directly to console.
     /// Used for warmup where we want to see progress but don't need interactivity.
     /// </summary>
@@ -693,7 +716,7 @@ static partial class Mill
 
         var template = await File.ReadAllTextAsync(fullPath);
         var rendered = template.Replace("{{USER_PROMPT}}", "");
-        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+        var cli = ResolveCli();
 
         using var process = new Process
         {
@@ -729,7 +752,7 @@ static partial class Mill
             return 1;
         }
 
-        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+        var cli = ResolveCli();
 
         // Build prompt with pre-loaded context
         var prompt = new System.Text.StringBuilder();
@@ -825,7 +848,7 @@ static partial class Mill
     /// </summary>
     static async Task<string> RunClaudeBatch(string input)
     {
-        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+        var cli = ResolveCli();
         var output = new System.Text.StringBuilder();
 
         using var process = new Process
