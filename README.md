@@ -81,7 +81,10 @@ mill spec                     # → outputs: created: #42
 # 3. List available issues
 mill run
 
-# 4. Execute work loop
+# 4. Autopick best issue (checks health, scores by priority + theme)
+mill run --auto
+
+# 5. Or pick specific issue
 mill run #42                  # runs in isolated worktree, cleans up after
 ```
 
@@ -89,9 +92,10 @@ mill run #42                  # runs in isolated worktree, cleans up after
 
 | Command | Purpose |
 |---------|---------|
-| `mill init` | Initialize repo (labels, directories, AGENTS.md, context warmup) |
+| `mill init` | Initialize repo (labels, directories, AGENTS.md, label-map, context) |
 | `mill spec` | Interactive spec creation → GitHub issue |
 | `mill run` | List available issues (sorted by impact) |
+| `mill run --auto` | Autopick: health check, score candidates, recommend best issue |
 | `mill run #N` | Execute work loop on issue |
 
 **Guards:** Loop won't run if issue is closed, `in-progress`, `blocked`, or `ready-for-review`.
@@ -123,6 +127,7 @@ AGENTS.md            # Project instructions (cross-tool standard)
 CLAUDE.md            # Shim (@AGENTS.md) for Claude Code
 .mill/
 ├── context.md       # Auto-generated project context
+├── label-map.yaml   # Label mappings for autopick scoring
 ├── memory/          # Machine-generated learnings
 ├── drafts/          # In-progress specs
 ├── standards/       # Human-authored rules

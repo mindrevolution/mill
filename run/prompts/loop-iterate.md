@@ -40,17 +40,13 @@ Trivial issues: one line. Complex work: be explicit.
 
 ## GitHub ({{ISSUE_NUMBER}})
 
-**Labels:**
+**If blocked:**
 ```bash
-# Blocker:
 gh issue edit {{ISSUE_NUMBER}} --remove-label "in-progress" --add-label "blocked"
-
-# Complete:
-gh issue edit {{ISSUE_NUMBER}} --remove-label "in-progress,blocked" --add-label "ready-for-review"
 ```
 
-**Comments** — only for: completion, discovered constraints, blockers requiring input.
-Never for: routine progress, failed attempts, iteration noise.
+**Comments** — only for: blockers requiring input, discovered constraints.
+Never for: routine progress, failed attempts.
 
 **PR on completion (required for MILL_DONE):**
 ```bash
@@ -64,7 +60,7 @@ gh pr create --title "{{SPEC_REF}}: <description>" --body "Fixes {{SPEC_REF}}
 <results>"
 ```
 
-If push or PR creation fails, do NOT output `{{COMPLETION_TOKEN}}`. Instead, report the error and prompt the user for help.
+If push or PR creation fails, do NOT output `{{COMPLETION_TOKEN}}`. Report the error and prompt user for help.
 
 ## Memory
 

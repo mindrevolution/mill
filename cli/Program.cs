@@ -7,6 +7,8 @@ return args switch
 {
     ["init"] => await Mill.Init(),
     ["spec", ..] => await Mill.RunSpec(),
+    ["run", "--auto"] => await Mill.RunAutopick(),
+    ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
     ["run"] => Mill.ListAvailableIssues(),
     _ => ShowHelp()
@@ -21,6 +23,7 @@ static int ShowHelp()
           mill init               initialize repo for MILL
           mill spec               create specification → GitHub issue
           mill run                list available issues
+          mill run --auto         autopick best issue (health check + scoring)
           mill run #123           execute work loop on GitHub issue
         """);
     return 0;
@@ -44,6 +47,7 @@ static partial class Mill
 {
     const string ContextFile = ".mill/context.md";
     const string DraftsDir = ".mill/drafts";
+    const string LabelMapFile = ".mill/label-map.yaml";
 
     static readonly string[] RequiredLabels =
     [
@@ -140,6 +144,14 @@ static partial class Mill
         Directory.CreateDirectory(".mill/standards");
         Directory.CreateDirectory(".mill/memory");
         Out.Ok(".mill/ structure");
+
+        // Generate label map for autopick
+        Out.Step("generating label map...");
+        var labelMapResult = await GenerateLabelMap();
+        if (labelMapResult == 0)
+            Out.Ok("label map created");
+        else
+            Out.Warn("label map generation skipped (will use defaults)");
 
         // Add .mill/work/ to gitignore (worktrees shouldn't be committed)
         Out.Step("updating .gitignore...");
@@ -489,6 +501,15 @@ static partial class Mill
 
                 if (output.Contains(token))
                 {
+                    // Mark issue ready-for-review (CLI handles this reliably, not LLM)
+                    if (isGhIssue)
+                    {
+                        Out.Step("marking ready-for-review...");
+                        var (labelExit, _, labelErr) = Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
+                        if (labelExit != 0)
+                            Out.Warn($"failed to update label: {labelErr.Trim()}");
+                    }
+
                     Out.Blank();
                     Out.Ok(token);
                     result = 0;
@@ -586,9 +607,226 @@ static partial class Mill
 
         Out.Blank();
         Console.WriteLine("  mill run #<number>");
+        Console.WriteLine("  mill run --auto");
         Out.Blank();
 
         return 0;
+    }
+
+    public static async Task<int> RunAutopick()
+    {
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        Out.Blank();
+        Out.Step("checking health and scoring issues...");
+        Out.Blank();
+
+        // Gather inputs for the prompt
+        var labelMap = File.Exists(LabelMapFile) ? await File.ReadAllTextAsync(LabelMapFile) : "";
+
+        // Fetch open issues
+        var (issuesExit, issuesJson) = Gh("issue", "list", "--state", "open", "--json", "number,title,body,labels,createdAt", "--limit", "100");
+        if (issuesExit != 0)
+        {
+            Out.Error("failed to fetch issues");
+            return 1;
+        }
+
+        // Load and render the prompt
+        var promptPath = Path.Combine(FindMillHome(), "run/prompts/run-autopick.md");
+        if (!File.Exists(promptPath))
+        {
+            Out.Error($"autopick prompt not found: {promptPath}");
+            return 1;
+        }
+
+        var template = await File.ReadAllTextAsync(promptPath);
+        var rendered = template
+            .Replace("{{LABEL_MAP}}", labelMap)
+            .Replace("{{OPEN_ISSUES}}", issuesJson);
+
+        // Run Claude and capture output
+        var output = await RunClaudeBatch(rendered);
+
+        // Parse output for tokens
+        if (output.Contains("BLOCKED"))
+        {
+            Out.Blank();
+            Out.Warn("health check failed — resolve issues before picking new work");
+            return 1;
+        }
+
+        if (output.Contains("EMPTY"))
+        {
+            Out.Blank();
+            Out.Warn("no open issues — run: mill spec");
+            return 0;
+        }
+
+        if (output.Contains("FULL"))
+        {
+            Out.Blank();
+            Out.Warn("all issues have workflow labels — finish existing work first");
+            return 0;
+        }
+
+        if (output.Contains("SKIP"))
+        {
+            Out.Blank();
+            Out.Ok("skipped");
+            return 0;
+        }
+
+        // Look for PICK:#N pattern
+        var pickMatch = PickPattern().Match(output);
+        if (pickMatch.Success)
+        {
+            var issueNumber = pickMatch.Groups[1].Value;
+            Out.Blank();
+            Out.Ok($"selected: #{issueNumber}");
+            Out.Blank();
+
+            // Chain to Execute
+            return await Execute($"#{issueNumber}", [$"#{issueNumber}"]);
+        }
+
+        // No recognized token — assume user declined or something went wrong
+        Out.Blank();
+        Out.Warn("no issue selected");
+        return 0;
+    }
+
+    static async Task<int> GenerateLabelMap()
+    {
+        // Fetch existing labels
+        var (exitCode, labelsJson) = Gh("label", "list", "--json", "name,description,color", "--limit", "200");
+        if (exitCode != 0 || string.IsNullOrWhiteSpace(labelsJson) || labelsJson.Trim() == "[]")
+        {
+            // No labels or failed — create minimal default
+            var defaultMap = """
+                # Auto-generated by mill init — no custom labels detected
+
+                type_mapping:
+                  security: [security]
+                  bug: [bug]
+                  feature: [feature]
+                  task: [task]
+
+                impact_mapping:
+                  high: [impact:high]
+                  low: [impact:low]
+
+                complexity_mapping: {}
+                exclude: []
+                """;
+            await File.WriteAllTextAsync(LabelMapFile, defaultMap);
+            return 0;
+        }
+
+        // Load and render the prompt
+        var promptPath = Path.Combine(FindMillHome(), "spec/prompts/labelmap-generate.md");
+        if (!File.Exists(promptPath))
+        {
+            Out.Warn($"labelmap prompt not found: {promptPath}");
+            return 1;
+        }
+
+        var template = await File.ReadAllTextAsync(promptPath);
+        var rendered = template.Replace("{{LABELS_JSON}}", labelsJson);
+
+        // Run Claude to generate the map
+        var output = await RunClaudeSilent(rendered);
+
+        // Extract YAML from output (look for ```yaml blocks or just use raw output)
+        var yaml = ExtractYaml(output);
+        if (string.IsNullOrWhiteSpace(yaml))
+        {
+            Out.Warn("failed to generate label map");
+            return 1;
+        }
+
+        await File.WriteAllTextAsync(LabelMapFile, yaml);
+        return 0;
+    }
+
+    static string ExtractYaml(string output)
+    {
+        // Try to extract from ```yaml block
+        var yamlMatch = YamlBlockPattern().Match(output);
+        if (yamlMatch.Success)
+            return yamlMatch.Groups[1].Value.Trim();
+
+        // If output looks like YAML (starts with # or key:), use it directly
+        var trimmed = output.Trim();
+        if (trimmed.StartsWith('#') || trimmed.Contains("type_mapping:"))
+            return trimmed;
+
+        return "";
+    }
+
+    /// <summary>
+    /// Run Claude silently and return output (no streaming to console).
+    /// Used for generating label maps during init.
+    /// </summary>
+    static async Task<string> RunClaudeSilent(string input)
+    {
+        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
+        var output = new System.Text.StringBuilder();
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                Arguments = "-p --dangerously-skip-permissions --output-format stream-json",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.Start();
+        await process.StandardInput.WriteAsync(input);
+        process.StandardInput.Close();
+
+        // Parse streaming JSON and extract text content silently
+        while (!process.StandardOutput.EndOfStream)
+        {
+            var line = await process.StandardOutput.ReadLineAsync();
+            if (string.IsNullOrEmpty(line)) continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("type", out var msgType) && msgType.GetString() == "assistant" &&
+                    root.TryGetProperty("message", out var message) &&
+                    message.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in content.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var type) && type.GetString() == "text" &&
+                            item.TryGetProperty("text", out var text))
+                        {
+                            output.AppendLine(text.GetString() ?? "");
+                        }
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                output.AppendLine(line);
+            }
+        }
+
+        await process.WaitForExitAsync();
+        return output.ToString();
     }
 
     static int GetImpactTier(List<GhLabel> labels)
@@ -906,6 +1144,12 @@ static partial class Mill
 
     [GeneratedRegex(@"mill-context-hash:\s*([a-f0-9]+)")]
     private static partial Regex HashPattern();
+
+    [GeneratedRegex(@"PICK:#(\d+)")]
+    private static partial Regex PickPattern();
+
+    [GeneratedRegex(@"```yaml\s*([\s\S]*?)```", RegexOptions.Multiline)]
+    private static partial Regex YamlBlockPattern();
 }
 
 record GhIssue(
