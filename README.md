@@ -1,160 +1,87 @@
 # MILL
 
-**Turning intent into verified deliverables, continuously.**
+**Spec-first AI delivery.** MILL turns conversations into verified specs, then executes them in bounded loops until tests pass — not until the AI thinks it's done.
 
-MILL turns conversations into specifications, then executes them in bounded loops until verification passes — not until the AI thinks it's done.
-
-```
-Chat → Spec → Contract → Loop → Verify → Learn
-```
-
-## Core Idea
-
-The system doesn't "get smarter" implicitly. The **model gets better explicitly.**
-
-- Ambiguous intent → explicit, verifiable specification
-- Specification includes a **Loop Contract** with success criteria
-- Execution runs in bounded iterations until criteria pass
-- Verified learnings feed back into project memory
-
-**Key insight:** Keep work in a controlled loop until *objective criteria* are met.
-
-## Trajectory: Toward Autonomous Operation
-
-MILL is designed to evolve from human-driven to fully autonomous.
-
-```mermaid
-flowchart LR
-    subgraph Today
-        A[Human creates spec] --> B[Human triggers loop]
-    end
-
-    subgraph Tomorrow
-        C[MILL drafts specs] --> D[Human approves]
-        D --> E[MILL runs loops]
-    end
-
-    subgraph Future
-        F[Sources: meetings, tickets, monitoring] --> G[MILL generates specs]
-        G --> H[MILL prioritizes & executes]
-        H --> I[Human reviews PRs]
-    end
+```bash
+mill spec          # chat → spec → GitHub issue
+mill run #42       # loop until tests pass → PR
 ```
 
-**The end state:**
-- MILL ingests work from multiple sources (meeting notes, support tickets, monitoring alerts)
-- MILL drafts specifications autonomously
-- MILL prioritizes and executes without prompting
-- Humans shift from *operators* to *supervisors* — reviewing, approving, intervening when needed
+## How It Works
 
-**Why incremental:**
-- Each step validates assumptions before building the next
-- Human-in-the-loop today teaches MILL what good specs look like
-- Manual triggers today become automatic triggers tomorrow
-- The contracts and verification we build now are the foundation for trust in autonomous execution
+1. **Spec** — Interactive elicitation turns intent into a verifiable contract
+2. **Loop** — AI iterates until success criteria pass (max 20 iterations)
+3. **PR** — Only created after tests pass
 
-**Current phase:** Human-driven spec creation and loop execution, with structured contracts that will enable future automation.
-
-## The Merge Gate
-
-Even at full autonomy, **humans own the merge button**.
-
-> A well-governed system preserves human ownership of the merge button while raising the baseline quality of every PR.
-
-Shipping affects the whole organization — support, marketing, customers. The merge decision is "is everyone ready?", not just "is the code ready?"
-
-MILL automates everything *up to* the merge. Humans control the flow.
-
-## Loop Contract
-
-Every spec includes a contract that defines "done":
+Every spec includes a Loop Contract:
 
 ```markdown
 ## Loop Contract
 - Success Criteria: <machine-checkable>
-- Test Command: <required — must pass before PR>
-- Verification Commands: <additional checks>
-- Completion Promise: MILL_DONE
+- Test Command: <must pass before PR>
 - Stop Conditions: <max iterations>
 ```
 
-The contract decides completion, not the agent. **No PR without passing tests.**
+The contract decides completion, not the agent.
 
 ## Quick Start
 
 ```bash
-# 1. Initialize repo (once)
-mill init
-
-# 2. Create spec (interactive)
-mill spec                     # → outputs: created: #42
-
-# 3. List available issues
-mill run
-
-# 4. Autopick best issue (checks health, scores by priority + theme)
-mill run --auto
-
-# 5. Or pick specific issue
-mill run #42                  # runs in isolated worktree, cleans up after
+mill init              # setup repo (once)
+mill spec              # create spec → GitHub issue #N
+mill run               # list issues
+mill run --auto        # autopick best issue
+mill run #42           # execute loop
 ```
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `mill init` | Initialize repo (labels, directories, config, AGENTS.md, context) |
-| `mill spec` | Interactive spec creation → GitHub issue |
-| `mill run` | List available issues (sorted by impact) |
-| `mill run --auto` | Autopick: health check, score candidates, recommend best issue |
-| `mill run #N` | Execute work loop on issue |
+| `mill init` | Initialize repo (labels, config, context) |
+| `mill spec` | Interactive spec → GitHub issue |
+| `mill run` | List issues (sorted by impact) |
+| `mill run --auto` | Autopick and execute best issue |
+| `mill run #N` | Execute loop on specific issue |
 
-**Guards:** Loop won't run if issue is closed, `in-progress`, `blocked`, or `ready-for-review`.
+## Spec Types
 
-**Re-init:** Running `mill init` on an existing setup prompts for confirmation, then regenerates context.
-
-## Intent Types
-
-| Type | When | Verified by |
+| Type | When | Verified By |
 |------|------|-------------|
-| **Feature** | New capability | Acceptance criteria pass |
-| **Bug** | Broken behavior | Failing test passes |
-| **Security** | Risk/vulnerability | Threat mitigated |
-| **Task** | Technical work, no user change | Criteria pass, no regressions |
+| **Feature** | New capability | Acceptance criteria |
+| **Bug** | Broken behavior | Regression test |
+| **Security** | Vulnerability | Threat mitigated |
+| **Task** | Technical work | Criteria pass |
 
-## GitHub Integration
+## Trajectory
 
-**Labels** (created by `mill init`, managed automatically):
-- `in-progress` — loop is working
-- `blocked` — needs human input
-- `ready-for-review` — loop completed
-
-On success, creates PR with `Fixes #N` (use branch protection for review requirements).
-
-## Directory Structure
+Autonomy increases incrementally — each step validates before the next.
 
 ```
-AGENTS.md            # Project instructions (cross-tool standard)
-CLAUDE.md            # Shim (@AGENTS.md) for Claude Code
+Today:     Human creates spec → Human triggers loop
+Tomorrow:  MILL drafts specs → Human approves → MILL executes
+Future:    Multiple sources → MILL prioritizes → Human reviews PRs
+```
+
+Regardless of autonomy level, humans drive product direction — deciding *what* gets built and *when* it ships.
+
+## Structure
+
+```
 .mill/
-├── config.json      # Project configuration (scoring, excludes)
-├── context.md       # Auto-generated project context
-├── memory/          # Machine-generated learnings
-├── drafts/          # In-progress specs
-├── standards/       # Human-authored rules
-└── work/            # Worktrees (gitignored, ephemeral)
+├── config.json      # scoring, excludes
+├── context.md       # auto-generated
+├── memory/          # learnings
+├── drafts/          # in-progress specs
+└── standards/       # human rules
 ```
 
-**Worktree inheritance:** Config and standards are read from the parent repo (project-level). Context and memory are per-worktree (isolated). Context is only rebuilt if stale or missing.
-
-Completed specs live in GitHub Issues (single source of truth).
+Completed specs live in GitHub Issues.
 
 ## Requirements
 
-- Git repo + `gh` CLI (authenticated)
-
-**Optional env vars:** `MILL_CLI` (default: claude), `MILL_HOME`, `MILL_MAX_ITERATIONS` (default: 20)
+Git repo + `gh` CLI (authenticated)
 
 ## License
 
-[MIT](https://opensource.org/licenses/MIT) — use, modify, distribute freely. Keep the copyright notice.
+[MIT](https://opensource.org/licenses/MIT)
