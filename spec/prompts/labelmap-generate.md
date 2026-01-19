@@ -48,7 +48,7 @@ Labels that indicate issue should be skipped:
 
 | Exclude | Common Patterns |
 |---------|-----------------|
-| yes | wontfix, duplicate, invalid, question, discussion, on-hold, stale, spam |
+| yes | wontfix, duplicate, invalid, question, discussion, backlog, deferred, on-hold, icebox, later, stale, spam |
 
 ### 3. Generate YAML
 
@@ -94,6 +94,9 @@ exclude:
   - duplicate
   - invalid
   - question
+  - backlog
+  - deferred
+  - on-hold
 ```
 
 ### 4. Handle Edge Cases
@@ -114,7 +117,7 @@ impact_mapping:
   low: [impact:low]
 
 complexity_mapping: {}
-exclude: []
+exclude: [backlog, deferred, on-hold]
 ```
 
 **Ambiguous labels:**

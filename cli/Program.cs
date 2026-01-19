@@ -55,6 +55,7 @@ static partial class Mill
         "in-progress",
         "blocked",
         "ready-for-review",
+        "backlog",
         // Intent type labels
         "feature",
         "bug",
@@ -125,6 +126,7 @@ static partial class Mill
                     "in-progress" => "FFA500",
                     "blocked" => "D93F0B",
                     "ready-for-review" => "0E8A16",
+                    "backlog" => "C5DEF5",
                     "enhancement" => "A2EEEF",
                     "bug" => "D73A4A",
                     "security" => "EE0701",
@@ -565,8 +567,8 @@ static partial class Mill
 
         var issues = JsonSerializer.Deserialize(output, GhJsonContext.Default.ListGhIssue) ?? [];
 
-        // Filter out in-progress, blocked, ready-for-review
-        var excludeLabels = new[] { "in-progress", "blocked", "ready-for-review" };
+        // Filter out workflow labels and deferred issues
+        var excludeLabels = new[] { "in-progress", "blocked", "ready-for-review", "backlog", "deferred", "on-hold" };
         var available = issues
             .Where(i => !i.Labels.Any(l => excludeLabels.Contains(l.Name, StringComparer.OrdinalIgnoreCase)))
             .ToList();
@@ -601,7 +603,7 @@ static partial class Mill
         if (remaining > 0)
         {
             Out.Blank();
-            var filterQuery = Uri.EscapeDataString("is:open -label:in-progress -label:blocked -label:ready-for-review");
+            var filterQuery = Uri.EscapeDataString("is:open -label:in-progress -label:blocked -label:ready-for-review -label:backlog -label:deferred -label:on-hold");
             Console.WriteLine($"  +{remaining} more: {repoUrl.Trim()}/issues?q={filterQuery}");
         }
 
@@ -721,7 +723,7 @@ static partial class Mill
                   low: [impact:low]
 
                 complexity_mapping: {}
-                exclude: []
+                exclude: [backlog, deferred, on-hold]
                 """;
             await File.WriteAllTextAsync(LabelMapFile, defaultMap);
             return 0;
