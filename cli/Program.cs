@@ -483,7 +483,9 @@ static partial class Mill
         }
 
         var maxIterations = int.TryParse(Environment.GetEnvironmentVariable("MILL_MAX_ITERATIONS"), out var n) ? n : 20;
-        const string token = "MILL_DONE";
+        const string verifyToken = "MILL_VERIFY";
+        const string doneToken = "MILL_DONE";
+        const string failedToken = "VERIFY_FAILED";
 
         // Check if issue is a GitHub issue number (#123 or 123)
         var issueNumber = issue.TrimStart('#');
@@ -553,11 +555,18 @@ static partial class Mill
             specRef = issue;
         }
 
-        // Validate iteration prompt exists before starting
+        // Validate prompts exist before starting
         var iterationPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-iterate.md");
+        var verifyPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-verify.md");
         if (!File.Exists(iterationPrompt))
         {
             Out.Error($"iteration prompt not found: {iterationPrompt}");
+            Out.Detail("check MILL_HOME environment variable or installation");
+            return 1;
+        }
+        if (!File.Exists(verifyPrompt))
+        {
+            Out.Error($"verify prompt not found: {verifyPrompt}");
             Out.Detail("check MILL_HOME environment variable or installation");
             return 1;
         }
@@ -621,6 +630,8 @@ static partial class Mill
                 Out.Ok("context ready");
             }
 
+            string? lastFailureContext = null;
+
             for (var i = 0; i < maxIterations; i++)
             {
                 Out.Blank();
@@ -629,30 +640,100 @@ static partial class Mill
 
                 var template = await File.ReadAllTextAsync(iterationPrompt);
                 var rendered = template
-                    .Replace("{{SPEC_CONTENT}}", specContent)
+                    .Replace("{{SPEC_CONTENT}}", specContent + (lastFailureContext != null ? $"\n\n---\n## Previous Verification Failure\n{lastFailureContext}" : ""))
                     .Replace("{{SPEC_REF}}", specRef)
                     .Replace("{{ISSUE_NUMBER}}", isGhIssue ? issueNumber : "")
                     .Replace("{{ITERATION}}", (i + 1).ToString())
                     .Replace("{{MAX_ITERATIONS}}", maxIterations.ToString())
-                    .Replace("{{COMPLETION_TOKEN}}", token);
+                    .Replace("{{COMPLETION_TOKEN}}", verifyToken);
 
                 var output = await RunClaudeBatch(rendered);
 
-                if (output.Contains(token))
+                if (output.Contains(verifyToken))
                 {
-                    // Mark issue ready-for-review (CLI handles this reliably, not LLM)
-                    if (isGhIssue)
+                    // Parse metadata from MILL_VERIFY output
+                    var metadata = ParseVerifyMetadata(output);
+                    if (metadata == null)
                     {
-                        Out.Step("marking ready-for-review...");
-                        var (labelExit, _, labelErr) = Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
-                        if (labelExit != 0)
-                            Out.Warn($"failed to update label: {labelErr.Trim()}");
+                        Out.Warn("invalid verify metadata, continuing iteration");
+                        continue;
                     }
 
+                    // Extract test command from spec
+                    var testCommand = ExtractTestCommand(specContent);
+
+                    // Run verification prompt
                     Out.Blank();
-                    Out.Ok(token);
-                    result = 0;
-                    break;
+                    Out.Step("running verification...");
+                    Out.Blank();
+
+                    var verifyTemplate = await File.ReadAllTextAsync(verifyPrompt);
+                    var verifyRendered = verifyTemplate
+                        .Replace("{{SPEC_CONTENT}}", specContent)
+                        .Replace("{{SPEC_REF}}", specRef)
+                        .Replace("{{ISSUE_NUMBER}}", isGhIssue ? issueNumber : "")
+                        .Replace("{{TEST_COMMAND}}", testCommand ?? "echo 'no test command specified'");
+
+                    var verifyOutput = await RunClaudeBatch(verifyRendered);
+
+                    if (verifyOutput.Contains(doneToken))
+                    {
+                        // Verification passed - create PR
+                        Out.Blank();
+                        Out.Ok("verification passed");
+
+                        if (isGhIssue)
+                        {
+                            // Push branch
+                            Out.Step($"pushing branch {metadata.Branch}...");
+                            var (pushExit, _, pushErr) = Run("git", "push", "-u", "origin", metadata.Branch);
+                            if (pushExit != 0)
+                            {
+                                Out.Warn($"push failed: {pushErr.Trim()}");
+                                lastFailureContext = $"Push failed: {pushErr.Trim()}";
+                                continue;
+                            }
+
+                            // Create PR
+                            Out.Step("creating PR...");
+                            var prBody = $"Fixes #{issueNumber}\n\n## Summary\n{metadata.Summary}\n\n## Verification\n{metadata.Verification}";
+                            var (prExit, prOut, prErr) = Run("gh", "pr", "create", "--title", metadata.Title, "--body", prBody);
+                            if (prExit != 0)
+                            {
+                                Out.Warn($"PR creation failed: {prErr.Trim()}");
+                                lastFailureContext = $"PR creation failed: {prErr.Trim()}";
+                                continue;
+                            }
+                            Out.Detail(prOut.Trim());
+
+                            // Mark ready-for-review
+                            Out.Step("marking ready-for-review...");
+                            Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
+                        }
+
+                        Out.Blank();
+                        Out.Ok(doneToken);
+                        result = 0;
+                        break;
+                    }
+                    else if (verifyOutput.Contains(failedToken))
+                    {
+                        // Verification failed - extract reason, continue iteration
+                        var failure = ParseVerifyFailure(verifyOutput);
+                        Out.Blank();
+                        Out.Warn("verification failed");
+                        if (failure != null)
+                        {
+                            Out.Detail(failure.Suggestion ?? string.Join(", ", failure.Blockers));
+                            lastFailureContext = $"Blockers: {string.Join("; ", failure.Blockers)}\nSuggestion: {failure.Suggestion}";
+                        }
+                        continue;
+                    }
+                    else
+                    {
+                        Out.Warn("verify prompt did not output expected token");
+                        continue;
+                    }
                 }
             }
 
@@ -1188,6 +1269,71 @@ static partial class Mill
         return output.ToString();
     }
 
+    static VerifyMetadata? ParseVerifyMetadata(string output)
+    {
+        try
+        {
+            // Find JSON block after MILL_VERIFY
+            var verifyIndex = output.IndexOf("MILL_VERIFY");
+            if (verifyIndex < 0) return null;
+
+            var afterToken = output[(verifyIndex + "MILL_VERIFY".Length)..];
+            var jsonStart = afterToken.IndexOf('{');
+            var jsonEnd = afterToken.IndexOf('}');
+            if (jsonStart < 0 || jsonEnd < 0) return null;
+
+            var json = afterToken[jsonStart..(jsonEnd + 1)];
+            return JsonSerializer.Deserialize(json, VerifyJsonContext.Default.VerifyMetadata);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    static VerifyFailure? ParseVerifyFailure(string output)
+    {
+        try
+        {
+            // Find JSON block after VERIFY_FAILED
+            var failedIndex = output.IndexOf("VERIFY_FAILED");
+            if (failedIndex < 0) return null;
+
+            var afterToken = output[(failedIndex + "VERIFY_FAILED".Length)..];
+            var jsonStart = afterToken.IndexOf('{');
+            var jsonEnd = afterToken.LastIndexOf('}');
+            if (jsonStart < 0 || jsonEnd < 0) return null;
+
+            var json = afterToken[jsonStart..(jsonEnd + 1)];
+            return JsonSerializer.Deserialize(json, VerifyJsonContext.Default.VerifyFailure);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    static string? ExtractTestCommand(string specContent)
+    {
+        // Look for "**Test Command:**" pattern in Loop Contract
+        var match = TestCommandPattern().Match(specContent);
+        if (!match.Success) return null;
+
+        var command = match.Groups[1].Value.Trim();
+
+        // Skip if explicitly marked as none
+        if (command.StartsWith("none", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // Remove backticks if present
+        command = command.Trim('`');
+
+        return string.IsNullOrWhiteSpace(command) ? null : command;
+    }
+
+    [GeneratedRegex(@"\*\*Test Command:\*\*\s*`?([^`\n]+)`?")]
+    private static partial Regex TestCommandPattern();
+
     static string FindMillHome()
     {
         var env = Environment.GetEnvironmentVariable("MILL_HOME");
@@ -1270,3 +1416,21 @@ internal partial class GhJsonContext : JsonSerializerContext { }
 [JsonSerializable(typeof(MillConfig))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
 internal partial class MillConfigContext : JsonSerializerContext { }
+
+// Verification metadata from MILL_VERIFY signal
+record VerifyMetadata(
+    [property: JsonPropertyName("branch")] string Branch,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("summary")] string Summary,
+    [property: JsonPropertyName("verification")] string Verification);
+
+// Verification failure from VERIFY_FAILED signal
+record VerifyFailure(
+    [property: JsonPropertyName("blockers")] List<string> Blockers,
+    [property: JsonPropertyName("improvements")] List<string>? Improvements,
+    [property: JsonPropertyName("suggestion")] string? Suggestion);
+
+[JsonSerializable(typeof(VerifyMetadata))]
+[JsonSerializable(typeof(VerifyFailure))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+internal partial class VerifyJsonContext : JsonSerializerContext { }

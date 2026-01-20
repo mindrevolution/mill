@@ -28,7 +28,8 @@ mill/
 │       └── task.md
 ├── run/                    # Iterative execution
 │   └── prompts/
-│       ├── loop-iterate.md     # Single iteration prompt
+│       ├── loop-iterate.md     # Work prompt (implement, signal MILL_VERIFY)
+│       ├── loop-verify.md      # Verify prompt (review, approve/reject)
 │       └── run-autopick.md     # Intelligent issue selection
 └── README.md
 
@@ -53,7 +54,8 @@ Format: `[subject]-[verb].md`
 |------|---------|------|---------|
 | `context-warmup.md` | context | warmup | Build project context |
 | `spec-draft.md` | spec | draft | Interactive spec elicitation with persistence |
-| `loop-iterate.md` | loop | iterate | Execute one iteration |
+| `loop-iterate.md` | loop | iterate | Work prompt — implement slice, signal MILL_VERIFY |
+| `loop-verify.md` | loop | verify | Verify prompt — review work, approve or reject |
 | `run-autopick.md` | run | autopick | Intelligent issue selection |
 
 Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
@@ -90,14 +92,25 @@ flowchart TD
     A[User Intent] --> B["mill spec<br>(classify, elicit, generate)"]
     B --> C["GitHub Issue #N"]
     C --> D{"mill run"}
-    D -->|"#N"| E["mill run #N<br>(iterate until verified)"]
+    D -->|"#N"| E["Work prompt<br>(loop-iterate.md)"]
     D -->|"autopick"| F["score & select<br>(health, priority, theme)"]
     F --> E
-    E --> G[MILL_DONE → PR]
-    G --> H{Human reviews}
-    H -->|approve| I[Merge → Deploy]
-    H -->|request changes| E
+    E -->|MILL_VERIFY| G["Verify prompt<br>(loop-verify.md)"]
+    G -->|VERIFY_FAILED| E
+    G -->|MILL_DONE| H["CLI creates PR"]
+    H --> I{Human reviews}
+    I -->|approve| J[Merge → Deploy]
+    I -->|request changes| E
 ```
+
+### Two-Prompt Verification
+
+Work and verification are separated into distinct prompts:
+
+1. **Work prompt** (`loop-iterate.md`) — Implements the slice, runs tests, signals `MILL_VERIFY` with metadata
+2. **Verify prompt** (`loop-verify.md`) — Independent principal-engineer review, runs tests again, checks criteria, signals `MILL_DONE` or `VERIFY_FAILED`
+
+Only the verify prompt can authorize completion. The work prompt cannot grade its own homework.
 
 ## Requirements
 
@@ -109,11 +122,11 @@ flowchart TD
 ## Key Principles
 
 1. **Model is source of truth** — Specs drive execution, not conversation
-2. **Contracts over conversation** — No "done" without verification
+2. **Contracts over conversation** — No "done" without verification; work can't grade its own homework
 3. **Limits are mandatory** — Bounded work prevents runaway loops
 4. **Learning is explicit** — Memory improves the model, not the agent
 5. **Hybrid worktree inheritance** — Config and standards are shared from parent; context and memory are per-worktree (rebuilt only if stale)
-6. **Humans own the merge button** — PRs are coordination points (releases, support, dependencies), not just code review; automation stops at the gate
+6. **Humans drive product direction** — Humans decide what gets built and when it ships; AI improves the code
 
 ## Development Notes
 

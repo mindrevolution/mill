@@ -30,8 +30,8 @@ Trivial issues: one line. Complex work: be explicit.
 ### Verify
 - Run the **Test Command** from the Loop Contract — tests must pass
 - Run additional verification commands
-- If tests fail → fix and retry (do NOT proceed to PR)
-- If all criteria met → output `{{COMPLETION_TOKEN}}`
+- If tests fail → fix and retry
+- If all criteria met → signal ready for verification (see Output)
 - If not → output progress report + next intent
 
 ## Report
@@ -50,19 +50,7 @@ gh issue edit {{ISSUE_NUMBER}} --remove-label "in-progress" --add-label "blocked
 **Comments** — only for: blockers requiring input, discovered constraints.
 Never for: routine progress, failed attempts.
 
-**PR on completion (required for MILL_DONE):**
-```bash
-git push -u origin issue-{{ISSUE_NUMBER}}
-gh pr create --title "{{SPEC_REF}}: <description>" --body "Fixes {{SPEC_REF}}
-
-## Summary
-<changes>
-
-## Verification
-<results>"
-```
-
-If push or PR creation fails, do NOT output `{{COMPLETION_TOKEN}}`. Report the error and prompt user for help.
+**Do NOT create PR yourself.** When ready, signal for verification (see Output). An independent verify step will review, and CLI creates the PR if approved.
 
 ## Memory
 
@@ -76,6 +64,23 @@ Write to `.mill/memory/issue-{{ISSUE_NUMBER}}#iter-{{ITERATION}}.md` **only** if
 Most iterations produce no memory. Skip if nothing genuine.
 
 ## Output
-- Complete: `{{COMPLETION_TOKEN}}` on its own line — **only after PR created successfully**
-- Not complete: `NOT_DONE` on its own line
-- Blocked: report error, prompt user for help (do not exit)
+
+**Ready for verification** — when all criteria met and tests pass:
+
+```
+MILL_VERIFY
+{
+  "branch": "issue-{{ISSUE_NUMBER}}",
+  "title": "{{SPEC_REF}}: <brief description>",
+  "summary": "<what changed>",
+  "verification": "<test results and checks performed>"
+}
+```
+
+An independent verify step will then review and either approve (PR created) or reject (you'll see feedback and can fix).
+
+**Not complete:** `NOT_DONE` on its own line
+
+**Blocked:** report error, prompt user for help
+
+Do NOT output `MILL_DONE` — only the verify step can authorize completion.
