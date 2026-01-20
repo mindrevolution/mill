@@ -41,7 +41,7 @@ type: feature|bug|security|task
 title: Human-readable title
 slug: lowercase-hyphenated
 summary: one-line
-status: classifying|eliciting|reviewing|complete
+status: classifying|eliciting|reviewing|challenging|complete
 created: ISO8601
 updated: ISO8601
 fields_complete: [problem, users]
@@ -135,7 +135,42 @@ Use template from `model/templates/{type}.md`. Fill ALL fields.
 
 If any fail, elicit missing info.
 
-### 6. Confirm
+### 6. Challenge
+
+**When to challenge:** Skip this step for `bug` and `task` types with ≤3 acceptance criteria. Always challenge `feature` and `security` types, or any spec with >3 acceptance criteria.
+
+**Purpose:** Adversarial review to surface gaps before implementation. Elicitation builds the spec; challenge tries to break it.
+
+Update draft status to `challenging`. Then probe these areas one question at a time:
+
+| Area | Example Questions |
+|------|-------------------|
+| **Assumptions** | "You assume X is always available — what if it's not?" |
+| **Edge cases** | "What happens with empty input? Concurrent access? 10x expected load?" |
+| **Failure modes** | "If the database/API/service is down, what should happen?" |
+| **Integration** | "How does this interact with [existing feature]? Any conflicts?" |
+| **Rollback** | "If this breaks in production, how do we recover or disable it?" |
+
+**Flow:**
+1. Identify 2-4 potential gaps from the areas above
+2. Ask ONE question, wait for response
+3. If answer reveals missing criteria → add to spec, return to step 5 (Validate)
+4. If answer confirms no gap → continue to next question
+5. After all gaps addressed → proceed to Confirm
+
+```
+challenging spec for gaps...
+
+[area]: [specific question about this spec]
+
+1. [option if applicable]
+2. [option]
+3. not a concern because [user explains]
+```
+
+**Do not invent problems.** If the spec is solid, acknowledge it and move on. Challenge is not a gate to add scope — it surfaces genuine risks.
+
+### 7. Confirm
 
 **MANDATORY GATE — DO NOT PROCEED WITHOUT EXPLICIT USER APPROVAL**
 
@@ -155,15 +190,15 @@ validation:
 approve and create issue? [y/n]
 ```
 
-**STOP HERE.** Do not call `gh issue create` or proceed to step 7 until user responds.
+**STOP HERE.** Do not call `gh issue create` or proceed to step 8 until user responds.
 
-- If user says `y`, `yes`, or `approve` → proceed to step 7
-- If user says `n`, `no`, or provides feedback → incorporate changes and repeat step 6
-- If user adds new information → update spec, repeat step 6
+- If user says `y`, `yes`, or `approve` → proceed to step 8
+- If user says `n`, `no`, or provides feedback → incorporate changes and repeat step 7
+- If user adds new information → update spec, repeat step 7
 
-### 7. Finalize
+### 8. Finalize
 
-**Only after explicit user approval in step 6.**
+**Only after explicit user approval in step 7.**
 
 GitHub is source of truth. No local spec files.
 
@@ -192,4 +227,4 @@ Fallback: if `gh` fails, write to `.mill/{type}/{slug}.md`.
 8. Scope creep → separate spec
 9. End cleanly — after finalize, stop
 10. Never use built-in plan mode, TodoWrite, or other Claude Code features — only MILL workflow
-11. **NEVER create GitHub issue without explicit user approval** — step 6 confirmation is mandatory
+11. **NEVER create GitHub issue without explicit user approval** — step 7 confirmation is mandatory
