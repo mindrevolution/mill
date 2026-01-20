@@ -7,6 +7,7 @@ return args switch
 {
     ["init"] => await Mill.Init(),
     ["spec", ..] => await Mill.RunSpec(),
+    ["personas"] => Mill.RunPersonas(),
     ["run", "--auto"] => await Mill.RunAutopick(),
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
@@ -22,6 +23,7 @@ static int ShowHelp()
         usage:
           mill init               initialize repo for MILL
           mill spec               create specification → GitHub issue
+          mill personas           create, update, or manage user personas
           mill run                list available issues
           mill run --auto         autopick best issue (health check + scoring)
           mill run #123           execute work loop on GitHub issue
@@ -232,6 +234,8 @@ static partial class Mill
         Out.Blank();
         Out.Ok("ready — run: mill spec");
         Out.Blank();
+        Out.Detail("tip: run `mill personas` to define user segments for better specs");
+        Out.Blank();
 
         return 0;
     }
@@ -293,6 +297,104 @@ static partial class Mill
         var selectedDraft = PromptForDraft();
 
         return RunClaudeInteractive("spec/prompts/spec-draft.md", selectedDraft);
+    }
+
+    public static int RunPersonas()
+    {
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+
+        Out.Blank();
+
+        var personasFile = Path.Combine(MillDir, "personas.md");
+        if (File.Exists(personasFile))
+        {
+            Out.Ok("existing personas found");
+            Out.Detail("you can update, add, or remove personas");
+        }
+        else
+        {
+            Out.Step("no personas yet — starting creation");
+        }
+
+        Out.Blank();
+
+        return RunClaudeInteractivePersonas("spec/prompts/personas.md");
+    }
+
+    static int RunClaudeInteractivePersonas(string promptPath)
+    {
+        var fullPath = Path.Combine(FindMillHome(), promptPath);
+        if (!File.Exists(fullPath))
+        {
+            Out.Error($"prompt not found: {fullPath}");
+            return 1;
+        }
+
+        var cli = ResolveCli();
+
+        // Build prompt with pre-loaded context for persona generation
+        var prompt = new System.Text.StringBuilder();
+        prompt.AppendLine(File.ReadAllText(fullPath));
+
+        prompt.AppendLine("\n---\n# Pre-loaded Context\n");
+
+        // README is critical for understanding intended users
+        var readmePath = Path.Combine(GitRoot, "README.md");
+        if (File.Exists(readmePath))
+        {
+            prompt.AppendLine("## README.md\n");
+            prompt.AppendLine(File.ReadAllText(readmePath));
+        }
+
+        // AGENTS.md for project context
+        var agentsPath = Path.Combine(GitRoot, "AGENTS.md");
+        if (File.Exists(agentsPath))
+        {
+            prompt.AppendLine("\n## AGENTS.md\n");
+            prompt.AppendLine(File.ReadAllText(agentsPath));
+        }
+
+        // context.md if available
+        if (File.Exists(ContextFile))
+        {
+            prompt.AppendLine("\n## .mill/context.md\n");
+            prompt.AppendLine(File.ReadAllText(ContextFile));
+        }
+
+        // Existing personas for update mode
+        var personasFile = Path.Combine(MillDir, "personas.md");
+        if (File.Exists(personasFile))
+        {
+            prompt.AppendLine("\n## Existing Personas (.mill/personas.md)\n");
+            prompt.AppendLine(File.ReadAllText(personasFile));
+            prompt.AppendLine("\n**Mode:** Update existing personas based on new evidence or user input.");
+        }
+
+        var promptContent = prompt.ToString();
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
+        process.StartInfo.ArgumentList.Add("--append-system-prompt");
+        process.StartInfo.ArgumentList.Add(promptContent);
+
+        process.Start();
+        process.WaitForExit();
+        return process.ExitCode;
     }
 
     static string? PromptForDraft()
@@ -953,6 +1055,14 @@ static partial class Mill
         {
             prompt.AppendLine("\n## .mill/memory/project.md\n");
             prompt.AppendLine(File.ReadAllText(projectMemory));
+        }
+
+        // Personas for spec elicitation (NOT loaded during run)
+        var personasFile = Path.Combine(MillDir, "personas.md");
+        if (File.Exists(personasFile))
+        {
+            prompt.AppendLine("\n## .mill/personas.md\n");
+            prompt.AppendLine(File.ReadAllText(personasFile));
         }
 
         // Add uncommitted changes

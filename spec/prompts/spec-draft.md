@@ -5,10 +5,31 @@ Transform user intent into a complete, loop-ready specification.
 **CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/drafts/`) as defined below.
 
 ## Context
-Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, uncommitted changes.
+Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
 
 **Resume Mode:** If `# Resume Mode` section exists, continue from that draft.
 **New Session:** User's first message IS their intent. Proceed directly — don't ask "what would you like to build?"
+
+## Using Personas
+
+If `.mill/personas.md` is loaded, use it to improve elicitation:
+
+1. **Tailor questions** — reference specific personas when asking about users
+   - Instead of: "who is this for?"
+   - Ask: "is this primarily for ops engineers like Alex, or product leads like Sam?"
+
+2. **Inform user stories** — write stories using persona context
+   - Use their job, trigger, and pain points to frame the story
+   - Example: "As an ops engineer on-call, I want to see test results inline so that I don't context-switch to the CI dashboard"
+
+3. **DO NOT copy personas into spec** — personas inform the writing, but the spec stands alone
+   - User stories should be self-contained
+   - Don't reference persona names in the final spec
+   - The run loop won't have personas — specs must be complete without them
+
+4. **Validate against personas** — check if the spec addresses real pain points
+   - Does this solve a job-to-be-done?
+   - Would this reduce churn risk?
 
 ## Draft Persistence
 
@@ -87,6 +108,8 @@ One question at a time. Layer by layer:
 | Acceptance | Regression test | Mitigation | Acceptance |
 | Scope | Verification | Verification | Guardrails |
 | Test command | Test command | Test command | Test command |
+
+**If personas exist:** When eliciting "Users" and "User story", reference loaded personas to ground the conversation. Write user stories that reflect persona jobs and pain points, but don't name personas in the output.
 
 Reject vague criteria:
 - "faster" → "< Xms"

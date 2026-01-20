@@ -40,9 +40,20 @@ mill run #42           # execute loop
 |---------|---------|
 | `mill init` | Initialize repo (labels, config, context) |
 | `mill spec` | Interactive spec → GitHub issue |
+| `mill personas` | Create or update user personas |
 | `mill run` | List issues (sorted by impact) |
 | `mill run --auto` | Autopick and execute best issue |
 | `mill run #N` | Execute loop on specific issue |
+
+## Personas
+
+Optional user personas (`.mill/personas.md`) improve spec elicitation by grounding questions and user stories in real user segments.
+
+```bash
+mill personas     # create, update, or manage personas
+```
+
+Personas are loaded during `mill spec` but **not** during `mill run`. They "compile down" into concrete user stories — the spec stands alone with no persona references. The run loop only sees the self-contained spec.
 
 ## Spec Types
 
@@ -71,6 +82,7 @@ Regardless of autonomy level, humans drive product direction — deciding *what*
 .mill/
 ├── config.json      # scoring, excludes
 ├── context.md       # auto-generated
+├── personas.md      # user personas (optional)
 ├── memory/          # learnings
 ├── drafts/          # in-progress specs
 └── standards/       # human rules
