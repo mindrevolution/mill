@@ -62,51 +62,21 @@ Improvements are noted but don't block approval.
 
 ## Output
 
+**Do NOT post comments to the GitHub issue.** Feedback stays internal to the loop.
+
 ### If APPROVED
 
-First, post a review comment to the GitHub issue:
-
-```bash
-gh issue comment {{ISSUE_NUMBER}} --body "## Verification Passed ✓
-
-**Reviewed:** {{SPEC_REF}}
-
-### Checklist
-- [x] Tests pass
-- [x] Success criteria met
-- [x] Code review passed
-
-### Notes
-<any improvements noted, or 'None'>
-
-Ready for PR creation."
-```
-
-Then output on its own line:
+Output on its own line:
 
 ```
 MILL_DONE
 ```
 
+The CLI will create the PR. Verification passed = PR exists.
+
 ### If REJECTED
 
-First, post a review comment to the GitHub issue:
-
-```bash
-gh issue comment {{ISSUE_NUMBER}} --body "## Verification Failed ✗
-
-**Reviewed:** {{SPEC_REF}}
-
-### Blockers
-<numbered list of blockers with specifics>
-
-### Improvements (non-blocking)
-<list or 'None'>
-
-Returning to work loop for fixes."
-```
-
-Then output:
+Output:
 
 ```
 VERIFY_FAILED
@@ -116,6 +86,8 @@ VERIFY_FAILED
   "suggestion": "<most important thing to fix first>"
 }
 ```
+
+The CLI injects this into the next work iteration as "Previous Verification Failure" context. The work loop will see exactly what to fix.
 
 ## Guidelines
 
