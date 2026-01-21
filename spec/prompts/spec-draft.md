@@ -45,7 +45,7 @@ status: classifying|eliciting|reviewing|challenging|complete
 created: ISO8601
 updated: ISO8601
 fields_complete: [problem, users]
-fields_pending: [acceptance_criteria, scope, verification]
+fields_pending: [acceptance_criteria, scope, verification, loop_contract]
 ---
 
 ## Problem/Opportunity
@@ -54,6 +54,7 @@ fields_pending: [acceptance_criteria, scope, verification]
 ## Acceptance Criteria
 ## Scope
 ## Verification
+## Loop Contract
 ```
 
 ## Flow
@@ -107,7 +108,7 @@ One question at a time. Layer by layer:
 | User story | Environment | Attack vector | Scope |
 | Acceptance | Regression test | Mitigation | Acceptance |
 | Scope | Verification | Verification | Guardrails |
-| Test command | Test command | Test command | Test command |
+| Loop Contract | Loop Contract | Loop Contract | Loop Contract |
 
 **If personas exist:** When eliciting "Users" and "User story", reference loaded personas to ground the conversation. Write user stories that reflect persona jobs and pain points, but don't name personas in the output.
 
@@ -119,19 +120,21 @@ Reject vague criteria:
 Push back on scope creep: "separate spec, finish this first."
 
 ### 4. Generate
-Use template from `model/templates/{type}.md`. Fill ALL fields.
+Use template from `spec/templates/{type}.md`. Fill ALL fields.
 
 ### 5. Validate
 ```
 [ ] success criteria testable
 [ ] each criterion verifiable
-[ ] test command specified (or explicit "none: <reason>")
-[ ] verification commands runnable
 [ ] scope clear (in/out)
 [ ] no placeholders
+[ ] Loop Contract present with:
+    - test command (or explicit "none: <reason>")
+    - success criteria
+    - stop conditions
 ```
 
-**Test Command is required.** Ask: "What command runs the tests?" Common: `npm test`, `dotnet test`, `pytest`, `go test ./...`. If no tests exist, require explicit reason.
+**Loop Contract is required.** Ask: "What command runs the tests?" Common: `npm test`, `dotnet test`, `pytest`, `go test ./...`. If no tests exist, require explicit reason. Stop conditions default to 20 iterations.
 
 If any fail, elicit missing info.
 
