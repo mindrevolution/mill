@@ -185,18 +185,25 @@ static partial class Mill
             Out.Detail("config already exists");
         }
 
-        // Add .mill/work/ to gitignore (worktrees shouldn't be committed)
+        // Add .mill/work/ and .mill/.prompt to gitignore (ephemeral files)
         Out.Step("updating .gitignore...");
         var gitignorePath = Path.Combine(GitRoot, ".gitignore");
         var gitignore = File.Exists(gitignorePath) ? File.ReadAllText(gitignorePath) : "";
+        var gitignoreUpdates = new List<string>();
+
         if (!gitignore.Contains(".mill/work/"))
+            gitignoreUpdates.Add(".mill/work/");
+        if (!gitignore.Contains(".mill/.prompt"))
+            gitignoreUpdates.Add(".mill/.prompt");
+
+        if (gitignoreUpdates.Count > 0)
         {
-            File.AppendAllText(gitignorePath, "\n# MILL worktrees\n.mill/work/\n");
-            Out.Ok(".mill/work/ added to .gitignore");
+            File.AppendAllText(gitignorePath, "\n# MILL ephemeral\n" + string.Join("\n", gitignoreUpdates) + "\n");
+            Out.Ok($"{string.Join(", ", gitignoreUpdates)} added to .gitignore");
         }
         else
         {
-            Out.Detail(".mill/work/ already in .gitignore");
+            Out.Detail(".gitignore already configured");
         }
 
         // Run context warmup (also generates AGENTS.md if missing)
@@ -376,6 +383,11 @@ static partial class Mill
 
         var promptContent = prompt.ToString();
 
+        // Write to .mill/.prompt to avoid command line length limits (Windows: 32KB, Linux: 128KB per arg)
+        var promptFile = Path.Combine(CurrentMillDir, ".prompt");
+        Directory.CreateDirectory(CurrentMillDir);
+        File.WriteAllText(promptFile, promptContent);
+
         using var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -390,7 +402,7 @@ static partial class Mill
 
         process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
         process.StartInfo.ArgumentList.Add("--append-system-prompt");
-        process.StartInfo.ArgumentList.Add(promptContent);
+        process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
 
         process.Start();
         process.WaitForExit();
@@ -1181,6 +1193,11 @@ static partial class Mill
 
         var promptContent = prompt.ToString();
 
+        // Write to .mill/.prompt to avoid command line length limits (Windows: 32KB, Linux: 128KB per arg)
+        var promptFile = Path.Combine(CurrentMillDir, ".prompt");
+        Directory.CreateDirectory(CurrentMillDir);
+        File.WriteAllText(promptFile, promptContent);
+
         using var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -1197,7 +1214,7 @@ static partial class Mill
         process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
         process.StartInfo.ArgumentList.Add("--disable-slash-commands");
         process.StartInfo.ArgumentList.Add("--append-system-prompt");
-        process.StartInfo.ArgumentList.Add(promptContent);
+        process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
 
         process.Start();
         process.WaitForExit();
