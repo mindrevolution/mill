@@ -23,6 +23,16 @@ Execute: `{{TEST_COMMAND}}`
 
 Tests must pass. If they fail, stop here — that's a blocker.
 
+**Verification tiers by change type:**
+
+| Type | Required | Rationale |
+|------|----------|-----------|
+| **Infrastructure** (logging, config, CI/CD, observability) | Build passes + code review | Low risk — runtime issues caught in staging, quick to fix |
+| **Features/Bugs** (user-facing behavior) | Test command OR manual verification steps in spec | Business logic requires behavioral verification |
+| **Security** | Explicit security checks + tests | High stakes, no "fix it later" |
+
+For infrastructure changes, if the spec notes "Verification: build + code review (infrastructure change)", code review of correct patterns is sufficient. Runtime behavior is verified in staging, not gated on PR.
+
 ### 2. Check Success Criteria
 
 Review each criterion in the Loop Contract. Verify it's actually met, not just claimed.
