@@ -985,12 +985,15 @@ static partial class Mill
             StartInfo = new ProcessStartInfo
             {
                 FileName = exe,
-                Arguments = string.Join(" ", args),
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false
             }
         };
+
+        foreach (var arg in args)
+            process.StartInfo.ArgumentList.Add(arg);
+
         process.Start();
         var output = process.StandardOutput.ReadToEnd();
         var error = process.StandardError.ReadToEnd();
