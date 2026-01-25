@@ -4,7 +4,7 @@
 
 ```bash
 mill spec          # chat → spec → GitHub issue
-mill run #42       # loop until tests pass → PR
+mill run 42       # loop until tests pass → PR
 ```
 
 ## How It Works
@@ -31,7 +31,7 @@ mill init              # setup repo (once)
 mill spec              # create spec → GitHub issue #N
 mill run               # list issues
 mill run --auto        # autopick best issue
-mill run #42           # execute loop
+mill run 42           # execute loop
 ```
 
 ## Commands
@@ -43,7 +43,7 @@ mill run #42           # execute loop
 | `mill personas` | Create or update user personas |
 | `mill run` | List issues (sorted by impact) |
 | `mill run --auto` | Autopick and execute best issue |
-| `mill run #N` | Execute loop on specific issue |
+| `mill run N` | Execute loop on specific issue |
 
 ## Personas
 

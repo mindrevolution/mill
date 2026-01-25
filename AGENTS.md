@@ -73,7 +73,7 @@ mill run
 mill run --auto
 
 # work specific issue
-mill run #42
+mill run 42
 ```
 
 ## Intent Types

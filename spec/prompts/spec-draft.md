@@ -211,7 +211,7 @@ GitHub is source of truth. No local spec files.
    ```
    created: #{number}
 
-   mill run #{number}
+   mill run {number}
 
    /exit
    ```

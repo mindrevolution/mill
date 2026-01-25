@@ -141,9 +141,9 @@ run #47? [y/n/NUMBER]
 
 | Input | Output | Effect |
 |-------|--------|--------|
-| y, yes | `PICK:#47` | CLI runs `mill run #47` |
+| y, yes | `PICK:47` | CLI runs `mill run 47` |
 | n, no | `SKIP` | Exit cleanly |
-| 52 | `PICK:#52` | User overrides selection |
+| 52 | `PICK:52` | User overrides selection |
 | ? | Show full score breakdown for all candidates |
 
 ## Edge Cases
@@ -173,7 +173,7 @@ Output: `FULL`
 
 | Token | Meaning |
 |-------|---------|
-| `PICK:#N` | User approved, run issue N |
+| `PICK:N` | User approved, run issue N |
 | `SKIP` | User declined |
 | `BLOCKED` | Health check failed |
 | `EMPTY` | No issues to pick from |

@@ -26,7 +26,7 @@ static int ShowHelp()
           mill personas           create, update, or manage user personas
           mill run                list available issues
           mill run --auto         autopick best issue (health check + scoring)
-          mill run #123           execute work loop on GitHub issue
+          mill run 123            execute work loop on GitHub issue
         """);
     return 0;
 }
@@ -499,8 +499,8 @@ static partial class Mill
         const string doneToken = "MILL_DONE";
         const string failedToken = "MILL_REJECTED";
 
-        // Check if issue is a GitHub issue number (#123 or 123)
-        var issueNumber = issue.TrimStart('#');
+        // Check if issue is a GitHub issue number
+        var issueNumber = issue;
         var isGhIssue = int.TryParse(issueNumber, out _);
 
         string specContent;
@@ -856,7 +856,7 @@ static partial class Mill
         }
 
         Out.Blank();
-        Console.WriteLine("  mill run #<number>");
+        Console.WriteLine("  mill run <number>");
         Console.WriteLine("  mill run --auto");
         Out.Blank();
 
@@ -932,17 +932,17 @@ static partial class Mill
             return 0;
         }
 
-        // Look for PICK:#N pattern
+        // Look for PICK:N pattern
         var pickMatch = PickPattern().Match(output);
         if (pickMatch.Success)
         {
             var issueNumber = pickMatch.Groups[1].Value;
             Out.Blank();
-            Out.Ok($"selected: #{issueNumber}");
+            Out.Ok($"selected: {issueNumber}");
             Out.Blank();
 
             // Chain to Execute
-            return await Execute($"#{issueNumber}", [$"#{issueNumber}"]);
+            return await Execute(issueNumber, [issueNumber]);
         }
 
         // No recognized token — assume user declined or something went wrong
@@ -1408,7 +1408,7 @@ static partial class Mill
     [GeneratedRegex(@"mill-context-hash:\s*([a-f0-9]+)")]
     private static partial Regex HashPattern();
 
-    [GeneratedRegex(@"PICK:#(\d+)")]
+    [GeneratedRegex(@"PICK:(\d+)")]
     private static partial Regex PickPattern();
 }
 
