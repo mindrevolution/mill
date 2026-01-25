@@ -32,4 +32,4 @@ If a GitHub issue is known, prepare an update summary suitable for posting to th
 
 ## Completion Output
 If complete, output the exact completion promise token on its own line at the end.
-If not complete, output `NOT_DONE` on its own line at the end.
+If not complete, output `MILL_CONTINUE` on its own line at the end.

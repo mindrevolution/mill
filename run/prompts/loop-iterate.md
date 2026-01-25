@@ -1,6 +1,6 @@
 # Implement (MILL Iteration {{ITERATION}}/{{MAX_ITERATIONS}})
 
-Execute one iteration against the spec. Honor standards and Loop Contract.
+Execute ONE slice against the spec. Honor standards and Loop Contract.
 
 ## Spec
 **Ref:** {{SPEC_REF}}
@@ -9,36 +9,93 @@ Execute one iteration against the spec. Honor standards and Loop Contract.
 
 ## Workflow
 
-1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md). If neither exists and you need to create one: create `AGENTS.md` with content, and `CLAUDE.md` containing only `@AGENTS.md`
+1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
 2. Verify `.mill/context.md` exists (run warmup if not)
 3. Read `.mill/standards/` and architecture docs
 4. Verify Loop Contract present (stop if missing)
-5. Identify success criteria and verification commands
 
-### Focus
-State intent for THIS iteration:
-- **Slice:** Smallest piece that advances the contract
-- **Done:** How you'll know slice is complete (before verification)
-- **Risk:** One blocker, if any
+---
 
-Trivial issues: one line. Complex work: be explicit.
+## Slicing (MANDATORY)
 
-### Execute
-- Implement the slice. Minimize unrelated changes.
-- Check: slice complete? Note deferrals.
+Work is sliced by concern. Each iteration implements ONE slice only.
 
-### Verify
-- Run the **Test Command** from the Loop Contract — tests must pass
-- Run additional verification commands
-- If tests fail → fix and retry
-- If all criteria met → signal ready for verification (see Output)
-- If not → output progress report + next intent
+### Concerns (slice boundaries)
+- **Model** — data structures, types, schemas
+- **Logic** — business rules, algorithms, core behavior
+- **Interface** — API, CLI, UI changes
+- **Integration** — wiring components together
+- **Tests** — test coverage for the above
+- **Config/Docs** — configuration, documentation updates
+
+### Iteration 1: Plan + First Slice
+
+1. Analyze the spec and identify which concerns it touches
+2. Write a slice plan to `.mill/memory/issue-{{ISSUE_NUMBER}}-plan.md`:
+
+```markdown
+# Slice Plan for {{SPEC_REF}}
+
+## Concerns
+- [ ] Model — <what changes>
+- [ ] Logic — <what changes>
+- [ ] Tests — <what changes>
+
+## Slice Order
+1. <first slice — what and why first>
+2. <second slice>
+3. <third slice if needed>
+
+## Current: Slice 1
+```
+
+3. Implement ONLY slice 1
+4. Commit with message: `{{SPEC_REF}}: <slice description> (1/N)`
+5. Signal `MILL_CONTINUE`
+
+### Iteration 2+: Next Slice
+
+1. Read `.mill/memory/issue-{{ISSUE_NUMBER}}-plan.md`
+2. Update "Current" to next slice, check off completed concerns
+3. Implement ONLY the next slice
+4. Commit with message: `{{SPEC_REF}}: <slice description> (M/N)`
+5. If more slices remain → `MILL_CONTINUE`
+6. If final slice complete → `MILL_VERIFY`
+
+### Single-Concern Exception
+
+If the spec genuinely touches only ONE concern (e.g., "fix typo", "add one test"):
+- Skip planning
+- Implement directly
+- Signal `MILL_VERIFY` after commit
+
+Be honest: most features touch 2+ concerns. When in doubt, slice.
+
+---
+
+## Execute
+
+For the current slice ONLY:
+- Implement the changes
+- Minimize unrelated changes
+- Commit before signaling
+
+### Verify Before Signaling
+- Run the **Test Command** from the Loop Contract
+- If tests fail → fix within this slice, don't proceed
+- If tests pass → commit and signal
+
+---
 
 ## Report
-- **Slice:** What attempted
-- **Changed:** What and why
-- **Verification:** Results
-- **Remaining:** Gaps or next slice
+
+After each iteration:
+- **Slice:** Which slice (M/N) and what it covered
+- **Changed:** Files modified
+- **Verification:** Test results
+- **Next:** What the next slice will address (or "final" if done)
+
+---
 
 ## GitHub ({{ISSUE_NUMBER}})
 
@@ -48,38 +105,41 @@ gh issue edit {{ISSUE_NUMBER}} --remove-label "in-progress" --add-label "blocked
 ```
 
 **Comments** — only for: blockers requiring input, discovered constraints.
-Never for: routine progress, failed attempts.
 
-**Do NOT create PR yourself.** When ready, signal for verification (see Output). An independent verify step will review, and CLI creates the PR if approved.
+**Do NOT create PR yourself.** Signal for verification; CLI creates the PR if approved.
+
+---
 
 ## Memory
 
-Write to `.mill/memory/issue-{{ISSUE_NUMBER}}#iter-{{ITERATION}}.md` **only** if discovered:
+The slice plan lives in `.mill/memory/issue-{{ISSUE_NUMBER}}-plan.md`.
+
+Write additional memory ONLY if you discover:
 - Constraint not in spec
 - Invalidated assumption
-- Required decomposition
+- Plan needs revision (update the plan file)
 
-**Never** for: failed attempts, typos, debug details, slice planning/progress.
-
-Most iterations produce no memory. Skip if nothing genuine.
+---
 
 ## Output
 
-**Ready for verification** — when all criteria met and tests pass:
+**Not complete (more slices remain):**
+```
+MILL_CONTINUE
 
+Next slice: <brief description of next slice>
+```
+
+**Ready for verification (final slice complete, all tests pass):**
 ```
 MILL_VERIFY
 {
   "branch": "issue-{{ISSUE_NUMBER}}",
   "title": "{{SPEC_REF}}: <brief description>",
-  "summary": "<what changed>",
+  "summary": "<what changed across all slices>",
   "verification": "<test results and checks performed>"
 }
 ```
-
-An independent verify step will then review and either approve (PR created) or reject (you'll see feedback and can fix).
-
-**Not complete:** `NOT_DONE` on its own line
 
 **Blocked:** report error, prompt user for help
 

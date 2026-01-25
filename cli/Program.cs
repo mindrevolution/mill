@@ -497,7 +497,7 @@ static partial class Mill
         var maxIterations = int.TryParse(Environment.GetEnvironmentVariable("MILL_MAX_ITERATIONS"), out var n) ? n : 20;
         const string verifyToken = "MILL_VERIFY";
         const string doneToken = "MILL_DONE";
-        const string failedToken = "VERIFY_FAILED";
+        const string failedToken = "MILL_REJECTED";
 
         // Check if issue is a GitHub issue number (#123 or 123)
         var issueNumber = issue.TrimStart('#');
@@ -661,6 +661,17 @@ static partial class Mill
 
                 var output = await RunClaudeBatch(rendered);
 
+                if (output.Contains("MILL_CONTINUE"))
+                {
+                    // Slice complete, more work remains
+                    var nextSlice = ExtractNextSlice(output);
+                    Out.Blank();
+                    Out.Ok("slice complete");
+                    if (nextSlice != null)
+                        Out.Detail($"next: {nextSlice}");
+                    continue;
+                }
+
                 if (output.Contains(verifyToken))
                 {
                     // Parse metadata from MILL_VERIFY output
@@ -746,6 +757,13 @@ static partial class Mill
                         Out.Warn("verify prompt did not output expected token");
                         continue;
                     }
+                }
+                else
+                {
+                    // No recognized signal - warn and continue
+                    Out.Blank();
+                    Out.Warn("no signal (expected MILL_CONTINUE or MILL_VERIFY)");
+                    continue;
                 }
             }
 
@@ -1315,11 +1333,11 @@ static partial class Mill
     {
         try
         {
-            // Find JSON block after VERIFY_FAILED
-            var failedIndex = output.IndexOf("VERIFY_FAILED");
+            // Find JSON block after MILL_REJECTED
+            var failedIndex = output.IndexOf("MILL_REJECTED");
             if (failedIndex < 0) return null;
 
-            var afterToken = output[(failedIndex + "VERIFY_FAILED".Length)..];
+            var afterToken = output[(failedIndex + "MILL_REJECTED".Length)..];
             var jsonStart = afterToken.IndexOf('{');
             var jsonEnd = afterToken.LastIndexOf('}');
             if (jsonStart < 0 || jsonEnd < 0) return null;
@@ -1353,6 +1371,19 @@ static partial class Mill
 
     [GeneratedRegex(@"\*\*Test Command:\*\*\s*`?([^`\n]+)`?")]
     private static partial Regex TestCommandPattern();
+
+    static string? ExtractNextSlice(string output)
+    {
+        // Look for "Next slice: <description>" pattern
+        var match = NextSlicePattern().Match(output);
+        if (!match.Success) return null;
+
+        var description = match.Groups[1].Value.Trim();
+        return string.IsNullOrWhiteSpace(description) ? null : description;
+    }
+
+    [GeneratedRegex(@"Next slice:\s*(.+)", RegexOptions.IgnoreCase)]
+    private static partial Regex NextSlicePattern();
 
     static string FindMillHome()
     {
@@ -1444,7 +1475,7 @@ record VerifyMetadata(
     [property: JsonPropertyName("summary")] string Summary,
     [property: JsonPropertyName("verification")] string Verification);
 
-// Verification failure from VERIFY_FAILED signal
+// Verification failure from MILL_REJECTED signal
 record VerifyFailure(
     [property: JsonPropertyName("blockers")] List<string> Blockers,
     [property: JsonPropertyName("improvements")] List<string>? Improvements,

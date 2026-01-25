@@ -85,7 +85,7 @@ IMPORTANT: Execute every step in order, top to bottom.
 
 ## Loop Contract
 - Success Criteria: <machine-checkable criteria aligned to Acceptance Criteria>
-- Completion Promise: <exact token string to output when done, e.g. RALPH_DONE>
+- Completion Promise: <exact token string to output when done, e.g. MILL_DONE>
 - Verification Commands: <commands and expected signals>
 - Stop Conditions: <max iterations, time, or budget>
 - Progress Reporting: <where and how to report each iteration, e.g. GitHub issue update format>

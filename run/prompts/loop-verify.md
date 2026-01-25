@@ -89,7 +89,7 @@ The CLI will create the PR. Verification passed = PR exists.
 Output:
 
 ```
-VERIFY_FAILED
+MILL_REJECTED
 {
   "blockers": ["<blocker 1>", "<blocker 2>"],
   "improvements": ["<improvement 1>"],

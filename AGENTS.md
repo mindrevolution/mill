@@ -96,7 +96,7 @@ flowchart TD
     D -->|"autopick"| F["score & select<br>(health, priority, theme)"]
     F --> E
     E -->|MILL_VERIFY| G["Verify prompt<br>(loop-verify.md)"]
-    G -->|VERIFY_FAILED| E
+    G -->|MILL_REJECTED| E
     G -->|MILL_DONE| H["CLI creates PR"]
     H --> I{Human reviews}
     I -->|approve| J[Merge → Deploy]
@@ -108,7 +108,7 @@ flowchart TD
 Work and verification are separated into distinct prompts:
 
 1. **Work prompt** (`loop-iterate.md`) — Implements the slice, runs tests, signals `MILL_VERIFY` with metadata
-2. **Verify prompt** (`loop-verify.md`) — Independent principal-engineer review, runs tests again, checks criteria, signals `MILL_DONE` or `VERIFY_FAILED`
+2. **Verify prompt** (`loop-verify.md`) — Independent principal-engineer review, runs tests again, checks criteria, signals `MILL_DONE` or `MILL_REJECTED`
 
 Only the verify prompt can authorize completion. The work prompt cannot grade its own homework.
 
