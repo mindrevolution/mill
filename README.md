@@ -64,6 +64,8 @@ Personas are loaded during `mill spec` but **not** during `mill run`. They "comp
 | **Security** | Vulnerability | Threat mitigated |
 | **Task** | Technical work | Criteria pass |
 
+Types are tracked via labels (not GitHub issue types) for portability across git platforms.
+
 ## Trajectory
 
 Autonomy increases incrementally — each step validates before the next.
