@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 // Clean up old binary from previous update (silent, on every run)
-Updater.CleanupOldBinary();
+Installer.CleanupOldBinary();
 
 return args switch
 {
@@ -31,7 +31,7 @@ static int ShowVersion()
 
 static async Task<int> RunUpdateCheck()
 {
-    var check = await Updater.Check();
+    var check = await Installer.Check();
 
     Console.WriteLine($"  current: {check.Current}");
 
@@ -58,7 +58,7 @@ static async Task<int> RunUpdateCheck()
 
 static async Task<int> RunUpdate()
 {
-    var check = await Updater.Check();
+    var check = await Installer.Check();
 
     Console.WriteLine($"  current: {check.Current}");
 
@@ -78,7 +78,7 @@ static async Task<int> RunUpdate()
     Console.WriteLine($"  latest:  {check.Latest}");
     Out.Blank();
 
-    var (success, message) = await Updater.Apply();
+    var (success, message) = await Installer.Apply();
 
     if (success)
     {
@@ -1517,9 +1517,39 @@ static partial class Mill
 }
 
 /// <summary>
+/// Installation mode: determined by whether we're running from system location or not.
+/// </summary>
+enum InstallMode
+{
+    /// <summary>
+    /// Binary is running from a non-system location (e.g., download folder).
+    /// Will copy itself to system location.
+    /// </summary>
+    Install,
+
+    /// <summary>
+    /// Binary is running from system location.
+    /// Will check for updates and download newer version.
+    /// </summary>
+    Update
+}
+
+/// <summary>
+/// Result of install check: version comparison and mode detection.
+/// </summary>
+record InstallCheck(
+    InstallMode Mode,
+    string Current,
+    string? Latest,
+    string? InstalledVersion,
+    bool UpdateAvailable,
+    bool IsDowngrade,
+    string? Error);
+
+/// <summary>
 /// Self-update logic: fetch latest release from GitHub, download, and replace the running binary.
 /// </summary>
-static class Updater
+static class Installer
 {
     const string RepoOwner = "mindrevolution";
     const string RepoName = "mill";
@@ -1531,6 +1561,104 @@ static class Updater
             { "Accept", "application/vnd.github.v3+json" }
         }
     };
+
+    /// <summary>
+    /// Gets the system install path for the current platform.
+    /// Unix: ~/.local/bin/mill
+    /// Windows: %LOCALAPPDATA%\Programs\mill\mill.exe
+    /// </summary>
+    public static string GetSystemInstallPath()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(localAppData, "Programs", "mill", "mill.exe");
+        }
+        else
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Path.Combine(home, ".local", "bin", "mill");
+        }
+    }
+
+    /// <summary>
+    /// Checks if the current binary is running from the system install location.
+    /// </summary>
+    public static bool IsInstalledLocation()
+    {
+        var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+        var systemPath = GetSystemInstallPath();
+
+        // Normalize paths for comparison
+        return string.Equals(
+            Path.GetFullPath(exePath),
+            Path.GetFullPath(systemPath),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Gets the version of the installed binary (if any).
+    /// Returns null if not installed or unreadable.
+    /// </summary>
+    public static string? GetInstalledVersion()
+    {
+        var systemPath = GetSystemInstallPath();
+        if (!File.Exists(systemPath))
+            return null;
+
+        try
+        {
+            // Run the installed binary with --version to get its version
+            var (exit, output, _) = Run(systemPath, "--version");
+            if (exit != 0) return null;
+
+            // Parse "mill X.Y.Z" output
+            var parts = output.Trim().Split(' ');
+            return parts.Length >= 2 ? parts[1] : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Checks if a path looks like a temp/download location that should be auto-cleaned.
+    /// </summary>
+    public static bool IsTemporaryLocation(string path)
+    {
+        var dir = Path.GetDirectoryName(path) ?? "";
+        var dirLower = dir.ToLowerInvariant();
+
+        // Common download/temp locations
+        return dirLower.Contains("download") ||
+               dirLower.Contains("temp") ||
+               dirLower.Contains("tmp") ||
+               dirLower.Contains("desktop");
+    }
+
+    static (int ExitCode, string Output, string Error) Run(string exe, params string[] args)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = exe,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            }
+        };
+
+        foreach (var arg in args)
+            process.StartInfo.ArgumentList.Add(arg);
+
+        process.Start();
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return (process.ExitCode, output, error);
+    }
 
     /// <summary>
     /// Check result: current vs latest version.
