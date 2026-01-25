@@ -5,8 +5,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
+// Clean up old binary from previous update (silent, on every run)
+Updater.CleanupOldBinary();
+
 return args switch
 {
+    ["--version"] or ["-v"] => ShowVersion(),
+    ["update", "--check"] => await RunUpdateCheck(),
+    ["update"] => await RunUpdate(),
     ["init"] => await Mill.Init(),
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
@@ -16,6 +22,75 @@ return args switch
     ["run"] => Mill.ListAvailableIssues(),
     _ => ShowHelp()
 };
+
+static int ShowVersion()
+{
+    Console.WriteLine($"mill {Mill.Version}");
+    return 0;
+}
+
+static async Task<int> RunUpdateCheck()
+{
+    var check = await Updater.Check();
+
+    Console.WriteLine($"  current: {check.Current}");
+
+    if (check.Error != null)
+    {
+        Out.Error($"failed to check for updates: {check.Error}");
+        return 1;
+    }
+
+    Console.WriteLine($"  latest:  {check.Latest}");
+    Out.Blank();
+
+    if (check.UpdateAvailable)
+    {
+        Console.WriteLine("  run `mill update` to install");
+    }
+    else
+    {
+        Out.Ok($"already at latest ({check.Current})");
+    }
+
+    return 0;
+}
+
+static async Task<int> RunUpdate()
+{
+    var check = await Updater.Check();
+
+    Console.WriteLine($"  current: {check.Current}");
+
+    if (check.Error != null)
+    {
+        Out.Error($"failed to check for updates: {check.Error}");
+        return 1;
+    }
+
+    if (!check.UpdateAvailable)
+    {
+        Out.Blank();
+        Out.Ok($"already at latest ({check.Current})");
+        return 0;
+    }
+
+    Console.WriteLine($"  latest:  {check.Latest}");
+    Out.Blank();
+
+    var (success, message) = await Updater.Apply();
+
+    if (success)
+    {
+        Out.Ok(message);
+        return 0;
+    }
+    else
+    {
+        Out.Error(message);
+        return 1;
+    }
+}
 
 static int ShowHelp()
 {
@@ -29,6 +104,9 @@ static int ShowHelp()
           mill run                list available issues
           mill run --auto         autopick best issue (health check + scoring)
           mill run 123            execute work loop on GitHub issue
+          mill update             update mill to latest version
+          mill update --check     check for updates without installing
+          mill --version          show version
         """);
     return 0;
 }
