@@ -2,7 +2,9 @@ $ErrorActionPreference = "Stop"
 Push-Location $PSScriptRoot
 
 try {
-    $rid = "win-x64"
+    # detect architecture
+    $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "arm64" } else { "x64" }
+    $rid = "win-$arch"
     $installDir = "$env:LOCALAPPDATA\Programs\mill"
     $target = "$installDir\mill.exe"
 
