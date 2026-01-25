@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            asset: mill-win-x64.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            asset: mill-linux-x64
+          - os: macos-13
+            rid: osx-x64
+            asset: mill-osx-x64
+          - os: macos-14
+            rid: osx-arm64
+            asset: mill-osx-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: publish
+        run: dotnet publish cli/mill-cli.csproj -c Release -r ${{ matrix.rid }} -o out
+
+      - name: rename artifact
+        shell: bash
+        run: |
+          if [[ "${{ matrix.rid }}" == win-* ]]; then
+            mv out/mill.exe out/${{ matrix.asset }}
+          else
+            mv out/mill out/${{ matrix.asset }}
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: out/${{ matrix.asset }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
