@@ -11,8 +11,8 @@ Installer.CleanupOldBinary();
 return args switch
 {
     ["--version"] or ["-v"] => ShowVersion(),
-    ["update", "--check"] => await RunUpdateCheck(),
-    ["update"] => await RunUpdate(),
+    ["install", "--check"] => await RunInstallCheck(),
+    ["install"] => await RunInstall(),
     ["init"] => await Mill.Init(),
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
@@ -29,66 +29,143 @@ static int ShowVersion()
     return 0;
 }
 
-static async Task<int> RunUpdateCheck()
+static async Task<int> RunInstallCheck()
 {
-    var check = await Installer.Check();
+    var check = await Installer.CheckInstall();
 
     Console.WriteLine($"  current: {check.Current}");
+    Console.WriteLine($"  mode:    {check.Mode.ToString().ToLowerInvariant()}");
 
-    if (check.Error != null)
+    if (check.Mode == InstallMode.Install)
     {
-        Out.Error($"failed to check for updates: {check.Error}");
-        return 1;
-    }
-
-    Console.WriteLine($"  latest:  {check.Latest}");
-    Out.Blank();
-
-    if (check.UpdateAvailable)
-    {
-        Console.WriteLine("  run `mill update` to install");
+        // Install mode: show installed version if any
+        if (check.InstalledVersion != null)
+        {
+            Console.WriteLine($"  installed: {check.InstalledVersion}");
+            if (check.IsDowngrade)
+            {
+                Out.Blank();
+                Out.Warn($"downgrade: installed {check.InstalledVersion} is newer than {check.Current}");
+            }
+        }
+        else
+        {
+            Out.Blank();
+            Out.Ok("ready to install");
+        }
     }
     else
     {
-        Out.Ok($"already at latest ({check.Current})");
+        // Update mode: check for updates
+        if (check.Error != null)
+        {
+            Out.Error($"failed to check for updates: {check.Error}");
+            return 1;
+        }
+
+        Console.WriteLine($"  latest:  {check.Latest}");
+        Out.Blank();
+
+        if (check.UpdateAvailable)
+        {
+            Console.WriteLine("  run `mill install` to update");
+        }
+        else
+        {
+            Out.Ok($"already at latest ({check.Current})");
+        }
     }
 
     return 0;
 }
 
-static async Task<int> RunUpdate()
+static async Task<int> RunInstall()
 {
-    var check = await Installer.Check();
+    var check = await Installer.CheckInstall();
 
-    Console.WriteLine($"  current: {check.Current}");
-
-    if (check.Error != null)
-    {
-        Out.Error($"failed to check for updates: {check.Error}");
-        return 1;
-    }
-
-    if (!check.UpdateAvailable)
-    {
-        Out.Blank();
-        Out.Ok($"already at latest ({check.Current})");
-        return 0;
-    }
-
-    Console.WriteLine($"  latest:  {check.Latest}");
     Out.Blank();
+    Console.WriteLine($"  current: {check.Current}");
+    Console.WriteLine($"  mode:    {check.Mode.ToString().ToLowerInvariant()}");
 
-    var (success, message) = await Installer.Apply();
-
-    if (success)
+    if (check.Mode == InstallMode.Install)
     {
-        Out.Ok(message);
-        return 0;
+        // Install mode: copy to system location
+        if (check.InstalledVersion != null)
+        {
+            Console.WriteLine($"  installed: {check.InstalledVersion}");
+        }
+
+        // Handle downgrade with confirmation
+        if (check.IsDowngrade)
+        {
+            Out.Blank();
+            Out.Warn($"installed {check.InstalledVersion} is newer than {check.Current}");
+            Console.Write("  continue? [y/n] ");
+            var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
+            if (confirm != "y")
+            {
+                Out.Blank();
+                Out.Warn("aborted");
+                return 0;
+            }
+        }
+
+        Out.Blank();
+        Out.Step("installing...");
+
+        var (success, message) = Installer.CopyToSystemLocation();
+
+        if (success)
+        {
+            Out.Ok(message);
+
+            // Check PATH and provide guidance
+            if (!Installer.IsInstallLocationInPath())
+            {
+                Out.Blank();
+                Out.Warn("install location not in PATH");
+                Out.Detail(Installer.GetPathInstructions());
+            }
+
+            return 0;
+        }
+        else
+        {
+            Out.Error(message);
+            return 1;
+        }
     }
     else
     {
-        Out.Error(message);
-        return 1;
+        // Update mode: check for updates and download
+        if (check.Error != null)
+        {
+            Out.Error($"failed to check for updates: {check.Error}");
+            return 1;
+        }
+
+        if (!check.UpdateAvailable)
+        {
+            Out.Blank();
+            Out.Ok($"already at latest ({check.Current})");
+            return 0;
+        }
+
+        Console.WriteLine($"  latest:  {check.Latest}");
+        Out.Blank();
+
+        var (success, message) = await Installer.Apply();
+
+        if (success)
+        {
+            Out.Ok(message);
+            return 0;
+        }
+        else
+        {
+            Out.Error(message);
+            return 1;
+        }
     }
 }
 
@@ -104,8 +181,8 @@ static int ShowHelp()
           mill run                list available issues
           mill run --auto         autopick best issue (health check + scoring)
           mill run 123            execute work loop on GitHub issue
-          mill update             update mill to latest version
-          mill update --check     check for updates without installing
+          mill install            install or update mill
+          mill install --check    check install status without changes
           mill --version          show version
         """);
     return 0;
