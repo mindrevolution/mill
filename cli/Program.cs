@@ -49,6 +49,30 @@ static class Out
 
 static partial class Mill
 {
+    /// <summary>
+    /// Gets the current mill version from assembly metadata.
+    /// Falls back to "unknown" if not available.
+    /// </summary>
+    public static string Version =>
+        Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion?.Split('+')[0] ?? "unknown";
+
+    /// <summary>
+    /// Gets the expected GitHub release asset name for the current platform.
+    /// </summary>
+    public static string AssetName
+    {
+        get
+        {
+            var os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
+                   : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx"
+                   : "linux";
+            var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
+            return os == "win" ? $"mill-{os}-{arch}.exe" : $"mill-{os}-{arch}";
+        }
+    }
+
     // Parent git root - cached at startup, never changes (used for config, standards, drafts)
     static string? _parentGitRoot;
     static string ParentGitRoot => _parentGitRoot ??= ResolveGitRoot();
@@ -1412,6 +1436,170 @@ static partial class Mill
 
     [GeneratedRegex(@"PICK:(\d+)")]
     private static partial Regex PickPattern();
+}
+
+/// <summary>
+/// Self-update logic: fetch latest release from GitHub, download, and replace the running binary.
+/// </summary>
+static class Updater
+{
+    const string RepoOwner = "mindrevolution";
+    const string RepoName = "mill";
+    static readonly HttpClient Http = new()
+    {
+        DefaultRequestHeaders =
+        {
+            { "User-Agent", "mill" },
+            { "Accept", "application/vnd.github.v3+json" }
+        }
+    };
+
+    /// <summary>
+    /// Check result: current vs latest version.
+    /// </summary>
+    public record UpdateCheck(string Current, string? Latest, bool UpdateAvailable, string? Error);
+
+    /// <summary>
+    /// Checks for updates by querying the GitHub Releases API.
+    /// </summary>
+    public static async Task<UpdateCheck> Check()
+    {
+        var current = Mill.Version;
+        try
+        {
+            var release = await FetchLatestRelease();
+            if (release == null)
+                return new UpdateCheck(current, null, false, "no releases available");
+
+            var latest = release.TagName.TrimStart('v');
+            var updateAvailable = CompareVersions(current, latest) < 0;
+            return new UpdateCheck(current, latest, updateAvailable, null);
+        }
+        catch (HttpRequestException ex)
+        {
+            var message = ex.StatusCode == System.Net.HttpStatusCode.Forbidden
+                ? "rate limited — try again later"
+                : $"connection failed: {ex.Message}";
+            return new UpdateCheck(current, null, false, message);
+        }
+        catch (Exception ex)
+        {
+            return new UpdateCheck(current, null, false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Downloads and installs the latest version.
+    /// </summary>
+    public static async Task<(bool Success, string Message)> Apply()
+    {
+        var check = await Check();
+        if (check.Error != null)
+            return (false, check.Error);
+
+        if (!check.UpdateAvailable)
+            return (true, $"already at latest ({check.Current})");
+
+        try
+        {
+            var release = await FetchLatestRelease();
+            if (release == null)
+                return (false, "no releases available");
+
+            var assetName = Mill.AssetName;
+            var asset = release.Assets.FirstOrDefault(a => a.Name == assetName);
+            if (asset == null)
+                return (false, $"no binary for {assetName}");
+
+            // Download to temp file
+            var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+            var exeDir = Path.GetDirectoryName(exePath)!;
+            var tmpPath = Path.Combine(exeDir, assetName + ".tmp");
+
+            Out.Step($"downloading {assetName}...");
+
+            using (var response = await Http.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+            {
+                response.EnsureSuccessStatusCode();
+                await using var fs = File.Create(tmpPath);
+                await response.Content.CopyToAsync(fs);
+            }
+
+            // Verify download size
+            var downloadedSize = new FileInfo(tmpPath).Length;
+            if (downloadedSize == 0 || downloadedSize != asset.Size)
+            {
+                File.Delete(tmpPath);
+                return (false, "download corrupted — size mismatch");
+            }
+
+            // Self-replace using rename trick
+            var oldPath = exePath + ".old";
+
+            // Remove leftover .old from previous update (might fail if locked, that's ok)
+            try { File.Delete(oldPath); } catch { /* ignore */ }
+
+            // Rename current → old, tmp → current
+            File.Move(exePath, oldPath);
+            File.Move(tmpPath, exePath);
+
+            // On Unix, set executable bit
+            if (!OperatingSystem.IsWindows())
+            {
+                var chmod = Process.Start("chmod", ["+x", exePath]);
+                chmod?.WaitForExit();
+            }
+
+            return (true, $"updated to {check.Latest}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return (false, "permission denied — check install location");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Cleans up old binary from previous update. Call on startup.
+    /// </summary>
+    public static void CleanupOldBinary()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+            var oldPath = exePath + ".old";
+            if (File.Exists(oldPath))
+                File.Delete(oldPath);
+        }
+        catch { /* silently ignore */ }
+    }
+
+    static async Task<GhRelease?> FetchLatestRelease()
+    {
+        var url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
+        var json = await Http.GetStringAsync(url);
+        return JsonSerializer.Deserialize(json, GhJsonContext.Default.GhRelease);
+    }
+
+    /// <summary>
+    /// Compares semantic versions. Returns negative if a &lt; b, 0 if equal, positive if a &gt; b.
+    /// </summary>
+    static int CompareVersions(string a, string b)
+    {
+        var aParts = a.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
+        var bParts = b.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
+
+        for (var i = 0; i < Math.Max(aParts.Length, bParts.Length); i++)
+        {
+            var av = i < aParts.Length ? aParts[i] : 0;
+            var bv = i < bParts.Length ? bParts[i] : 0;
+            if (av != bv) return av.CompareTo(bv);
+        }
+        return 0;
+    }
 }
 
 record GhIssue(
