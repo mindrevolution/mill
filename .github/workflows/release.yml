@@ -13,6 +13,9 @@ jobs:
           - os: windows-latest
             rid: win-x64
             asset: mill-win-x64.exe
+          - os: windows-11-arm
+            rid: win-arm64
+            asset: mill-win-arm64.exe
           - os: ubuntu-latest
             rid: linux-x64
             asset: mill-linux-x64
