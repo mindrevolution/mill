@@ -139,24 +139,24 @@ Only the verify prompt can authorize completion. The work prompt cannot grade it
 
 ## CLI Output Style
 
-Minimal, uniform, hacker style. All messages lowercase, no emojis except small symbols.
+Minimal, uniform, Astro-inspired. Colored symbols, lowercase messages.
 
-| Method | Prefix | Use |
-|--------|--------|-----|
-| `Out.Warn(msg)` | `  ! ` | warnings, non-fatal issues |
-| `Out.Ok(msg)` | `  ✓ ` | success, completion |
-| `Out.Detail(msg)` | `    ↳ ` | sub-item, additional info |
-| `Out.Step(msg)` | `  > ` | action in progress |
-| `Out.Error(msg)` | `  x ` | errors (stderr) |
-| `Out.Line()` | `  ---` | separator |
-| `Out.Blank()` | | empty line |
+| Method | Symbol | Color | Use |
+|--------|--------|-------|-----|
+| `Out.Step(msg)` | `▶` | Cyan | action in progress |
+| `Out.Ok(msg)` | `✓` | Green | success, completion |
+| `Out.Warn(msg)` | `▲` | Yellow | warnings, non-fatal issues |
+| `Out.Error(msg)` | `✕` | Red | errors (stderr) |
+| `Out.Detail(msg)` | `↳` | Gray | sub-item, additional info |
+| `Out.Line()` | `---` | | separator |
+| `Out.Blank()` | | | empty line |
 
 Example output:
 ```
-  ! context stale
-  ! uncommitted changes (not in context)
+  ▲ context stale
+  ▲ uncommitted changes (not in context)
 
-  > building context...
+  ▶ building context...
 
   ---
 

@@ -36,13 +36,46 @@ static int ShowHelp()
 /// </summary>
 static class Out
 {
-    public static void Warn(string msg) => Console.WriteLine($"  ! {msg}");
-    public static void Ok(string msg) => Console.WriteLine($"  ✓ {msg}");
-    public static void Detail(string msg) => Console.WriteLine($"    ↳ {msg}");
-    public static void Step(string msg) => Console.WriteLine($"  > {msg}");
-    public static void Error(string msg) => Console.Error.WriteLine($"  x {msg}");
+    public static void Step(string msg)
+    {
+        WriteColored("  ▶ ", ConsoleColor.Cyan);
+        Console.WriteLine(msg);
+    }
+
+    public static void Ok(string msg)
+    {
+        WriteColored("  ✓ ", ConsoleColor.Green);
+        Console.WriteLine(msg);
+    }
+
+    public static void Warn(string msg)
+    {
+        WriteColored("  ▲ ", ConsoleColor.Yellow);
+        Console.WriteLine(msg);
+    }
+
+    public static void Error(string msg)
+    {
+        WriteColored("  ✕ ", ConsoleColor.Red);
+        Console.Error.WriteLine(msg);
+    }
+
+    public static void Detail(string msg)
+    {
+        WriteColored("    ↳ ", ConsoleColor.DarkGray);
+        Console.WriteLine(msg);
+    }
+
     public static void Line() => Console.WriteLine("  ---");
     public static void Blank() => Console.WriteLine();
+
+    static void WriteColored(string text, ConsoleColor color)
+    {
+        var prev = Console.ForegroundColor;
+        Console.ForegroundColor = color;
+        Console.Write(text);
+        Console.ForegroundColor = prev;
+    }
 }
 
 static partial class Mill
