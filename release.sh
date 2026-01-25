@@ -9,9 +9,16 @@ tag="v$version"
 
 echo "  > preparing release $tag"
 
-# validate clean state
-if [[ -n $(git status --porcelain) ]]; then
-    echo "  x working directory not clean"
+# warn if not on main branch
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$branch" != "dev" && "$branch" != "main" ]]; then
+    echo "  ! on branch '$branch', not dev/main"
+    read -p "  press enter to continue or ctrl+c to abort"
+fi
+
+# validate no uncommitted changes (untracked files are ok)
+if [[ -n $(git status --porcelain -uno) ]]; then
+    echo "  x uncommitted changes"
     exit 1
 fi
 

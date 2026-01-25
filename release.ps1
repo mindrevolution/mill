@@ -9,10 +9,17 @@ try {
 
     Write-Host "  > preparing release $tag"
 
-    # validate clean state
-    $status = git status --porcelain
+    # warn if not on main branch
+    $branch = git rev-parse --abbrev-ref HEAD
+    if ($branch -ne "dev" -and $branch -ne "main") {
+        Write-Host "  ! on branch '$branch', not dev/main" -ForegroundColor Yellow
+        Read-Host "  press enter to continue or ctrl+c to abort"
+    }
+
+    # validate no uncommitted changes (untracked files are ok)
+    $status = git status --porcelain -uno
     if ($status) {
-        Write-Host "  x working directory not clean" -ForegroundColor Red
+        Write-Host "  x uncommitted changes" -ForegroundColor Red
         exit 1
     }
 
