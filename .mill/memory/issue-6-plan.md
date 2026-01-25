@@ -1,7 +1,7 @@
 # Slice Plan for #6
 
 ## Concerns
-- [ ] Model - add InstallMode enum, InstallCheck record, system location helpers
+- [x] Model - add InstallMode enum, InstallCheck record, system location helpers
 - [ ] Logic - mode detection, install/copy logic, downgrade check, cleanup, update logic
 - [ ] Interface - add `mill install` and `mill install --check` commands, update help
 
@@ -10,4 +10,4 @@
 2. **Logic** - Implement install logic: mode detection, install/copy behavior, downgrade warning, auto-cleanup, update behavior
 3. **Interface** - Wire up CLI commands (`install`, `install --check`), update help text, remove old `update` command
 
-## Current: Slice 1
+## Current: Slice 2

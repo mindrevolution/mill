@@ -1661,9 +1661,176 @@ static class Installer
     }
 
     /// <summary>
-    /// Check result: current vs latest version.
+    /// Check result: current vs latest version (legacy, used by update command).
     /// </summary>
     public record UpdateCheck(string Current, string? Latest, bool UpdateAvailable, string? Error);
+
+    /// <summary>
+    /// Performs install check: determines mode, compares versions, detects downgrade.
+    /// </summary>
+    public static async Task<InstallCheck> CheckInstall()
+    {
+        var current = Mill.Version;
+        var isInstalled = IsInstalledLocation();
+        var mode = isInstalled ? InstallMode.Update : InstallMode.Install;
+        var installedVersion = isInstalled ? current : GetInstalledVersion();
+
+        // Check if downgrade (only relevant in Install mode)
+        var isDowngrade = false;
+        if (mode == InstallMode.Install && installedVersion != null)
+        {
+            isDowngrade = CompareVersions(current, installedVersion) < 0;
+        }
+
+        // Fetch latest from GitHub (for Update mode)
+        string? latest = null;
+        string? error = null;
+        var updateAvailable = false;
+
+        if (mode == InstallMode.Update)
+        {
+            try
+            {
+                var release = await FetchLatestRelease();
+                if (release == null)
+                {
+                    error = "no releases available";
+                }
+                else
+                {
+                    latest = release.TagName.TrimStart('v');
+                    updateAvailable = CompareVersions(current, latest) < 0;
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                error = ex.StatusCode == System.Net.HttpStatusCode.Forbidden
+                    ? "rate limited — try again later"
+                    : $"connection failed: {ex.Message}";
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+        }
+
+        return new InstallCheck(mode, current, latest, installedVersion, updateAvailable, isDowngrade, error);
+    }
+
+    /// <summary>
+    /// Main install logic: copies to system location (Install mode) or updates (Update mode).
+    /// Returns (success, message).
+    /// </summary>
+    public static async Task<(bool Success, string Message)> Install(bool skipDowngradePrompt = false)
+    {
+        var check = await CheckInstall();
+
+        if (check.Mode == InstallMode.Install)
+        {
+            // Install mode: copy to system location
+            if (check.IsDowngrade && !skipDowngradePrompt)
+            {
+                // Downgrade requires confirmation (caller should prompt)
+                return (false, $"downgrade: installed {check.InstalledVersion} is newer than {check.Current}");
+            }
+
+            return CopyToSystemLocation();
+        }
+        else
+        {
+            // Update mode: download and update
+            if (check.Error != null)
+                return (false, check.Error);
+
+            if (!check.UpdateAvailable)
+                return (true, $"already at latest ({check.Current})");
+
+            return await Apply();
+        }
+    }
+
+    /// <summary>
+    /// Copies current binary to system install location.
+    /// </summary>
+    public static (bool Success, string Message) CopyToSystemLocation()
+    {
+        var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+        var systemPath = GetSystemInstallPath();
+        var systemDir = Path.GetDirectoryName(systemPath)!;
+
+        try
+        {
+            // Create directory if needed
+            Directory.CreateDirectory(systemDir);
+
+            // Copy binary to system location
+            File.Copy(exePath, systemPath, overwrite: true);
+
+            // On Unix, set executable bit
+            if (!OperatingSystem.IsWindows())
+            {
+                var chmod = Process.Start("chmod", ["+x", systemPath]);
+                chmod?.WaitForExit();
+            }
+
+            // Auto-cleanup: delete source if from temp/download location
+            var shouldCleanup = IsTemporaryLocation(exePath);
+            if (shouldCleanup)
+            {
+                try { File.Delete(exePath); }
+                catch { /* ignore cleanup failure */ }
+            }
+
+            return (true, $"installed to {systemPath}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return (false, $"permission denied — cannot write to {systemDir}");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Checks if the install location is in PATH.
+    /// </summary>
+    public static bool IsInstallLocationInPath()
+    {
+        var systemPath = GetSystemInstallPath();
+        var systemDir = Path.GetDirectoryName(systemPath)!;
+
+        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var separator = OperatingSystem.IsWindows() ? ';' : ':';
+        var pathDirs = pathEnv.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+
+        return pathDirs.Any(dir =>
+            string.Equals(Path.GetFullPath(dir), Path.GetFullPath(systemDir),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Gets PATH instructions for the current platform.
+    /// </summary>
+    public static string GetPathInstructions()
+    {
+        var systemPath = GetSystemInstallPath();
+        var systemDir = Path.GetDirectoryName(systemPath)!;
+
+        if (OperatingSystem.IsWindows())
+        {
+            return $"add to PATH: setx PATH \"%PATH%;{systemDir}\"";
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            return $"add to PATH: echo 'export PATH=\"{systemDir}:$PATH\"' >> ~/.zshrc";
+        }
+        else
+        {
+            return $"add to PATH: echo 'export PATH=\"{systemDir}:$PATH\"' >> ~/.bashrc";
+        }
+    }
 
     /// <summary>
     /// Checks for updates by querying the GitHub Releases API.
