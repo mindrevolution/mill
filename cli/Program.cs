@@ -1658,8 +1658,15 @@ static class Updater
     static async Task<GhRelease?> FetchLatestRelease()
     {
         var url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
-        var json = await Http.GetStringAsync(url);
-        return JsonSerializer.Deserialize(json, GhJsonContext.Default.GhRelease);
+        try
+        {
+            var json = await Http.GetStringAsync(url);
+            return JsonSerializer.Deserialize(json, GhJsonContext.Default.GhRelease);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null; // no releases published yet
+        }
     }
 
     /// <summary>
