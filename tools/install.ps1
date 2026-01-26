@@ -17,13 +17,12 @@ try {
 
     Write-Host "  ✓ installed" -ForegroundColor Green
 
-    # check if in PATH
-    $paths = $env:PATH -split ";"
-    if ($paths -notcontains $installDir) {
-        Write-Host ""
-        Write-Host "  ! $installDir not in PATH" -ForegroundColor Yellow
-        Write-Host "  run once to add:"
-        Write-Host "    [Environment]::SetEnvironmentVariable('PATH', `$env:PATH + ';$installDir', 'User')"
+    # add to PATH if not present
+    $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+    if ($userPath -notlike "*$installDir*") {
+        [Environment]::SetEnvironmentVariable('PATH', "$userPath;$installDir", 'User')
+        $env:PATH = "$env:PATH;$installDir"
+        Write-Host "  ✓ added to PATH" -ForegroundColor Green
     }
 }
 finally {
