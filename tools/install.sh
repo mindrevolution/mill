@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cd "$(dirname "$0")/.."
+
 # detect platform
 case "$(uname -s)" in
     Darwin) os="osx" ;;
@@ -14,26 +16,19 @@ case "$(uname -m)" in
     *)             echo "  x unsupported architecture"; exit 1 ;;
 esac
 
-asset="mill-$os-$arch"
+rid="$os-$arch"
 install_dir="$HOME/.local/bin"
 target="$install_dir/mill"
 
-echo "  > fetching latest release..."
-release_url=$(curl -fsSL https://api.github.com/repos/mindrevolution/mill/releases/latest \
-    | grep "browser_download_url.*$asset\"" \
-    | cut -d '"' -f 4)
+echo "  > building for $rid"
+dotnet publish cli/mill-cli.csproj -c Release -r "$rid" -o out --nologo -v q
 
-if [[ -z "$release_url" ]]; then
-    echo "  x no release found for $asset"
-    exit 1
-fi
-
-echo "  > downloading $asset..."
+echo "  > installing to $target"
 mkdir -p "$install_dir"
-curl -fsSL "$release_url" -o "$target"
+cp out/mill "$target"
 chmod +x "$target"
 
-echo "  ✓ installed to $target"
+echo "  ✓ installed"
 
 # check if in PATH
 if ! command -v mill &>/dev/null; then
