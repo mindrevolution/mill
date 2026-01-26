@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-Push-Location $PSScriptRoot
+Push-Location "$PSScriptRoot/.."
 
 try {
     # extract version from csproj

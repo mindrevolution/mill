@@ -1,31 +1,31 @@
 $ErrorActionPreference = "Stop"
-Push-Location $PSScriptRoot
 
-try {
-    # detect architecture
-    $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "arm64" } else { "x64" }
-    $rid = "win-$arch"
-    $installDir = "$env:LOCALAPPDATA\Programs\mill"
-    $target = "$installDir\mill.exe"
+# detect architecture
+$arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "arm64" } else { "x64" }
+$asset = "mill-win-$arch.exe"
+$installDir = "$env:LOCALAPPDATA\Programs\mill"
+$target = "$installDir\mill.exe"
 
-    Write-Host "  > building for $rid"
-    dotnet publish cli/mill-cli.csproj -c Release -r $rid -o out --nologo -v q
+Write-Host "  > fetching latest release..."
+$release = Invoke-RestMethod -Uri "https://api.github.com/repos/mindrevolution/mill/releases/latest"
+$url = $release.assets | Where-Object { $_.name -eq $asset } | Select-Object -ExpandProperty browser_download_url
 
-    Write-Host "  > installing to $target"
-    New-Item -ItemType Directory -Force -Path $installDir | Out-Null
-    Copy-Item "out/mill.exe" $target -Force
-
-    Write-Host "  ✓ installed" -ForegroundColor Green
-
-    # check if in PATH
-    $paths = $env:PATH -split ";"
-    if ($paths -notcontains $installDir) {
-        Write-Host ""
-        Write-Host "  ! $installDir not in PATH" -ForegroundColor Yellow
-        Write-Host "  run once to add:"
-        Write-Host "    [Environment]::SetEnvironmentVariable('PATH', `$env:PATH + ';$installDir', 'User')"
-    }
+if (-not $url) {
+    Write-Host "  x no release found for $asset" -ForegroundColor Red
+    exit 1
 }
-finally {
-    Pop-Location
+
+Write-Host "  > downloading $asset..."
+New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+Invoke-WebRequest -Uri $url -OutFile $target
+
+Write-Host "  ✓ installed to $target" -ForegroundColor Green
+
+# check if in PATH
+$paths = $env:PATH -split ";"
+if ($paths -notcontains $installDir) {
+    Write-Host ""
+    Write-Host "  ! $installDir not in PATH" -ForegroundColor Yellow
+    Write-Host "  run once to add:"
+    Write-Host "    [Environment]::SetEnvironmentVariable('PATH', `$env:PATH + ';$installDir', 'User')"
 }
