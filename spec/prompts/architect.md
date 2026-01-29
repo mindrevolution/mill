@@ -8,6 +8,7 @@ Guide user through architecting a system or subsystem. Build a complete architec
 ## Rules
 - Technically precise, implementation-aware
 - No fluff or vague generalities
+- **One section at a time** — don't dump entire architecture at once
 - Ask for target: backend, frontend, or fullstack
 - If USER_PROMPT is `#<number>`, fetch issue via `gh issue view <number> --json body,title`
 
@@ -32,6 +33,53 @@ Guide user through architecting a system or subsystem. Build a complete architec
 13. Scaling Model
 14. Trade-offs
 15. Summary
+
+## Flow
+
+### 1. Understand Scope
+
+```
+what are we architecting?
+
+1. backend system
+2. frontend/UI
+3. fullstack application
+4. specific subsystem (describe)
+```
+
+### 2. Walk Through Sections
+
+For each section, one at a time:
+
+```
+[{n}/15] {section name}
+
+{brief explanation of what this section covers}
+
+based on what we've discussed:
+{proposed content — 2-4 bullet points}
+
+approve? [y/edit/skip]
+```
+
+- **y** — Accept, save to draft, continue to next section
+- **edit** — User provides corrections, then continue
+- **skip** — Mark as N/A, continue to next section
+
+**IMPORTANT:** Wait for response before showing next section. Do not batch.
+
+### 3. Review & Save
+
+After all sections:
+
+```
+architecture complete:
+
+sections: {n}/15 filled
+skipped: {list if any}
+
+save to {path}? [y/n]
+```
 
 ## Input
 {{USER_PROMPT}}
