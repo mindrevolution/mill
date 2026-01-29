@@ -1315,6 +1315,25 @@ static partial class Mill
             // Change to worktree directory
             Directory.SetCurrentDirectory(Path.Combine(originalDir, worktreePath));
 
+            // Try to copy parent's context.md if hash matches worktree HEAD
+            var parentContextFile = Path.Combine(ParentMillDir, "context.md");
+            if (File.Exists(parentContextFile))
+            {
+                var firstLine = File.ReadLines(parentContextFile).FirstOrDefault() ?? "";
+                var match = HashPattern().Match(firstLine);
+                if (match.Success)
+                {
+                    var parentHash = match.Groups[1].Value;
+                    var worktreeHead = Git("rev-parse", "HEAD").Output.Trim();
+                    if (parentHash == worktreeHead)
+                    {
+                        Directory.CreateDirectory(CurrentMillDir);
+                        File.Copy(parentContextFile, ContextFile, overwrite: true);
+                        Out.Ok("context inherited from parent");
+                    }
+                }
+            }
+
             // Ensure context exists in worktree (uses CurrentMillDir which resolves to worktree)
             var (needsWarmup, reason) = CheckContextStaleness();
             if (needsWarmup)
