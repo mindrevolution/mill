@@ -638,7 +638,8 @@ static partial class Mill
             return 1;
         }
 
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return 1;
 
         // Build prompt with pre-loaded context
         var prompt = new System.Text.StringBuilder();
@@ -762,7 +763,8 @@ static partial class Mill
             return 1;
         }
 
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return 1;
 
         // Build prompt with pre-loaded context for persona generation
         var prompt = new System.Text.StringBuilder();
@@ -873,7 +875,8 @@ static partial class Mill
             return 1;
         }
 
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return 1;
 
         // Build prompt with pre-loaded context for standards inference
         var prompt = new System.Text.StringBuilder();
@@ -1057,7 +1060,9 @@ static partial class Mill
         prompt.AppendLine("3. If no clear patterns found, create minimal standards with placeholders");
         prompt.AppendLine("4. Do NOT ask questions — just infer and write");
 
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return 1;
+
         using var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -1756,26 +1761,89 @@ static partial class Mill
     }
 
     /// <summary>
-    /// Resolve CLI executable, handling Windows .cmd wrappers.
+    /// Resolve Claude CLI executable path.
+    /// Priority: CLAUDE_PATH env var → PATH lookup → native install location
     /// </summary>
-    static string ResolveCli()
+    static string? ResolveCli()
     {
-        var cli = Environment.GetEnvironmentVariable("MILL_CLI") ?? "claude";
-
-        // On Windows, npm installs create .cmd wrappers
-        if (OperatingSystem.IsWindows() && !cli.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) && !cli.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        // 1. Explicit override via env var
+        var explicitPath = Environment.GetEnvironmentVariable("CLAUDE_PATH");
+        if (!string.IsNullOrEmpty(explicitPath))
         {
-            // Check if .cmd version exists in PATH
-            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(';') ?? [];
-            foreach (var dir in pathDirs)
-            {
-                var cmdPath = Path.Combine(dir, cli + ".cmd");
-                if (File.Exists(cmdPath))
-                    return cmdPath;
-            }
+            if (File.Exists(explicitPath))
+                return explicitPath;
+            Out.Warn($"CLAUDE_PATH set but file not found: {explicitPath}");
         }
 
-        return cli;
+        // 2. Find in PATH
+        var found = FindInPath("claude");
+        if (found != null)
+            return found;
+
+        // 3. Native install location fallback
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var nativePath = OperatingSystem.IsWindows()
+            ? Path.Combine(userProfile, ".local", "bin", "claude.exe")
+            : Path.Combine(userProfile, ".local", "bin", "claude");
+
+        if (File.Exists(nativePath))
+            return nativePath;
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolve CLI or show error with install instructions.
+    /// </summary>
+    static string? RequireCli()
+    {
+        var cli = ResolveCli();
+        if (cli != null)
+            return cli;
+
+        Out.Error("claude CLI not found");
+        Out.Detail("install: https://code.claude.com/docs/en/setup");
+        Out.Detail("or set CLAUDE_PATH env var to explicit path");
+        return null;
+    }
+
+    /// <summary>
+    /// Find executable in PATH using platform-specific lookup.
+    /// </summary>
+    static string? FindInPath(string name)
+    {
+        try
+        {
+            var (cmd, args) = OperatingSystem.IsWindows()
+                ? ("where.exe", name)
+                : ("which", name);
+
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = cmd,
+                    Arguments = args,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            var output = process.StandardOutput.ReadLine(); // First match
+            process.WaitForExit();
+
+            if (process.ExitCode == 0 && !string.IsNullOrEmpty(output) && File.Exists(output))
+                return output;
+        }
+        catch
+        {
+            // where.exe or which not available, fall through
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -1793,7 +1861,8 @@ static partial class Mill
 
         var template = await File.ReadAllTextAsync(fullPath);
         var rendered = template.Replace("{{USER_PROMPT}}", "");
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return 1;
 
         using var process = new Process
         {
@@ -1829,7 +1898,8 @@ static partial class Mill
             return 1;
         }
 
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return 1;
 
         // Build prompt with pre-loaded context
         var prompt = new System.Text.StringBuilder();
@@ -1943,7 +2013,9 @@ static partial class Mill
     /// </summary>
     static async Task<string> RunClaudeBatch(string input)
     {
-        var cli = ResolveCli();
+        var cli = RequireCli();
+        if (cli == null) return "";
+
         var output = new System.Text.StringBuilder();
 
         using var process = new Process
