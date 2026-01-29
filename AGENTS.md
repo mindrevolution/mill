@@ -139,27 +139,28 @@ Only the verify prompt can authorize completion. The work prompt cannot grade it
 
 ## CLI Output Style
 
-Minimal, uniform, Astro-inspired. Colored symbols, lowercase messages.
+Minimal, uniform, Astro-inspired. Lowercase messages.
+
+**Design:** Progress indicators (`•`) are subtle gray; status symbols use color to convey meaning at a glance.
 
 | Method | Symbol | Color | Use |
 |--------|--------|-------|-----|
-| `Out.Step(msg)` | `▶` | Cyan | action in progress |
+| `Out.Step(msg)` | `•` | Gray | action in progress (subtle) |
 | `Out.Ok(msg)` | `✓` | Green | success, completion |
 | `Out.Warn(msg)` | `▲` | Yellow | warnings, non-fatal issues |
 | `Out.Error(msg)` | `✕` | Red | errors (stderr) |
 | `Out.Detail(msg)` | `↳` | Gray | sub-item, additional info |
+| `Out.Prompt(msg)` | `❯` | Blink | awaiting user input |
+| `Out.Confirm(msg)` | `❯` | Blink | y/n single-keypress confirmation |
 | `Out.Line()` | `---` | | separator |
 | `Out.Blank()` | | | empty line |
 
 Example output:
 ```
+  • verifying git repo...
+  ✓ git repo
+  • verifying gh auth...
+  ✓ gh authenticated
   ▲ context stale
-  ▲ uncommitted changes (not in context)
-
-  ▶ building context...
-
-  ---
-
-  ✓ context loaded (commit abc1234)
     ↳ uncommitted changes read on demand
 ```

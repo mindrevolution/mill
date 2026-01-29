@@ -119,7 +119,7 @@ static class Out
 {
     public static void Step(string msg)
     {
-        WriteColored("  ▶ ", ConsoleColor.Cyan);
+        WriteColored("  • ", ConsoleColor.DarkGray);
         Console.WriteLine(msg);
     }
 
