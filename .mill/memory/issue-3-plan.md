@@ -25,5 +25,5 @@
 
 3. **Build Verification** - Run `dotnet build` to verify compilation
 
-## Current: Slice 1
-Creating standards-infer.md prompt file.
+## Current: Slice 2
+Adding CLI command and Init integration.
