@@ -1639,7 +1639,7 @@ static class Updater
                 return (false, $"no binary for {assetName}");
 
             // Download to temp file
-            var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+            var exePath = Environment.ProcessPath!;
             var exeDir = Path.GetDirectoryName(exePath)!;
             var tmpPath = Path.Combine(exeDir, assetName + ".tmp");
 
@@ -1696,7 +1696,7 @@ static class Updater
     {
         try
         {
-            var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+            var exePath = Environment.ProcessPath!;
             var oldPath = exePath + ".old";
             if (File.Exists(oldPath))
                 File.Delete(oldPath);
