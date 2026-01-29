@@ -529,7 +529,12 @@ static partial class Mill
         // Check for existing drafts
         var selectedDraft = PromptForDraft();
 
-        return RunClaudeInteractive("spec/prompts/spec-draft.md", selectedDraft);
+        // Initial message based on mode
+        var initialMessage = selectedDraft != null
+            ? "continue this draft"
+            : "start";
+
+        return RunClaudeInteractive("spec/prompts/spec-draft.md", selectedDraft, initialMessage);
     }
 
     public static async Task<int> RunSpecRefine(string issueNumber)
@@ -700,7 +705,9 @@ static partial class Mill
         Out.Blank();
 
         var personasFile = Path.Combine(MillDir, "personas.md");
-        if (File.Exists(personasFile))
+        var hasExisting = File.Exists(personasFile);
+
+        if (hasExisting)
         {
             Out.Ok("existing personas found");
             Out.Detail("you can update, add, or remove personas");
@@ -712,10 +719,10 @@ static partial class Mill
 
         Out.Blank();
 
-        return RunClaudeInteractivePersonas("spec/prompts/personas.md");
+        return RunClaudeInteractivePersonas("spec/prompts/personas.md", hasExisting);
     }
 
-    static int RunClaudeInteractivePersonas(string promptPath)
+    static int RunClaudeInteractivePersonas(string promptPath, bool hasExistingPersonas)
     {
         var fullPath = Path.Combine(FindMillHome(), promptPath);
         if (!File.Exists(fullPath))
@@ -786,6 +793,12 @@ static partial class Mill
         process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
         process.StartInfo.ArgumentList.Add("--append-system-prompt");
         process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
+
+        // Initial message based on mode
+        var initialMessage = hasExistingPersonas
+            ? "review and update these personas"
+            : "help me define user personas for this project";
+        process.StartInfo.ArgumentList.Add(initialMessage);
 
         process.Start();
         process.WaitForExit();
@@ -1531,7 +1544,7 @@ static partial class Mill
     /// Run Claude in fully interactive mode - hands off to Claude completely.
     /// Pre-loads context into system prompt so it's available before user speaks.
     /// </summary>
-    static int RunClaudeInteractive(string promptPath, string? draftPath = null)
+    static int RunClaudeInteractive(string promptPath, string? draftPath = null, string? initialMessage = null)
     {
         var fullPath = Path.Combine(FindMillHome(), promptPath);
         if (!File.Exists(fullPath))
@@ -1638,6 +1651,10 @@ static partial class Mill
         process.StartInfo.ArgumentList.Add("--disable-slash-commands");
         process.StartInfo.ArgumentList.Add("--append-system-prompt");
         process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
+
+        // Initial message to kick off the workflow
+        if (!string.IsNullOrEmpty(initialMessage))
+            process.StartInfo.ArgumentList.Add(initialMessage);
 
         process.Start();
         process.WaitForExit();
