@@ -1527,6 +1527,76 @@ static partial class Mill
 
     record DraftInfo(string Path, string Type, string Title, string Status, DateTime Updated, int FieldsComplete, int FieldsPending);
 
+    static async Task<SpecLoadResult> LoadSpec(string issue)
+    {
+        var issueNumber = issue;
+        var isGhIssue = int.TryParse(issueNumber, out _);
+
+        if (isGhIssue)
+        {
+            Out.Step($"fetching issue #{issueNumber}...");
+            var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,state,labels");
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(output))
+            {
+                Out.Error($"failed to fetch issue #{issueNumber}");
+                return new SpecLoadResult(null, 1);
+            }
+
+            var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
+            if (issueDetail == null)
+            {
+                Out.Error("failed to parse issue");
+                return new SpecLoadResult(null, 1);
+            }
+
+            // Guard: check issue state and labels
+            if (issueDetail.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
+            {
+                Out.Warn("issue is closed — work was merged");
+                return new SpecLoadResult(null, 0);
+            }
+
+            var labels = issueDetail.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
+            if (labels.Contains("ready-for-review"))
+            {
+                Out.Warn("issue has 'ready-for-review' — remove label to re-run");
+                return new SpecLoadResult(null, 0);
+            }
+            if (labels.Contains("in-progress"))
+            {
+                Out.Warn("issue has 'in-progress' — already running?");
+                return new SpecLoadResult(null, 0);
+            }
+            if (labels.Contains("blocked"))
+            {
+                Out.Warn("issue has 'blocked' — resolve before running");
+                return new SpecLoadResult(null, 0);
+            }
+
+            var specContent = issueDetail.Body?.Trim() ?? "";
+            var specRef = $"#{issueNumber}";
+            Out.Ok($"loaded issue #{issueNumber}");
+
+            // Add in-progress label
+            Out.Step("marking in-progress...");
+            Gh("issue", "edit", issueNumber, "--remove-label", "ready-for-review,blocked", "--add-label", "in-progress");
+
+            return new SpecLoadResult(new SpecInfo(specContent, specRef, issueNumber, true), null);
+        }
+        else
+        {
+            // Fallback: local file (for offline/gh-unavailable scenarios)
+            if (!File.Exists(issue))
+            {
+                Out.Error($"spec not found: {issue}");
+                return new SpecLoadResult(null, 1);
+            }
+            var specContent = await File.ReadAllTextAsync(issue);
+            var specRef = issue;
+            return new SpecLoadResult(new SpecInfo(specContent, specRef, issueNumber, false), null);
+        }
+    }
+
     public static async Task<int> Execute(string issue, string[] args)
     {
         if (!IsInitialized())
@@ -1558,73 +1628,12 @@ static partial class Mill
         const string verifyToken = "MILL_VERIFY";
         const string doneToken = "MILL_DONE";
 
-        // Check if issue is a GitHub issue number
-        var issueNumber = issue;
-        var isGhIssue = int.TryParse(issueNumber, out _);
+        // Load spec from GitHub issue or local file
+        var specResult = await LoadSpec(issue);
+        if (specResult.ExitCode.HasValue)
+            return specResult.ExitCode.Value;
 
-        string specContent;
-        string specRef;
-
-        if (isGhIssue)
-        {
-            Out.Step($"fetching issue #{issueNumber}...");
-            var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,state,labels");
-            if (exitCode != 0 || string.IsNullOrWhiteSpace(output))
-            {
-                Out.Error($"failed to fetch issue #{issueNumber}");
-                return 1;
-            }
-
-            var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
-            if (issueDetail == null)
-            {
-                Out.Error("failed to parse issue");
-                return 1;
-            }
-
-            // Guard: check issue state and labels
-            if (issueDetail.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
-            {
-                Out.Warn("issue is closed — work was merged");
-                return 0;
-            }
-
-            var labels = issueDetail.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
-            if (labels.Contains("ready-for-review"))
-            {
-                Out.Warn("issue has 'ready-for-review' — remove label to re-run");
-                return 0;
-            }
-            if (labels.Contains("in-progress"))
-            {
-                Out.Warn("issue has 'in-progress' — already running?");
-                return 0;
-            }
-            if (labels.Contains("blocked"))
-            {
-                Out.Warn("issue has 'blocked' — resolve before running");
-                return 0;
-            }
-
-            specContent = issueDetail.Body?.Trim() ?? "";
-            specRef = $"#{issueNumber}";
-            Out.Ok($"loaded issue #{issueNumber}");
-
-            // Add in-progress label
-            Out.Step("marking in-progress...");
-            Gh("issue", "edit", issueNumber, "--remove-label", "ready-for-review,blocked", "--add-label", "in-progress");
-        }
-        else
-        {
-            // Fallback: local file (for offline/gh-unavailable scenarios)
-            if (!File.Exists(issue))
-            {
-                Out.Error($"spec not found: {issue}");
-                return 1;
-            }
-            specContent = await File.ReadAllTextAsync(issue);
-            specRef = issue;
-        }
+        var (specContent, specRef, issueNumber, isGhIssue) = specResult.Spec!;
 
         // Validate prompts exist before starting
         var iterationPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-iterate.md");
@@ -3241,6 +3250,10 @@ record VerifyMetadata(
 [JsonSerializable(typeof(VerifyMetadata))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class VerifyJsonContext : JsonSerializerContext { }
+
+// Spec loading result
+record SpecInfo(string Content, string Ref, string IssueNumber, bool IsGhIssue);
+record SpecLoadResult(SpecInfo? Spec, int? ExitCode);
 
 // Criterion verification types
 record AcceptanceCriterion(int Index, string Title, string Body);
