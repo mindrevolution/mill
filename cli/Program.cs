@@ -23,6 +23,7 @@ return args switch
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
     ["standards"] => Mill.RunStandards(),
+    ["sweep"] => await Mill.RunSweep(),
     ["run", "--auto"] => await Mill.RunAutopick(),
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
@@ -318,7 +319,10 @@ static partial class Mill
         "feature",
         "bug",
         "security",
-        "task"
+        "task",
+        // Sweep labels
+        "sweep",
+        "impact:low"
     ];
 
     public static async Task<int> Init()
@@ -385,6 +389,8 @@ static partial class Mill
                     "bug" => "D73A4A",
                     "security" => "EE0701",
                     "chore" => "666666",
+                    "sweep" => "BFD4F2",
+                    "impact:low" => "C5DEF5",
                     _ => "CCCCCC"
                 };
                 Gh("label", "create", label, "--color", color, "--force");
@@ -512,6 +518,96 @@ static partial class Mill
     {
         var (success, existing) = GetExistingLabels();
         return success && RequiredLabels.All(existing.Contains);
+    }
+
+    /// <summary>
+    /// Gets existing open sweep issues to avoid creating duplicates.
+    /// Returns a set of finding IDs that already have open issues.
+    /// </summary>
+    static HashSet<string> GetExistingSweepIssues()
+    {
+        var (exit, output) = Gh("issue", "list", "--state", "open", "--label", "sweep", "--json", "body", "--limit", "100");
+        if (exit != 0) return [];
+
+        var issues = JsonSerializer.Deserialize(output, GhJsonContext.Default.ListGhIssueDetail) ?? [];
+        var existingIds = new HashSet<string>();
+
+        foreach (var issue in issues)
+        {
+            if (string.IsNullOrEmpty(issue.Body)) continue;
+
+            // Extract finding ID from issue body (format: "Finding: `dry-001`" or similar)
+            var match = Regex.Match(issue.Body, @"Finding:\s*`?([a-z]+-\d+)`?", RegexOptions.IgnoreCase);
+            if (match.Success)
+                existingIds.Add(match.Groups[1].Value.ToLowerInvariant());
+        }
+
+        return existingIds;
+    }
+
+    /// <summary>
+    /// Reads dismissed findings from project memory.
+    /// Returns a set of finding IDs that have been dismissed by the user.
+    /// </summary>
+    static HashSet<string> ReadDismissedFindings()
+    {
+        var projectMemory = Path.Combine(MemoryDir, "project.md");
+        if (!File.Exists(projectMemory)) return [];
+
+        var content = File.ReadAllText(projectMemory);
+        var dismissed = new HashSet<string>();
+
+        // Look for dismissed findings section
+        var match = Regex.Match(content, @"## Dismissed Findings\s*\n((?:- .+\n?)+)", RegexOptions.IgnoreCase);
+        if (!match.Success) return dismissed;
+
+        // Extract each dismissed finding ID
+        var section = match.Groups[1].Value;
+        foreach (Match idMatch in Regex.Matches(section, @"- `?([a-z]+-\d+)`?", RegexOptions.IgnoreCase))
+        {
+            dismissed.Add(idMatch.Groups[1].Value.ToLowerInvariant());
+        }
+
+        return dismissed;
+    }
+
+    /// <summary>
+    /// Appends dismissed findings to project memory.
+    /// </summary>
+    static void SaveDismissedFindings(IEnumerable<string> findingIds)
+    {
+        var projectMemory = Path.Combine(MemoryDir, "project.md");
+        Directory.CreateDirectory(MemoryDir);
+
+        var content = File.Exists(projectMemory) ? File.ReadAllText(projectMemory) : "";
+
+        // Check if dismissed findings section exists
+        if (content.Contains("## Dismissed Findings"))
+        {
+            // Append to existing section
+            var lines = findingIds.Select(id => $"- `{id}`");
+            var insertion = string.Join("\n", lines) + "\n";
+
+            // Find the end of the section and insert
+            var sectionEnd = content.IndexOf("\n## ", content.IndexOf("## Dismissed Findings") + 1);
+            if (sectionEnd == -1)
+            {
+                // Section is at the end of file
+                content = content.TrimEnd() + "\n" + insertion;
+            }
+            else
+            {
+                content = content.Insert(sectionEnd, insertion);
+            }
+        }
+        else
+        {
+            // Create new section
+            var section = "\n## Dismissed Findings\n\n" + string.Join("\n", findingIds.Select(id => $"- `{id}`")) + "\n";
+            content = content.TrimEnd() + section;
+        }
+
+        File.WriteAllText(projectMemory, content);
     }
 
     public static async Task<int> RunSpec()
@@ -1084,6 +1180,274 @@ static partial class Mill
         await process.WaitForExitAsync();
 
         return process.ExitCode;
+    }
+
+    /// <summary>
+    /// Scan codebase against standards, surface findings, and optionally create GitHub issues.
+    /// </summary>
+    public static async Task<int> RunSweep()
+    {
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        // Check for standards
+        var standardsFile = Path.Combine(StandardsDir, "code.md");
+        if (!File.Exists(standardsFile))
+        {
+            Out.Blank();
+            Out.Warn("no standards defined");
+            Out.Detail("sweep requires standards to check against");
+            Out.Blank();
+            Console.WriteLine("  run: mill init      (infers standards during setup)");
+            Console.WriteLine("  or:  mill standards (create/edit standards manually)");
+            Out.Blank();
+            return 1;
+        }
+
+        Out.Blank();
+        Out.Step("analyzing codebase against standards...");
+        Out.Blank();
+
+        // Run Claude to analyze the codebase
+        var sweepPromptPath = Path.Combine(FindMillHome(), "run/prompts/sweep-analyze.md");
+        if (!File.Exists(sweepPromptPath))
+        {
+            Out.Error($"sweep prompt not found: {sweepPromptPath}");
+            return 1;
+        }
+
+        // Build the prompt with standards content
+        var template = await File.ReadAllTextAsync(sweepPromptPath);
+        var standardsContent = await File.ReadAllTextAsync(standardsFile);
+        var rendered = template.Replace("{{STANDARDS_CONTENT}}", standardsContent);
+
+        // Run Claude and capture output
+        var cli = RequireCli();
+        if (cli == null) return 1;
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                Arguments = "-p --dangerously-skip-permissions --output-format text",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = false, // Let errors go to console
+                UseShellExecute = false
+            }
+        };
+
+        process.Start();
+        await process.StandardInput.WriteAsync(rendered);
+        process.StandardInput.Close();
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        if (process.ExitCode != 0)
+        {
+            Out.Error("analysis failed");
+            return 1;
+        }
+
+        // Parse the JSON output
+        var analysisMatch = Regex.Match(output, @"SWEEP_ANALYSIS\s*(\{[\s\S]*\})", RegexOptions.Multiline);
+        if (!analysisMatch.Success)
+        {
+            Out.Warn("could not parse analysis output");
+            Out.Detail("check the sweep-analyze prompt format");
+            return 1;
+        }
+
+        SweepAnalysis? analysis;
+        try
+        {
+            analysis = JsonSerializer.Deserialize(analysisMatch.Groups[1].Value, GhJsonContext.Default.SweepAnalysis);
+        }
+        catch (JsonException ex)
+        {
+            Out.Error($"invalid analysis JSON: {ex.Message}");
+            return 1;
+        }
+
+        if (analysis == null || analysis.Categories.Count == 0)
+        {
+            Out.Blank();
+            Out.Ok("no findings — codebase looks good!");
+            Out.Blank();
+            return 0;
+        }
+
+        // Load existing sweep issues and dismissed findings to filter
+        var existingIssues = GetExistingSweepIssues();
+        var dismissed = ReadDismissedFindings();
+
+        // Filter findings per category
+        var filteredCategories = new List<SweepCategory>();
+        foreach (var category in analysis.Categories)
+        {
+            var filtered = category.Findings
+                .Where(f => !existingIssues.Contains(f.Id.ToLowerInvariant()))
+                .Where(f => !dismissed.Contains(f.Id.ToLowerInvariant()))
+                .ToList();
+
+            if (filtered.Count > 0)
+            {
+                filteredCategories.Add(category with { Findings = filtered });
+            }
+        }
+
+        if (filteredCategories.Count == 0)
+        {
+            Out.Blank();
+            Out.Ok("no new findings (existing issues or dismissed)");
+            Out.Blank();
+            return 0;
+        }
+
+        // Interactive selection per category
+        var selectedFindings = new List<SweepFinding>();
+        var toDismiss = new List<string>();
+
+        Out.Blank();
+        Console.WriteLine($"  found {filteredCategories.Sum(c => c.Findings.Count)} findings in {filteredCategories.Count} categories");
+        Out.Blank();
+
+        foreach (var category in filteredCategories)
+        {
+            Out.Line();
+            Out.Blank();
+            Console.WriteLine($"  {category.Name}");
+            if (!string.IsNullOrEmpty(category.Description))
+                Out.Detail(category.Description);
+            Out.Blank();
+
+            // Display numbered findings
+            for (var i = 0; i < category.Findings.Count; i++)
+            {
+                var f = category.Findings[i];
+                var severity = f.Severity?.ToLowerInvariant() switch
+                {
+                    "high" => "[high]",
+                    "medium" => "[med]",
+                    _ => "[low]"
+                };
+                Console.WriteLine($"    {i + 1}. {severity,-6} {f.Title}");
+                if (!string.IsNullOrEmpty(f.File))
+                    Out.Detail($"{f.File}" + (f.Line > 0 ? $":{f.Line}" : ""));
+            }
+
+            Out.Blank();
+            Out.Prompt($"create issues [1-{category.Findings.Count}, all, none] (enter to skip): ");
+
+            var input = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
+            // Clear line and reprint without blink
+            Console.Write($"\r\x1b[2K  ❯ selection: {(string.IsNullOrEmpty(input) ? "skip" : input)}");
+            Console.WriteLine();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                // Default: skip
+                continue;
+            }
+            else if (input == "all")
+            {
+                selectedFindings.AddRange(category.Findings);
+            }
+            else if (input == "none")
+            {
+                // Prompt to remember as dismissed
+                if (Out.Confirm("remember as dismissed?"))
+                {
+                    toDismiss.AddRange(category.Findings.Select(f => f.Id));
+                }
+            }
+            else
+            {
+                // Parse comma-separated numbers
+                var indices = input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => int.TryParse(s, out var n) ? n : -1)
+                    .Where(n => n >= 1 && n <= category.Findings.Count)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var idx in indices)
+                {
+                    selectedFindings.Add(category.Findings[idx - 1]);
+                }
+            }
+        }
+
+        // Save dismissed findings
+        if (toDismiss.Count > 0)
+        {
+            SaveDismissedFindings(toDismiss);
+            Out.Blank();
+            Out.Ok($"dismissed {toDismiss.Count} findings");
+        }
+
+        // Create issues for selected findings
+        if (selectedFindings.Count == 0)
+        {
+            Out.Blank();
+            Out.Ok("no issues created");
+            Out.Blank();
+            return 0;
+        }
+
+        Out.Blank();
+        Out.Step($"creating {selectedFindings.Count} issues...");
+        Out.Blank();
+
+        var created = 0;
+        foreach (var finding in selectedFindings)
+        {
+            var title = $"[sweep] {finding.Title}";
+            var body = $"""
+                **Finding:** `{finding.Id}`
+
+                {finding.Description}
+
+                **Location:** {finding.File ?? "N/A"}{(finding.Line > 0 ? $":{finding.Line}" : "")}
+                **Severity:** {finding.Severity ?? "low"}
+
+                ---
+                *Generated by `mill sweep`*
+                """;
+
+            var (exitCode, _) = Gh("issue", "create",
+                "--title", title,
+                "--body", body,
+                "--label", "task",
+                "--label", "impact:low",
+                "--label", "sweep");
+
+            if (exitCode == 0)
+            {
+                created++;
+                Out.Detail($"created: {finding.Title}");
+            }
+            else
+            {
+                Out.Warn($"failed: {finding.Title}");
+            }
+        }
+
+        Out.Blank();
+        Out.Ok($"{created} issues created");
+        Out.Detail("run: mill run to see available issues");
+        Out.Blank();
+
+        return 0;
     }
 
     static string? PromptForDraft()
@@ -2845,8 +3209,10 @@ record HealthConfig
 
 [JsonSerializable(typeof(List<GhIssue>))]
 [JsonSerializable(typeof(GhIssueDetail))]
+[JsonSerializable(typeof(List<GhIssueDetail>))]
 [JsonSerializable(typeof(GhIssueDetailFull))]
 [JsonSerializable(typeof(GhRelease))]
+[JsonSerializable(typeof(SweepAnalysis))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class GhJsonContext : JsonSerializerContext { }
 
@@ -2884,3 +3250,27 @@ record CriterionFail(
 [JsonSerializable(typeof(CriterionFail))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class CriterionJsonContext : JsonSerializerContext { }
+
+// Sweep analysis types
+record SweepFinding(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("file")] string? File,
+    [property: JsonPropertyName("line")] int? Line,
+    [property: JsonPropertyName("severity")] string Severity);
+
+record SweepCategory(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("findings")] List<SweepFinding> Findings);
+
+record SweepAnalysis(
+    [property: JsonPropertyName("categories")] List<SweepCategory> Categories);
+
+[JsonSerializable(typeof(SweepFinding))]
+[JsonSerializable(typeof(SweepCategory))]
+[JsonSerializable(typeof(SweepAnalysis))]
+[JsonSerializable(typeof(List<SweepCategory>))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+internal partial class SweepJsonContext : JsonSerializerContext { }
