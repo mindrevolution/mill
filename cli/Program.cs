@@ -648,6 +648,29 @@ static partial class Mill
             return 1;
         }
 
+        // Check if local branch is behind remote
+        Out.Step("syncing with remote...");
+        Git("fetch");
+        var (_, upstream, _) = Git("rev-parse", "--abbrev-ref", "@{upstream}");
+        upstream = upstream.Trim();
+        if (!string.IsNullOrEmpty(upstream))
+        {
+            var (_, behindStr, _) = Git("rev-list", "--count", $"HEAD..{upstream}");
+            if (int.TryParse(behindStr.Trim(), out var behind) && behind > 0)
+            {
+                Out.Warn($"local branch is {behind} commit{(behind == 1 ? "" : "s")} behind {upstream}");
+                Console.Write("  continue anyway? [y/n] ");
+                var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
+                if (confirm != "y")
+                {
+                    Out.Blank();
+                    Out.Warn("aborted — run: git pull");
+                    return 0;
+                }
+                Out.Blank();
+            }
+        }
+
         var maxIterations = int.TryParse(Environment.GetEnvironmentVariable("MILL_MAX_ITERATIONS"), out var n) ? n : 20;
         const string verifyToken = "MILL_VERIFY";
         const string doneToken = "MILL_DONE";
