@@ -1,9 +1,12 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+
+Console.OutputEncoding = Encoding.UTF8;
 
 // Clean up old binary from previous update (silent, on every run)
 Updater.CleanupOldBinary();
