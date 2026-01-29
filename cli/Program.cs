@@ -1632,6 +1632,97 @@ static partial class Mill
         return new WorktreeSetupResult(new WorktreeInfo(worktreePath, branchName, originalDir), null);
     }
 
+    static async Task<VerificationResult> RunTestsAndVerify(string specContent, string specRef)
+    {
+        var testCommand = ExtractTestCommand(specContent);
+        var criteria = ExtractCriteria(specContent);
+
+        Out.Blank();
+
+        // Step 1: Run tests once (gate before criterion verification)
+        if (!string.IsNullOrEmpty(testCommand))
+        {
+            Out.Step($"running tests: {testCommand}");
+            var (shellCmd, shellArg) = OperatingSystem.IsWindows()
+                ? (FindInPath("pwsh") != null ? ("pwsh", "-c") : ("powershell.exe", "-Command"))
+                : ("sh", "-c");
+            var (testExit, testOut, testErr) = Run(shellCmd, shellArg, testCommand);
+            if (testExit != 0)
+            {
+                Out.Blank();
+                Out.Warn("tests failed");
+                Out.Detail(testErr.Length > 0 ? testErr.Trim() : testOut.Trim());
+                var failureContext = $"Tests failed: {(testErr.Length > 0 ? testErr.Trim() : testOut.Trim())}";
+                return new VerificationResult(false, failureContext);
+            }
+            Out.Ok("tests passed");
+        }
+
+        // Step 2: Verify criteria
+        if (criteria.Count > 0)
+        {
+            Out.Step($"verifying {criteria.Count} acceptance criteria...");
+            Out.Blank();
+
+            var (allPassed, results, failCtx) = await RunCriterionVerification(specContent, specRef, criteria);
+
+            Out.Blank();
+            if (allPassed)
+            {
+                Out.Ok($"all {results.Count} criteria passed");
+            }
+            else
+            {
+                var failures = results.Where(r => !r.Passed).ToList();
+                Out.Warn($"{failures.Count}/{results.Count} criteria failed:");
+                foreach (var f in failures)
+                {
+                    Out.Detail($"[{f.Index}] {f.Title}: {f.Reason}");
+                }
+                return new VerificationResult(false, failCtx);
+            }
+        }
+        else
+        {
+            // No parseable criteria — skip verification with warning
+            Out.Blank();
+            Out.Warn("no acceptance criteria found in spec");
+            Out.Detail("specs should have structured criteria for proper verification");
+            Out.Detail("continuing without criterion verification...");
+        }
+
+        return new VerificationResult(true, null);
+    }
+
+    static PullRequestResult CreatePullRequest(VerifyMetadata metadata, string issueNumber)
+    {
+        // Push branch
+        Out.Step($"pushing branch {metadata.Branch}...");
+        var (pushExit, _, pushErr) = Run("git", "push", "-u", "origin", metadata.Branch);
+        if (pushExit != 0)
+        {
+            Out.Warn($"push failed: {pushErr.Trim()}");
+            return new PullRequestResult(false, $"Push failed: {pushErr.Trim()}");
+        }
+
+        // Create PR
+        Out.Step("creating PR...");
+        var prBody = $"Fixes #{issueNumber}\n\n## Summary\n{metadata.Summary}\n\n## Verification\n{metadata.Verification}";
+        var (prExit, prOut, prErr) = Run("gh", "pr", "create", "--title", metadata.Title, "--body", prBody);
+        if (prExit != 0)
+        {
+            Out.Warn($"PR creation failed: {prErr.Trim()}");
+            return new PullRequestResult(false, $"PR creation failed: {prErr.Trim()}");
+        }
+        Out.Detail(prOut.Trim());
+
+        // Mark ready-for-review
+        Out.Step("marking ready-for-review...");
+        Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
+
+        return new PullRequestResult(true, null);
+    }
+
     public static async Task<int> Execute(string issue, string[] args)
     {
         if (!IsInitialized())
@@ -1791,104 +1882,22 @@ static partial class Mill
                         continue;
                     }
 
-                    // Extract test command and criteria
-                    var testCommand = ExtractTestCommand(specContent);
-                    var criteria = ExtractCriteria(specContent);
+                    // Run tests and verify criteria
+                    var verifyResult = await RunTestsAndVerify(specContent, specRef);
 
-                    Out.Blank();
-
-                    // Step 1: Run tests once (gate before criterion verification)
-                    if (!string.IsNullOrEmpty(testCommand))
+                    if (verifyResult.Passed)
                     {
-                        Out.Step($"running tests: {testCommand}");
-                        var (shellCmd, shellArg) = OperatingSystem.IsWindows()
-                            ? (FindInPath("pwsh") != null ? ("pwsh", "-c") : ("powershell.exe", "-Command"))
-                            : ("sh", "-c");
-                        var (testExit, testOut, testErr) = Run(shellCmd, shellArg, testCommand);
-                        if (testExit != 0)
-                        {
-                            Out.Blank();
-                            Out.Warn("tests failed");
-                            Out.Detail(testErr.Length > 0 ? testErr.Trim() : testOut.Trim());
-                            lastFailureContext = $"Tests failed: {(testErr.Length > 0 ? testErr.Trim() : testOut.Trim())}";
-                            continue;
-                        }
-                        Out.Ok("tests passed");
-                    }
-
-                    bool verificationPassed;
-                    string? criterionFailureContext = null;
-
-                    // Step 2: Verify criteria
-                    if (criteria.Count > 0)
-                    {
-                        Out.Step($"verifying {criteria.Count} acceptance criteria...");
-                        Out.Blank();
-
-                        var (allPassed, results, failCtx) = await RunCriterionVerification(
-                            specContent, specRef, criteria);
-
-                        verificationPassed = allPassed;
-                        criterionFailureContext = failCtx;
-
-                        Out.Blank();
-                        if (allPassed)
-                        {
-                            Out.Ok($"all {results.Count} criteria passed");
-                        }
-                        else
-                        {
-                            var failures = results.Where(r => !r.Passed).ToList();
-                            Out.Warn($"{failures.Count}/{results.Count} criteria failed:");
-                            foreach (var f in failures)
-                            {
-                                Out.Detail($"[{f.Index}] {f.Title}: {f.Reason}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // No parseable criteria — skip verification with warning
-                        Out.Blank();
-                        Out.Warn("no acceptance criteria found in spec");
-                        Out.Detail("specs should have structured criteria for proper verification");
-                        Out.Detail("continuing without criterion verification...");
-                        verificationPassed = true; // Tests passed, that's all we can check
-                    }
-
-                    if (verificationPassed)
-                    {
-                        // Verification passed - create PR
                         Out.Blank();
                         Out.Ok("verification passed");
 
                         if (isGhIssue)
                         {
-                            // Push branch
-                            Out.Step($"pushing branch {metadata.Branch}...");
-                            var (pushExit, _, pushErr) = Run("git", "push", "-u", "origin", metadata.Branch);
-                            if (pushExit != 0)
+                            var prResult = CreatePullRequest(metadata, issueNumber);
+                            if (!prResult.Success)
                             {
-                                Out.Warn($"push failed: {pushErr.Trim()}");
-                                lastFailureContext = $"Push failed: {pushErr.Trim()}";
+                                lastFailureContext = prResult.Error;
                                 continue;
                             }
-
-                            // Create PR
-                            Out.Step("creating PR...");
-                            var prBody = $"Fixes #{issueNumber}\n\n## Summary\n{metadata.Summary}\n\n## Verification\n{metadata.Verification}";
-                            var (prExit, prOut, prErr) = Run("gh", "pr", "create", "--title", metadata.Title, "--body", prBody);
-                            if (prExit != 0)
-                            {
-                                Out.Warn($"PR creation failed: {prErr.Trim()}");
-                                lastFailureContext = $"PR creation failed: {prErr.Trim()}";
-                                continue;
-                            }
-                            Out.Detail(prOut.Trim());
-
-                            // Mark ready-for-review
-                            Out.Step("marking ready-for-review...");
-                            Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
                         }
 
                         Out.Blank();
@@ -1898,9 +1907,7 @@ static partial class Mill
                     }
                     else
                     {
-                        // Verification failed - inject context for next iteration
-                        if (criterionFailureContext != null)
-                            lastFailureContext = criterionFailureContext;
+                        lastFailureContext = verifyResult.FailureContext;
                         continue;
                     }
                 }
@@ -3269,6 +3276,10 @@ record SpecLoadResult(SpecInfo? Spec, int? ExitCode);
 // Worktree setup result
 record WorktreeInfo(string Path, string BranchName, string OriginalDir);
 record WorktreeSetupResult(WorktreeInfo? Worktree, int? ExitCode);
+
+// Verification result types
+record VerificationResult(bool Passed, string? FailureContext);
+record PullRequestResult(bool Success, string? Error);
 
 // Criterion verification types
 record AcceptanceCriterion(int Index, string Title, string Body);
