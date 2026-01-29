@@ -7,26 +7,26 @@ try {
     $version = [regex]::Match($csproj, '<Version>([^<]+)</Version>').Groups[1].Value
     $tag = "v$version"
 
-    Write-Host "  > preparing release $tag"
+    Write-Host "  • preparing release $tag"
 
     # warn if not on main branch
     $branch = git rev-parse --abbrev-ref HEAD
     if ($branch -ne "dev" -and $branch -ne "main") {
-        Write-Host "  ! on branch '$branch', not dev/main" -ForegroundColor Yellow
+        Write-Host "  ▲ on branch '$branch', not dev/main" -ForegroundColor Yellow
         Read-Host "  press enter to continue or ctrl+c to abort"
     }
 
     # validate no uncommitted changes (untracked files are ok)
     $status = git status --porcelain -uno
     if ($status) {
-        Write-Host "  x uncommitted changes" -ForegroundColor Red
+        Write-Host "  ✕ uncommitted changes" -ForegroundColor Red
         exit 1
     }
 
     # check if tag exists
     $existing = git rev-parse $tag 2>$null
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "  x tag $tag already exists" -ForegroundColor Red
+        Write-Host "  ✕ tag $tag already exists" -ForegroundColor Red
         exit 1
     }
 

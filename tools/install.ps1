@@ -8,10 +8,10 @@ try {
     $installDir = "$env:LOCALAPPDATA\Programs\mill"
     $target = "$installDir\mill.exe"
 
-    Write-Host "  > building for $rid"
+    Write-Host "  • building for $rid"
     dotnet publish cli/mill-cli.csproj -c Release -r $rid -o out --nologo -v q
 
-    Write-Host "  > installing to $target"
+    Write-Host "  • installing to $target"
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
     Copy-Item "out/mill.exe" $target -Force
 
