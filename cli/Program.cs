@@ -318,7 +318,10 @@ static partial class Mill
         "feature",
         "bug",
         "security",
-        "task"
+        "task",
+        // Sweep labels
+        "sweep",
+        "impact:low"
     ];
 
     public static async Task<int> Init()
@@ -385,6 +388,8 @@ static partial class Mill
                     "bug" => "D73A4A",
                     "security" => "EE0701",
                     "chore" => "666666",
+                    "sweep" => "BFD4F2",
+                    "impact:low" => "C5DEF5",
                     _ => "CCCCCC"
                 };
                 Gh("label", "create", label, "--color", color, "--force");
@@ -2884,3 +2889,27 @@ record CriterionFail(
 [JsonSerializable(typeof(CriterionFail))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class CriterionJsonContext : JsonSerializerContext { }
+
+// Sweep analysis types
+record SweepFinding(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("file")] string? File,
+    [property: JsonPropertyName("line")] int? Line,
+    [property: JsonPropertyName("severity")] string Severity);
+
+record SweepCategory(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("findings")] List<SweepFinding> Findings);
+
+record SweepAnalysis(
+    [property: JsonPropertyName("categories")] List<SweepCategory> Categories);
+
+[JsonSerializable(typeof(SweepFinding))]
+[JsonSerializable(typeof(SweepCategory))]
+[JsonSerializable(typeof(SweepAnalysis))]
+[JsonSerializable(typeof(List<SweepCategory>))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+internal partial class SweepJsonContext : JsonSerializerContext { }
