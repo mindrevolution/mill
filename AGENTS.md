@@ -161,7 +161,7 @@ Benefits:
 
 ## CLI Output Style
 
-Minimal, uniform, Astro-inspired. Lowercase messages.
+Minimal, uniform, lowercase messages.
 
 **Design:** Progress indicators (`•`) are subtle gray; status symbols use color to convey meaning at a glance.
 
