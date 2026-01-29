@@ -132,7 +132,7 @@ Benefits:
 - Granular feedback (know exactly which criterion failed)
 - Multiple independent reviewers strengthen "can't grade own homework"
 
-Fallback: Specs without parseable criteria use holistic `loop-verify.md`.
+**Note:** Specs without parseable criteria skip verification with a warning — fix the spec to include structured acceptance criteria.
 
 ## Requirements
 

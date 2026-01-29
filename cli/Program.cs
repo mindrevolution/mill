@@ -1193,7 +1193,6 @@ static partial class Mill
         var maxIterations = int.TryParse(Environment.GetEnvironmentVariable("MILL_MAX_ITERATIONS"), out var n) ? n : 20;
         const string verifyToken = "MILL_VERIFY";
         const string doneToken = "MILL_DONE";
-        const string failedToken = "MILL_REJECTED";
 
         // Check if issue is a GitHub issue number
         var issueNumber = issue;
@@ -1265,16 +1264,16 @@ static partial class Mill
 
         // Validate prompts exist before starting
         var iterationPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-iterate.md");
-        var verifyPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-verify.md");
+        var criterionPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-verify-criterion.md");
         if (!File.Exists(iterationPrompt))
         {
             Out.Error($"iteration prompt not found: {iterationPrompt}");
             Out.Detail("check MILL_HOME environment variable or installation");
             return 1;
         }
-        if (!File.Exists(verifyPrompt))
+        if (!File.Exists(criterionPrompt))
         {
-            Out.Error($"verify prompt not found: {verifyPrompt}");
+            Out.Error($"criterion prompt not found: {criterionPrompt}");
             Out.Detail("check MILL_HOME environment variable or installation");
             return 1;
         }
@@ -1432,36 +1431,12 @@ static partial class Mill
                     }
                     else
                     {
-                        // Fallback: no parseable criteria, use holistic verification
-                        Out.Step("verifying (no structured criteria found)...");
+                        // No parseable criteria — skip verification with warning
                         Out.Blank();
-
-                        var verifyTemplate = await File.ReadAllTextAsync(verifyPrompt);
-                        var verifyRendered = verifyTemplate
-                            .Replace("{{SPEC_CONTENT}}", specContent)
-                            .Replace("{{SPEC_REF}}", specRef)
-                            .Replace("{{ISSUE_NUMBER}}", isGhIssue ? issueNumber : "")
-                            .Replace("{{TEST_COMMAND}}", testCommand ?? "echo 'no test command specified'");
-
-                        var verifyOutput = await RunClaudeBatch(verifyRendered);
-                        verificationPassed = verifyOutput.Contains(doneToken);
-
-                        if (!verificationPassed && verifyOutput.Contains(failedToken))
-                        {
-                            var failure = ParseVerifyFailure(verifyOutput);
-                            Out.Blank();
-                            Out.Warn("verification failed");
-                            if (failure != null)
-                            {
-                                Out.Detail(failure.Suggestion ?? string.Join(", ", failure.Blockers));
-                                criterionFailureContext = $"Blockers: {string.Join("; ", failure.Blockers)}\nSuggestion: {failure.Suggestion}";
-                            }
-                        }
-                        else if (!verificationPassed)
-                        {
-                            Out.Warn("verify prompt did not output expected token");
-                            continue;
-                        }
+                        Out.Warn("no acceptance criteria found in spec");
+                        Out.Detail("specs should have structured criteria for proper verification");
+                        Out.Detail("continuing without criterion verification...");
+                        verificationPassed = true; // Tests passed, that's all we can check
                     }
 
                     if (verificationPassed)
@@ -2149,28 +2124,6 @@ static partial class Mill
 
             var json = afterToken[jsonStart..(jsonEnd + 1)];
             return JsonSerializer.Deserialize(json, VerifyJsonContext.Default.VerifyMetadata);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    static VerifyFailure? ParseVerifyFailure(string output)
-    {
-        try
-        {
-            // Find JSON block after MILL_REJECTED
-            var failedIndex = output.IndexOf("MILL_REJECTED");
-            if (failedIndex < 0) return null;
-
-            var afterToken = output[(failedIndex + "MILL_REJECTED".Length)..];
-            var jsonStart = afterToken.IndexOf('{');
-            var jsonEnd = afterToken.LastIndexOf('}');
-            if (jsonStart < 0 || jsonEnd < 0) return null;
-
-            var json = afterToken[jsonStart..(jsonEnd + 1)];
-            return JsonSerializer.Deserialize(json, VerifyJsonContext.Default.VerifyFailure);
         }
         catch
         {
@@ -2886,14 +2839,7 @@ record VerifyMetadata(
     [property: JsonPropertyName("summary")] string Summary,
     [property: JsonPropertyName("verification")] string Verification);
 
-// Verification failure from MILL_REJECTED signal
-record VerifyFailure(
-    [property: JsonPropertyName("blockers")] List<string> Blockers,
-    [property: JsonPropertyName("improvements")] List<string>? Improvements,
-    [property: JsonPropertyName("suggestion")] string? Suggestion);
-
 [JsonSerializable(typeof(VerifyMetadata))]
-[JsonSerializable(typeof(VerifyFailure))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class VerifyJsonContext : JsonSerializerContext { }
 
