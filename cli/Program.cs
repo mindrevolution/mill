@@ -155,14 +155,14 @@ static class Out
         var trueColor = Environment.GetEnvironmentVariable("COLORTERM") is "truecolor" or "24bit";
         if (trueColor)
         {
-            Console.WriteLine($"  \x1b[38;2;255;204;0m■\x1b[0m mill {Mill.Version}");
+            Console.WriteLine($"\x1b[38;2;255;204;0m■\x1b[0m mill {Mill.Version}");
         }
         else
         {
-            Console.Write("  ");
             WriteColored("■", ConsoleColor.Yellow);
             Console.WriteLine($" mill {Mill.Version}");
         }
+        Blank();
     }
 
     static void WriteColored(string text, ConsoleColor color)
