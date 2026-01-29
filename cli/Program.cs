@@ -19,6 +19,7 @@ return args switch
     ["install", "--check"] => await RunInstallCheck(),
     ["install"] => await RunInstall(),
     ["init"] => await Mill.Init(),
+    ["spec", var issue] when int.TryParse(issue, out _) => await Mill.RunSpecRefine(issue),
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
     ["run", "--auto"] => await Mill.RunAutopick(),
@@ -158,6 +159,7 @@ static int ShowHelp()
         usage:
           mill init               initialize repo for MILL
           mill spec               create specification → GitHub issue
+          mill spec <number>      refine existing spec against codebase
           mill personas           create or update user personas
 
           mill run                list available issues
@@ -528,6 +530,161 @@ static partial class Mill
         var selectedDraft = PromptForDraft();
 
         return RunClaudeInteractive("spec/prompts/spec-draft.md", selectedDraft);
+    }
+
+    public static async Task<int> RunSpecRefine(string issueNumber)
+    {
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        // Fetch issue
+        Out.Step($"fetching issue #{issueNumber}...");
+        var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,title,state,labels");
+        if (exitCode != 0 || string.IsNullOrWhiteSpace(output))
+        {
+            Out.Error($"failed to fetch issue #{issueNumber}");
+            return 1;
+        }
+
+        var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetailFull);
+        if (issueDetail == null)
+        {
+            Out.Error("failed to parse issue");
+            return 1;
+        }
+
+        if (issueDetail.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
+        {
+            Out.Warn("issue is closed");
+            return 0;
+        }
+
+        Out.Ok($"loaded: {issueDetail.Title}");
+
+        // Check context staleness
+        var (needsWarmup, reason) = CheckContextStaleness();
+        if (needsWarmup)
+        {
+            Out.Warn(reason.ToLower());
+            Out.Blank();
+            Out.Step("building context...");
+            Out.Blank();
+
+            var warmupExitCode = await RunClaudeStreaming("spec/prompts/context-warmup.md");
+            if (warmupExitCode != 0) return warmupExitCode;
+
+            Out.Blank();
+            Out.Line();
+            Out.Blank();
+        }
+
+        Out.Ok($"context loaded ({GetContextInfo()})");
+        Out.Blank();
+
+        return RunClaudeInteractiveRefine("spec/prompts/spec-refine.md", issueNumber, issueDetail.Body ?? "");
+    }
+
+    static int RunClaudeInteractiveRefine(string promptPath, string issueNumber, string issueBody)
+    {
+        var fullPath = Path.Combine(FindMillHome(), promptPath);
+        if (!File.Exists(fullPath))
+        {
+            Out.Error($"prompt not found: {fullPath}");
+            return 1;
+        }
+
+        var cli = ResolveCli();
+
+        // Build prompt with pre-loaded context
+        var prompt = new System.Text.StringBuilder();
+        prompt.AppendLine(File.ReadAllText(fullPath).Replace("{{ISSUE_NUMBER}}", issueNumber));
+
+        prompt.AppendLine("\n---\n# Pre-loaded Context\n");
+
+        // The existing spec
+        prompt.AppendLine("## Current Spec (GitHub Issue)\n");
+        prompt.AppendLine(issueBody);
+
+        // Context file
+        if (File.Exists(ContextFile))
+        {
+            prompt.AppendLine("\n## .mill/context.md\n");
+            prompt.AppendLine(File.ReadAllText(ContextFile));
+        }
+
+        // Standards
+        if (Directory.Exists(StandardsDir))
+        {
+            foreach (var file in Directory.GetFiles(StandardsDir, "*.md"))
+            {
+                prompt.AppendLine($"\n## {Path.GetRelativePath(GitRoot, file)}\n");
+                prompt.AppendLine(File.ReadAllText(file));
+            }
+        }
+
+        // Project memory
+        var projectMemory = Path.Combine(MemoryDir, "project.md");
+        if (File.Exists(projectMemory))
+        {
+            prompt.AppendLine("\n## .mill/memory/project.md\n");
+            prompt.AppendLine(File.ReadAllText(projectMemory));
+        }
+
+        // Uncommitted changes
+        var status = Git("status", "--porcelain").Output;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            prompt.AppendLine("\n## Uncommitted Changes\n```");
+            prompt.AppendLine(status.Trim());
+            prompt.AppendLine("```");
+
+            var diff = Git("diff").Output;
+            if (!string.IsNullOrWhiteSpace(diff))
+            {
+                var lines = diff.Split('\n');
+                prompt.AppendLine("\n```diff");
+                prompt.AppendLine(lines.Length > 200
+                    ? string.Join("\n", lines.Take(200)) + $"\n... ({lines.Length - 200} lines truncated)"
+                    : diff.Trim());
+                prompt.AppendLine("```");
+            }
+        }
+
+        var promptContent = prompt.ToString();
+
+        // Write to .mill/.prompt
+        var promptFile = Path.Combine(CurrentMillDir, ".prompt");
+        Directory.CreateDirectory(CurrentMillDir);
+        File.WriteAllText(promptFile, promptContent);
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
+        process.StartInfo.ArgumentList.Add("--append-system-prompt");
+        process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
+
+        process.Start();
+        process.WaitForExit();
+        return process.ExitCode;
     }
 
     public static int RunPersonas()
@@ -2010,6 +2167,12 @@ record GhIssueDetail(
     [property: JsonPropertyName("state")] string State,
     [property: JsonPropertyName("labels")] List<GhLabel> Labels);
 
+record GhIssueDetailFull(
+    [property: JsonPropertyName("body")] string? Body,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("labels")] List<GhLabel> Labels);
+
 record GhLabel([property: JsonPropertyName("name")] string Name);
 
 // GitHub Releases API types
@@ -2058,6 +2221,7 @@ record HealthConfig
 
 [JsonSerializable(typeof(List<GhIssue>))]
 [JsonSerializable(typeof(GhIssueDetail))]
+[JsonSerializable(typeof(GhIssueDetailFull))]
 [JsonSerializable(typeof(GhRelease))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class GhJsonContext : JsonSerializerContext { }

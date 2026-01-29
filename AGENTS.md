@@ -20,7 +20,8 @@ mill/
 ├── spec/                   # Spec creation (prompts + templates)
 │   ├── prompts/
 │   │   ├── context-warmup.md   # Generates .mill/context.md
-│   │   └── spec-draft.md       # Interactive spec elicitation
+│   │   ├── spec-draft.md       # Interactive spec elicitation
+│   │   └── spec-refine.md      # Update spec against current codebase
 │   └── templates/              # Spec output templates
 │       ├── feature.md
 │       ├── bug.md
@@ -54,6 +55,7 @@ Format: `[subject]-[verb].md`
 |------|---------|------|---------|
 | `context-warmup.md` | context | warmup | Build project context |
 | `spec-draft.md` | spec | draft | Interactive spec elicitation with persistence |
+| `spec-refine.md` | spec | refine | Update spec against current codebase |
 | `loop-iterate.md` | loop | iterate | Work prompt — implement slice, signal MILL_VERIFY |
 | `loop-verify.md` | loop | verify | Verify prompt — review work, approve or reject |
 | `run-autopick.md` | run | autopick | Intelligent issue selection |
@@ -65,6 +67,9 @@ Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
 ```bash
 # spec creation (interactive) → creates GitHub issue
 mill spec
+
+# refine existing spec against current codebase
+mill spec 42
 
 # list available issues
 mill run
