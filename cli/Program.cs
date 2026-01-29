@@ -22,6 +22,7 @@ return args switch
     ["spec", var issue] when int.TryParse(issue, out _) => await Mill.RunSpecRefine(issue),
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
+    ["standards"] => Mill.RunStandards(),
     ["run", "--auto"] => await Mill.RunAutopick(),
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
@@ -161,6 +162,7 @@ static int ShowHelp()
           mill spec               create specification → GitHub issue
           mill spec <number>      refine existing spec against codebase
           mill personas           create or update user personas
+          mill standards          infer or update codebase standards
 
           mill run                list available issues
           mill run --auto         autopick best issue
@@ -462,12 +464,36 @@ static partial class Mill
             Out.Ok("CLAUDE.md shim created");
         }
 
+        // Auto-infer standards if not present
+        var standardsFile = Path.Combine(StandardsDir, "code.md");
+        if (!File.Exists(standardsFile))
+        {
+            Out.Blank();
+            Out.Step("inferring standards...");
+            Out.Blank();
+
+            var standardsExitCode = await RunStandardsInference();
+            if (standardsExitCode != 0)
+            {
+                Out.Warn("standards inference skipped");
+            }
+            else
+            {
+                Out.Ok("standards created");
+            }
+        }
+        else
+        {
+            Out.Detail("standards already exist");
+        }
+
         Out.Blank();
         Out.Line();
         Out.Blank();
         Out.Ok("ready — run: mill spec");
         Out.Blank();
         Out.Detail("tip: run `mill personas` to define user segments for better specs");
+        Out.Detail("tip: run `mill standards` to refine inferred standards");
         Out.Blank();
 
         return 0;
@@ -807,6 +833,249 @@ static partial class Mill
 
         process.Start();
         process.WaitForExit();
+        return process.ExitCode;
+    }
+
+    public static int RunStandards()
+    {
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+
+        Out.Blank();
+
+        var standardsFile = Path.Combine(StandardsDir, "code.md");
+        var hasExisting = File.Exists(standardsFile);
+
+        if (hasExisting)
+        {
+            Out.Ok("existing standards found");
+            Out.Detail("you can update, add, or regenerate");
+        }
+        else
+        {
+            Out.Step("no standards yet — starting inference");
+        }
+
+        Out.Blank();
+
+        return RunClaudeInteractiveStandards("spec/prompts/standards-infer.md", hasExisting);
+    }
+
+    static int RunClaudeInteractiveStandards(string promptPath, bool hasExistingStandards)
+    {
+        var fullPath = Path.Combine(FindMillHome(), promptPath);
+        if (!File.Exists(fullPath))
+        {
+            Out.Error($"prompt not found: {fullPath}");
+            return 1;
+        }
+
+        var cli = ResolveCli();
+
+        // Build prompt with pre-loaded context for standards inference
+        var prompt = new System.Text.StringBuilder();
+        prompt.AppendLine(File.ReadAllText(fullPath));
+
+        prompt.AppendLine("\n---\n# Pre-loaded Context\n");
+
+        // context.md if available
+        if (File.Exists(ContextFile))
+        {
+            prompt.AppendLine("## .mill/context.md\n");
+            prompt.AppendLine(File.ReadAllText(ContextFile));
+        }
+
+        // AGENTS.md for project context
+        var agentsPath = Path.Combine(GitRoot, "AGENTS.md");
+        if (File.Exists(agentsPath))
+        {
+            prompt.AppendLine("\n## AGENTS.md\n");
+            prompt.AppendLine(File.ReadAllText(agentsPath));
+        }
+
+        // Existing standards for update mode
+        var standardsFile = Path.Combine(StandardsDir, "code.md");
+        if (File.Exists(standardsFile))
+        {
+            prompt.AppendLine("\n## Existing Standards (.mill/standards/code.md)\n");
+            prompt.AppendLine(File.ReadAllText(standardsFile));
+            prompt.AppendLine("\n**Mode:** Update existing standards based on new analysis or user input.");
+        }
+
+        // List config files that might contain standards
+        prompt.AppendLine("\n## Config Files Detected\n");
+        var configFiles = DetectConfigFiles();
+        if (configFiles.Count > 0)
+        {
+            foreach (var (name, content) in configFiles)
+            {
+                prompt.AppendLine($"### {name}\n```");
+                prompt.AppendLine(content.Length > 2000 ? content[..2000] + "\n... (truncated)" : content);
+                prompt.AppendLine("```\n");
+            }
+        }
+        else
+        {
+            prompt.AppendLine("No standard config files detected (.editorconfig, .eslintrc, etc.)");
+        }
+
+        var promptContent = prompt.ToString();
+
+        // Write to .mill/.prompt to avoid command line length limits
+        var promptFile = Path.Combine(CurrentMillDir, ".prompt");
+        Directory.CreateDirectory(CurrentMillDir);
+        File.WriteAllText(promptFile, promptContent);
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
+        process.StartInfo.ArgumentList.Add("--append-system-prompt");
+        process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
+
+        // Initial message based on mode
+        var initialMessage = hasExistingStandards
+            ? "review and update these standards"
+            : "infer standards from this codebase";
+        process.StartInfo.ArgumentList.Add(initialMessage);
+
+        process.Start();
+        process.WaitForExit();
+        return process.ExitCode;
+    }
+
+    static List<(string Name, string Content)> DetectConfigFiles()
+    {
+        var configFiles = new List<(string Name, string Content)>();
+        var configPatterns = new[]
+        {
+            ".editorconfig",
+            ".eslintrc",
+            ".eslintrc.js",
+            ".eslintrc.json",
+            ".eslintrc.yml",
+            "eslint.config.js",
+            "eslint.config.mjs",
+            ".prettierrc",
+            ".prettierrc.js",
+            ".prettierrc.json",
+            "prettier.config.js",
+            "stylecop.json",
+            ".stylecop",
+            "tsconfig.json",
+            "biome.json",
+            ".rubocop.yml",
+            "pyproject.toml",
+            "setup.cfg",
+            ".flake8",
+            "go.mod"
+        };
+
+        foreach (var pattern in configPatterns)
+        {
+            var path = Path.Combine(GitRoot, pattern);
+            if (File.Exists(path))
+            {
+                try
+                {
+                    configFiles.Add((pattern, File.ReadAllText(path)));
+                }
+                catch { }
+            }
+        }
+
+        return configFiles;
+    }
+
+    /// <summary>
+    /// Run standards inference in non-interactive streaming mode (for mill init).
+    /// Creates .mill/standards/code.md with inferred rules.
+    /// </summary>
+    static async Task<int> RunStandardsInference()
+    {
+        var promptPath = Path.Combine(FindMillHome(), "spec/prompts/standards-infer.md");
+        if (!File.Exists(promptPath))
+        {
+            Out.Error($"standards prompt not found: {promptPath}");
+            return 1;
+        }
+
+        // Build the prompt with context
+        var prompt = new System.Text.StringBuilder();
+        prompt.AppendLine(File.ReadAllText(promptPath));
+        prompt.AppendLine("\n---\n# Pre-loaded Context\n");
+
+        // context.md if available
+        if (File.Exists(ContextFile))
+        {
+            prompt.AppendLine("## .mill/context.md\n");
+            prompt.AppendLine(File.ReadAllText(ContextFile));
+        }
+
+        // AGENTS.md for project context
+        var agentsPath = Path.Combine(GitRoot, "AGENTS.md");
+        if (File.Exists(agentsPath))
+        {
+            prompt.AppendLine("\n## AGENTS.md\n");
+            prompt.AppendLine(File.ReadAllText(agentsPath));
+        }
+
+        // List config files
+        prompt.AppendLine("\n## Config Files Detected\n");
+        var configFiles = DetectConfigFiles();
+        if (configFiles.Count > 0)
+        {
+            foreach (var (name, content) in configFiles)
+            {
+                prompt.AppendLine($"### {name}\n```");
+                prompt.AppendLine(content.Length > 2000 ? content[..2000] + "\n... (truncated)" : content);
+                prompt.AppendLine("```\n");
+            }
+        }
+        else
+        {
+            prompt.AppendLine("No standard config files detected (.editorconfig, .eslintrc, etc.)");
+        }
+
+        // Add auto-inference instruction
+        prompt.AppendLine("\n---\n# Auto-Inference Mode\n");
+        prompt.AppendLine("This is running during `mill init`. Generate standards non-interactively:");
+        prompt.AppendLine("1. Detect config files and analyze codebase patterns");
+        prompt.AppendLine("2. Generate `.mill/standards/code.md` with inferred rules");
+        prompt.AppendLine("3. If no clear patterns found, create minimal standards with placeholders");
+        prompt.AppendLine("4. Do NOT ask questions — just infer and write");
+
+        var cli = ResolveCli();
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                Arguments = "-p --dangerously-skip-permissions",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                UseShellExecute = false
+            }
+        };
+
+        process.Start();
+        await process.StandardInput.WriteAsync(prompt.ToString());
+        process.StandardInput.Close();
+        await process.WaitForExitAsync();
+
         return process.ExitCode;
     }
 
@@ -1694,10 +1963,10 @@ static partial class Mill
         process.StandardInput.Close();
 
         // Parse streaming JSON and extract text content
-        while (!process.StandardOutput.EndOfStream)
+        string? line;
+        while ((line = await process.StandardOutput.ReadLineAsync()) is not null)
         {
-            var line = await process.StandardOutput.ReadLineAsync();
-            if (string.IsNullOrEmpty(line)) continue;
+            if (line.Length == 0) continue;
 
             try
             {
