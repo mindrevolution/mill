@@ -100,12 +100,13 @@ static int ShowHelp()
         usage:
           mill init               initialize repo for MILL
           mill spec               create specification → GitHub issue
-          mill personas           create, update, or manage user personas
+          mill personas           create or update user personas
+
           mill run                list available issues
-          mill run --auto         autopick best issue (health check + scoring)
-          mill run 123            execute work loop on GitHub issue
-          mill update             update mill to latest version
-          mill update --check     check for updates without installing
+          mill run --auto         autopick best issue
+          mill run <number>       execute work loop on issue
+
+          mill update             update to latest version
           mill --version          show version
         """);
     return 0;
