@@ -1597,6 +1597,41 @@ static partial class Mill
         }
     }
 
+    static WorktreeSetupResult SetupWorktree(string issueNumber, bool isGhIssue, string issue)
+    {
+        var worktreeName = isGhIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(issue)}";
+        var workDir = Path.Combine(MillDir, "work");
+        var worktreePath = Path.Combine(workDir, worktreeName);
+        var originalDir = Directory.GetCurrentDirectory();
+
+        Out.Step($"creating worktree {worktreePath}...");
+
+        // Ensure .mill/work directory exists
+        Directory.CreateDirectory(workDir);
+
+        // Remove existing worktree if present (from crashed run)
+        if (Directory.Exists(worktreePath))
+        {
+            var (rmExit, _, rmErr) = Git("worktree", "remove", "--force", worktreePath);
+            if (rmExit != 0)
+                Out.Warn($"failed to remove stale worktree: {rmErr.Trim()}");
+        }
+
+        var branchName = $"issue-{issueNumber}";
+
+        // Delete existing branch if present (from previous run)
+        Git("branch", "-D", branchName);
+        var (wtExit, _, wtErr) = Git("worktree", "add", "-b", branchName, worktreePath, "HEAD");
+        if (wtExit != 0)
+        {
+            Out.Error($"failed to create worktree: {wtErr.Trim()}");
+            return new WorktreeSetupResult(null, 1);
+        }
+        Out.Ok($"worktree created (branch: {branchName})");
+
+        return new WorktreeSetupResult(new WorktreeInfo(worktreePath, branchName, originalDir), null);
+    }
+
     public static async Task<int> Execute(string issue, string[] args)
     {
         if (!IsInitialized())
@@ -1652,35 +1687,11 @@ static partial class Mill
         }
 
         // Create isolated worktree for execution
-        var worktreeName = isGhIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(issue)}";
-        var workDir = Path.Combine(MillDir, "work");
-        var worktreePath = Path.Combine(workDir, worktreeName);
-        var originalDir = Directory.GetCurrentDirectory();
+        var worktreeResult = SetupWorktree(issueNumber, isGhIssue, issue);
+        if (worktreeResult.ExitCode.HasValue)
+            return worktreeResult.ExitCode.Value;
 
-        Out.Step($"creating worktree {worktreePath}...");
-
-        // Ensure .mill/work directory exists
-        Directory.CreateDirectory(workDir);
-
-        // Remove existing worktree if present (from crashed run)
-        if (Directory.Exists(worktreePath))
-        {
-            var (rmExit, _, rmErr) = Git("worktree", "remove", "--force", worktreePath);
-            if (rmExit != 0)
-                Out.Warn($"failed to remove stale worktree: {rmErr.Trim()}");
-        }
-
-        var branchName = $"issue-{issueNumber}";
-
-        // Delete existing branch if present (from previous run)
-        Git("branch", "-D", branchName);
-        var (wtExit, _, wtErr) = Git("worktree", "add", "-b", branchName, worktreePath, "HEAD");
-        if (wtExit != 0)
-        {
-            Out.Error($"failed to create worktree: {wtErr.Trim()}");
-            return 1;
-        }
-        Out.Ok($"worktree created (branch: {branchName})");
+        var (worktreePath, branchName, originalDir) = worktreeResult.Worktree!;
 
         var result = 1;
         try
@@ -3254,6 +3265,10 @@ internal partial class VerifyJsonContext : JsonSerializerContext { }
 // Spec loading result
 record SpecInfo(string Content, string Ref, string IssueNumber, bool IsGhIssue);
 record SpecLoadResult(SpecInfo? Spec, int? ExitCode);
+
+// Worktree setup result
+record WorktreeInfo(string Path, string BranchName, string OriginalDir);
+record WorktreeSetupResult(WorktreeInfo? Worktree, int? ExitCode);
 
 // Criterion verification types
 record AcceptanceCriterion(int Index, string Title, string Body);
