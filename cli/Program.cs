@@ -1378,24 +1378,93 @@ static partial class Mill
                         continue;
                     }
 
-                    // Extract test command from spec
+                    // Extract test command and criteria
                     var testCommand = ExtractTestCommand(specContent);
+                    var criteria = ExtractCriteria(specContent);
 
-                    // Run verification prompt
-                    Out.Blank();
-                    Out.Step("running verification...");
                     Out.Blank();
 
-                    var verifyTemplate = await File.ReadAllTextAsync(verifyPrompt);
-                    var verifyRendered = verifyTemplate
-                        .Replace("{{SPEC_CONTENT}}", specContent)
-                        .Replace("{{SPEC_REF}}", specRef)
-                        .Replace("{{ISSUE_NUMBER}}", isGhIssue ? issueNumber : "")
-                        .Replace("{{TEST_COMMAND}}", testCommand ?? "echo 'no test command specified'");
+                    // Step 1: Run tests once (gate before criterion verification)
+                    if (!string.IsNullOrEmpty(testCommand))
+                    {
+                        Out.Step($"running tests: {testCommand}");
+                        var (testExit, testOut, testErr) = Run("sh", "-c", testCommand);
+                        if (testExit != 0)
+                        {
+                            Out.Blank();
+                            Out.Warn("tests failed");
+                            Out.Detail(testErr.Length > 0 ? testErr.Trim() : testOut.Trim());
+                            lastFailureContext = $"Tests failed: {(testErr.Length > 0 ? testErr.Trim() : testOut.Trim())}";
+                            continue;
+                        }
+                        Out.Ok("tests passed");
+                    }
 
-                    var verifyOutput = await RunClaudeBatch(verifyRendered);
+                    bool verificationPassed;
+                    string? criterionFailureContext = null;
 
-                    if (verifyOutput.Contains(doneToken))
+                    // Step 2: Verify criteria
+                    if (criteria.Count > 0)
+                    {
+                        Out.Step($"verifying {criteria.Count} acceptance criteria...");
+                        Out.Blank();
+
+                        var (allPassed, results, failCtx) = await RunCriterionVerification(
+                            specContent, specRef, criteria);
+
+                        verificationPassed = allPassed;
+                        criterionFailureContext = failCtx;
+
+                        Out.Blank();
+                        if (allPassed)
+                        {
+                            Out.Ok($"all {results.Count} criteria passed");
+                        }
+                        else
+                        {
+                            var failures = results.Where(r => !r.Passed).ToList();
+                            Out.Warn($"{failures.Count}/{results.Count} criteria failed:");
+                            foreach (var f in failures)
+                            {
+                                Out.Detail($"[{f.Index}] {f.Title}: {f.Reason}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Fallback: no parseable criteria, use holistic verification
+                        Out.Step("verifying (no structured criteria found)...");
+                        Out.Blank();
+
+                        var verifyTemplate = await File.ReadAllTextAsync(verifyPrompt);
+                        var verifyRendered = verifyTemplate
+                            .Replace("{{SPEC_CONTENT}}", specContent)
+                            .Replace("{{SPEC_REF}}", specRef)
+                            .Replace("{{ISSUE_NUMBER}}", isGhIssue ? issueNumber : "")
+                            .Replace("{{TEST_COMMAND}}", testCommand ?? "echo 'no test command specified'");
+
+                        var verifyOutput = await RunClaudeBatch(verifyRendered);
+                        verificationPassed = verifyOutput.Contains(doneToken);
+
+                        if (!verificationPassed && verifyOutput.Contains(failedToken))
+                        {
+                            var failure = ParseVerifyFailure(verifyOutput);
+                            Out.Blank();
+                            Out.Warn("verification failed");
+                            if (failure != null)
+                            {
+                                Out.Detail(failure.Suggestion ?? string.Join(", ", failure.Blockers));
+                                criterionFailureContext = $"Blockers: {string.Join("; ", failure.Blockers)}\nSuggestion: {failure.Suggestion}";
+                            }
+                        }
+                        else if (!verificationPassed)
+                        {
+                            Out.Warn("verify prompt did not output expected token");
+                            continue;
+                        }
+                    }
+
+                    if (verificationPassed)
                     {
                         // Verification passed - create PR
                         Out.Blank();
@@ -1435,22 +1504,11 @@ static partial class Mill
                         result = 0;
                         break;
                     }
-                    else if (verifyOutput.Contains(failedToken))
-                    {
-                        // Verification failed - extract reason, continue iteration
-                        var failure = ParseVerifyFailure(verifyOutput);
-                        Out.Blank();
-                        Out.Warn("verification failed");
-                        if (failure != null)
-                        {
-                            Out.Detail(failure.Suggestion ?? string.Join(", ", failure.Blockers));
-                            lastFailureContext = $"Blockers: {string.Join("; ", failure.Blockers)}\nSuggestion: {failure.Suggestion}";
-                        }
-                        continue;
-                    }
                     else
                     {
-                        Out.Warn("verify prompt did not output expected token");
+                        // Verification failed - inject context for next iteration
+                        if (criterionFailureContext != null)
+                            lastFailureContext = criterionFailureContext;
                         continue;
                     }
                 }
@@ -2141,6 +2199,228 @@ static partial class Mill
     [GeneratedRegex(@"\*\*Test Command:\*\*\s*`?([^`\n]+)`?")]
     private static partial Regex TestCommandPattern();
 
+    /// <summary>
+    /// Extract acceptance criteria from spec for parallel verification.
+    /// </summary>
+    static List<AcceptanceCriterion> ExtractCriteria(string specContent)
+    {
+        var criteria = new List<AcceptanceCriterion>();
+
+        // Pattern A: Numbered items under "## Acceptance Criteria"
+        var acMatch = AcceptanceCriteriaSection().Match(specContent);
+        if (acMatch.Success)
+        {
+            var section = acMatch.Value;
+            var numbered = NumberedCriterion().Matches(section);
+            foreach (Match m in numbered)
+            {
+                criteria.Add(new AcceptanceCriterion(
+                    int.Parse(m.Groups[1].Value),
+                    m.Groups[2].Value.Trim(),
+                    m.Groups[3].Value.Trim()));
+            }
+        }
+
+        // Pattern B: Checkbox items under "## Verification" (bug/security specs)
+        if (criteria.Count == 0)
+        {
+            var verifyMatch = VerificationSection().Match(specContent);
+            if (verifyMatch.Success)
+            {
+                var section = verifyMatch.Value;
+                var checkboxes = CheckboxCriterion().Matches(section);
+                var idx = 1;
+                foreach (Match m in checkboxes)
+                {
+                    criteria.Add(new AcceptanceCriterion(idx++, m.Groups[1].Value.Trim(), ""));
+                }
+            }
+        }
+
+        return criteria;
+    }
+
+    [GeneratedRegex(@"## Acceptance Criteria.*?(?=\n## |\z)", RegexOptions.Singleline)]
+    private static partial Regex AcceptanceCriteriaSection();
+
+    [GeneratedRegex(@"(\d+)\.\s+\*\*([^*]+)\*\*\s*((?:\s+-\s+[^\n]+\n?)+)", RegexOptions.Multiline)]
+    private static partial Regex NumberedCriterion();
+
+    [GeneratedRegex(@"## Verification.*?(?=\n## |\z)", RegexOptions.Singleline)]
+    private static partial Regex VerificationSection();
+
+    [GeneratedRegex(@"-\s+\[\s*\]\s+(.+)")]
+    private static partial Regex CheckboxCriterion();
+
+    // Verification defaults (no config needed)
+    const int MaxParallelAgents = 4;
+    const int VerifyTimeoutMs = 300000; // 5 minutes
+
+    /// <summary>
+    /// Run criterion-based verification. Tests are run once by CLI before calling this.
+    /// </summary>
+    static async Task<(bool AllPassed, List<CriterionResult> Results, string? FailureContext)> RunCriterionVerification(
+        string specContent, string specRef, List<AcceptanceCriterion> criteria)
+    {
+        var promptPath = Path.Combine(FindMillHome(), "run/prompts/loop-verify-criterion.md");
+        var template = await File.ReadAllTextAsync(promptPath);
+
+        var results = new List<CriterionResult>();
+
+        // Batch criteria by MaxParallelAgents
+        var batches = criteria
+            .Select((c, i) => (Criterion: c, Batch: i / MaxParallelAgents))
+            .GroupBy(x => x.Batch)
+            .Select(g => g.Select(x => x.Criterion).ToList())
+            .ToList();
+
+        foreach (var batch in batches)
+        {
+            if (batch.Count > 1)
+                Out.Detail($"verifying criteria {batch.First().Index}-{batch.Last().Index} in parallel...");
+            else
+                Out.Detail($"verifying criterion {batch.First().Index}...");
+
+            var tasks = batch.Select(async criterion =>
+            {
+                var rendered = template
+                    .Replace("{{SPEC_CONTENT}}", specContent)
+                    .Replace("{{SPEC_REF}}", specRef)
+                    .Replace("{{CRITERION_INDEX}}", criterion.Index.ToString())
+                    .Replace("{{TOTAL_CRITERIA}}", criteria.Count.ToString())
+                    .Replace("{{CRITERION_TITLE}}", criterion.Title)
+                    .Replace("{{CRITERION_BODY}}", criterion.Body);
+
+                try
+                {
+                    using var cts = new CancellationTokenSource(VerifyTimeoutMs);
+                    var output = await RunClaudeBatchWithTimeout(rendered, cts.Token);
+                    return ParseCriterionResult(output, criterion);
+                }
+                catch (OperationCanceledException)
+                {
+                    return new CriterionResult(criterion.Index, criterion.Title, false,
+                        "Verification timed out", "Criterion may be too complex to verify");
+                }
+            });
+
+            var batchResults = await Task.WhenAll(tasks);
+            results.AddRange(batchResults);
+
+            // Early exit on failure
+            if (batchResults.Any(r => !r.Passed))
+                break;
+        }
+
+        var allPassed = results.All(r => r.Passed);
+        var failures = results.Where(r => !r.Passed).ToList();
+
+        string? failureContext = null;
+        if (!allPassed)
+        {
+            var blockers = failures.Select(f => $"[{f.Index}] {f.Title}: {f.Reason}");
+            var suggestion = failures.FirstOrDefault()?.Suggestion ?? "Address the failed criteria";
+            failureContext = $"Blockers: {string.Join("; ", blockers)}\nSuggestion: {suggestion}";
+        }
+
+        return (allPassed, results, failureContext);
+    }
+
+    /// <summary>
+    /// Run Claude batch with cancellation token for timeout.
+    /// </summary>
+    static async Task<string> RunClaudeBatchWithTimeout(string input, CancellationToken ct)
+    {
+        var cli = RequireCli();
+        if (cli == null) return "";
+
+        var output = new System.Text.StringBuilder();
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("-p");
+        process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
+        process.StartInfo.ArgumentList.Add("--verbose");
+        process.StartInfo.ArgumentList.Add("--output-format");
+        process.StartInfo.ArgumentList.Add("stream-json");
+
+        process.Start();
+
+        // Register cancellation to kill process
+        ct.Register(() => { try { process.Kill(); } catch { } });
+
+        await process.StandardInput.WriteAsync(input);
+        process.StandardInput.Close();
+
+        string? line;
+        while ((line = await process.StandardOutput.ReadLineAsync(ct)) is not null)
+        {
+            if (line.Length == 0) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("type", out var msgType) && msgType.GetString() == "assistant" &&
+                    root.TryGetProperty("message", out var message) &&
+                    message.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in content.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var type) && type.GetString() == "text" &&
+                            item.TryGetProperty("text", out var text))
+                        {
+                            output.AppendLine(text.GetString() ?? "");
+                        }
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                output.AppendLine(line);
+            }
+        }
+
+        await process.WaitForExitAsync(ct);
+        return output.ToString();
+    }
+
+    static CriterionResult ParseCriterionResult(string output, AcceptanceCriterion criterion)
+    {
+        if (output.Contains("CRITERION_PASS"))
+        {
+            return new CriterionResult(criterion.Index, criterion.Title, true, null, null);
+        }
+        else if (output.Contains("CRITERION_FAIL"))
+        {
+            try
+            {
+                var failIndex = output.IndexOf("CRITERION_FAIL");
+                var afterToken = output[(failIndex + "CRITERION_FAIL".Length)..];
+                var jsonStart = afterToken.IndexOf('{');
+                var jsonEnd = afterToken.LastIndexOf('}');
+                if (jsonStart >= 0 && jsonEnd > jsonStart)
+                {
+                    var json = afterToken[jsonStart..(jsonEnd + 1)];
+                    var fail = JsonSerializer.Deserialize(json, CriterionJsonContext.Default.CriterionFail);
+                    if (fail != null)
+                        return new CriterionResult(criterion.Index, criterion.Title, false, fail.Reason, fail.Suggestion);
+                }
+            }
+            catch { }
+            return new CriterionResult(criterion.Index, criterion.Title, false, "Criterion not met", null);
+        }
+        return new CriterionResult(criterion.Index, criterion.Title, false, "No verification token in output", null);
+    }
+
     static string? ExtractNextSlice(string output)
     {
         // Look for "Next slice: <description>" pattern
@@ -2616,3 +2896,23 @@ record VerifyFailure(
 [JsonSerializable(typeof(VerifyFailure))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class VerifyJsonContext : JsonSerializerContext { }
+
+// Criterion verification types
+record AcceptanceCriterion(int Index, string Title, string Body);
+
+record CriterionResult(int Index, string Title, bool Passed, string? Reason, string? Suggestion);
+
+record CriterionPass(
+    [property: JsonPropertyName("index")] int Index,
+    [property: JsonPropertyName("title")] string Title);
+
+record CriterionFail(
+    [property: JsonPropertyName("index")] int Index,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("reason")] string Reason,
+    [property: JsonPropertyName("suggestion")] string? Suggestion);
+
+[JsonSerializable(typeof(CriterionPass))]
+[JsonSerializable(typeof(CriterionFail))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+internal partial class CriterionJsonContext : JsonSerializerContext { }

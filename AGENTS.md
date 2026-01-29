@@ -29,9 +29,10 @@ mill/
 │       └── task.md
 ├── run/                    # Iterative execution
 │   └── prompts/
-│       ├── loop-iterate.md     # Work prompt (implement, signal MILL_VERIFY)
-│       ├── loop-verify.md      # Verify prompt (review, approve/reject)
-│       └── run-autopick.md     # Intelligent issue selection
+│       ├── loop-iterate.md         # Work prompt (implement, signal MILL_VERIFY)
+│       ├── loop-verify.md          # Verify prompt (review, approve/reject)
+│       ├── loop-verify-criterion.md # Parallel: verify one criterion
+│       └── run-autopick.md         # Intelligent issue selection
 └── README.md
 
 .mill/                      # Target repo's MILL folder
@@ -58,6 +59,7 @@ Format: `[subject]-[verb].md`
 | `spec-refine.md` | spec | refine | Update spec against current codebase |
 | `loop-iterate.md` | loop | iterate | Work prompt — implement slice, signal MILL_VERIFY |
 | `loop-verify.md` | loop | verify | Verify prompt — review work, approve or reject |
+| `loop-verify-criterion.md` | loop | verify-criterion | Parallel verification — check one criterion |
 | `run-autopick.md` | run | autopick | Intelligent issue selection |
 
 Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
@@ -116,6 +118,21 @@ Work and verification are separated into distinct prompts:
 2. **Verify prompt** (`loop-verify.md`) — Independent principal-engineer review, runs tests again, checks criteria, signals `MILL_DONE` or `MILL_REJECTED`
 
 Only the verify prompt can authorize completion. The work prompt cannot grade its own homework.
+
+### Criterion-Based Verification
+
+Verification runs one agent per acceptance criterion:
+
+1. **CLI runs tests once** (gate before criterion checks)
+2. **Agents verify criteria in parallel** (up to 4 concurrent)
+3. **Results aggregated** → `MILL_DONE` or `MILL_REJECTED` with specific failures
+
+Benefits:
+- Faster verification for complex specs
+- Granular feedback (know exactly which criterion failed)
+- Multiple independent reviewers strengthen "can't grade own homework"
+
+Fallback: Specs without parseable criteria use holistic `loop-verify.md`.
 
 ## Requirements
 
