@@ -156,6 +156,16 @@ static class Out
         Console.Write($"  \x1b[5m❯\x1b[0m {msg}");
     }
 
+    public static bool Confirm(string msg)
+    {
+        Prompt($"{msg} [y/n] ");
+        var key = Console.ReadKey(intercept: true);
+        // Clear line, reprint without blink
+        Console.Write($"\r\x1b[2K  ❯ {msg} [y/n] {key.KeyChar}");
+        Console.WriteLine();
+        return key.KeyChar is 'y' or 'Y';
+    }
+
     public static void Banner()
     {
         // #ffcc00 = RGB(255, 204, 0), fallback to ConsoleColor.Yellow
@@ -259,16 +269,12 @@ static partial class Mill
             Out.Warn("existing MILL setup detected (.mill/context.md)");
             Out.Detail("continuing will regenerate all context");
             Out.Blank();
-            Out.Prompt("continue? [y/n] ");
-            var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
-            if (confirm != "y")
+            if (!Out.Confirm("continue?"))
             {
-                Out.Blank();
                 Out.Warn("aborted");
                 Out.Blank();
                 return 0;
             }
-            Out.Blank();
 
             // Remove existing context to force regeneration
             File.Delete(ContextFile);
@@ -665,15 +671,11 @@ static partial class Mill
             if (int.TryParse(behindStr.Trim(), out var behind) && behind > 0)
             {
                 Out.Warn($"local branch is {behind} commit{(behind == 1 ? "" : "s")} behind {upstream}");
-                Out.Prompt("continue anyway? [y/n] ");
-                var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
-                if (confirm != "y")
+                if (!Out.Confirm("continue anyway?"))
                 {
-                    Out.Blank();
                     Out.Warn("aborted — run: git pull");
                     return 0;
                 }
-                Out.Blank();
             }
         }
 
