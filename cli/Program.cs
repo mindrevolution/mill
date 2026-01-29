@@ -1963,10 +1963,10 @@ static partial class Mill
         process.StandardInput.Close();
 
         // Parse streaming JSON and extract text content
-        while (!process.StandardOutput.EndOfStream)
+        string? line;
+        while ((line = await process.StandardOutput.ReadLineAsync()) is not null)
         {
-            var line = await process.StandardOutput.ReadLineAsync();
-            if (string.IsNullOrEmpty(line)) continue;
+            if (line.Length == 0) continue;
 
             try
             {
