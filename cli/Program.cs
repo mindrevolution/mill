@@ -519,6 +519,96 @@ static partial class Mill
         return success && RequiredLabels.All(existing.Contains);
     }
 
+    /// <summary>
+    /// Gets existing open sweep issues to avoid creating duplicates.
+    /// Returns a set of finding IDs that already have open issues.
+    /// </summary>
+    static HashSet<string> GetExistingSweepIssues()
+    {
+        var (exit, output) = Gh("issue", "list", "--state", "open", "--label", "sweep", "--json", "body", "--limit", "100");
+        if (exit != 0) return [];
+
+        var issues = JsonSerializer.Deserialize(output, GhJsonContext.Default.ListGhIssueDetail) ?? [];
+        var existingIds = new HashSet<string>();
+
+        foreach (var issue in issues)
+        {
+            if (string.IsNullOrEmpty(issue.Body)) continue;
+
+            // Extract finding ID from issue body (format: "Finding: `dry-001`" or similar)
+            var match = Regex.Match(issue.Body, @"Finding:\s*`?([a-z]+-\d+)`?", RegexOptions.IgnoreCase);
+            if (match.Success)
+                existingIds.Add(match.Groups[1].Value.ToLowerInvariant());
+        }
+
+        return existingIds;
+    }
+
+    /// <summary>
+    /// Reads dismissed findings from project memory.
+    /// Returns a set of finding IDs that have been dismissed by the user.
+    /// </summary>
+    static HashSet<string> ReadDismissedFindings()
+    {
+        var projectMemory = Path.Combine(MemoryDir, "project.md");
+        if (!File.Exists(projectMemory)) return [];
+
+        var content = File.ReadAllText(projectMemory);
+        var dismissed = new HashSet<string>();
+
+        // Look for dismissed findings section
+        var match = Regex.Match(content, @"## Dismissed Findings\s*\n((?:- .+\n?)+)", RegexOptions.IgnoreCase);
+        if (!match.Success) return dismissed;
+
+        // Extract each dismissed finding ID
+        var section = match.Groups[1].Value;
+        foreach (Match idMatch in Regex.Matches(section, @"- `?([a-z]+-\d+)`?", RegexOptions.IgnoreCase))
+        {
+            dismissed.Add(idMatch.Groups[1].Value.ToLowerInvariant());
+        }
+
+        return dismissed;
+    }
+
+    /// <summary>
+    /// Appends dismissed findings to project memory.
+    /// </summary>
+    static void SaveDismissedFindings(IEnumerable<string> findingIds)
+    {
+        var projectMemory = Path.Combine(MemoryDir, "project.md");
+        Directory.CreateDirectory(MemoryDir);
+
+        var content = File.Exists(projectMemory) ? File.ReadAllText(projectMemory) : "";
+
+        // Check if dismissed findings section exists
+        if (content.Contains("## Dismissed Findings"))
+        {
+            // Append to existing section
+            var lines = findingIds.Select(id => $"- `{id}`");
+            var insertion = string.Join("\n", lines) + "\n";
+
+            // Find the end of the section and insert
+            var sectionEnd = content.IndexOf("\n## ", content.IndexOf("## Dismissed Findings") + 1);
+            if (sectionEnd == -1)
+            {
+                // Section is at the end of file
+                content = content.TrimEnd() + "\n" + insertion;
+            }
+            else
+            {
+                content = content.Insert(sectionEnd, insertion);
+            }
+        }
+        else
+        {
+            // Create new section
+            var section = "\n## Dismissed Findings\n\n" + string.Join("\n", findingIds.Select(id => $"- `{id}`")) + "\n";
+            content = content.TrimEnd() + section;
+        }
+
+        File.WriteAllText(projectMemory, content);
+    }
+
     public static async Task<int> RunSpec()
     {
         if (!IsGitRepo())
@@ -2850,6 +2940,7 @@ record HealthConfig
 
 [JsonSerializable(typeof(List<GhIssue>))]
 [JsonSerializable(typeof(GhIssueDetail))]
+[JsonSerializable(typeof(List<GhIssueDetail>))]
 [JsonSerializable(typeof(GhIssueDetailFull))]
 [JsonSerializable(typeof(GhRelease))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
