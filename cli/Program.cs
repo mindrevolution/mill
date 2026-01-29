@@ -23,6 +23,7 @@ return args switch
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
     ["standards"] => Mill.RunStandards(),
+    ["sweep"] => await Mill.RunSweep(),
     ["run", "--auto"] => await Mill.RunAutopick(),
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
@@ -1179,6 +1180,274 @@ static partial class Mill
         await process.WaitForExitAsync();
 
         return process.ExitCode;
+    }
+
+    /// <summary>
+    /// Scan codebase against standards, surface findings, and optionally create GitHub issues.
+    /// </summary>
+    public static async Task<int> RunSweep()
+    {
+        if (!IsGitRepo())
+        {
+            Out.Error("not in a git repository");
+            return 1;
+        }
+
+        if (!IsInitialized())
+        {
+            Out.Warn("mill not initialized — run: mill init");
+            return 1;
+        }
+
+        // Check for standards
+        var standardsFile = Path.Combine(StandardsDir, "code.md");
+        if (!File.Exists(standardsFile))
+        {
+            Out.Blank();
+            Out.Warn("no standards defined");
+            Out.Detail("sweep requires standards to check against");
+            Out.Blank();
+            Console.WriteLine("  run: mill init      (infers standards during setup)");
+            Console.WriteLine("  or:  mill standards (create/edit standards manually)");
+            Out.Blank();
+            return 1;
+        }
+
+        Out.Blank();
+        Out.Step("analyzing codebase against standards...");
+        Out.Blank();
+
+        // Run Claude to analyze the codebase
+        var sweepPromptPath = Path.Combine(FindMillHome(), "run/prompts/sweep-analyze.md");
+        if (!File.Exists(sweepPromptPath))
+        {
+            Out.Error($"sweep prompt not found: {sweepPromptPath}");
+            return 1;
+        }
+
+        // Build the prompt with standards content
+        var template = await File.ReadAllTextAsync(sweepPromptPath);
+        var standardsContent = await File.ReadAllTextAsync(standardsFile);
+        var rendered = template.Replace("{{STANDARDS_CONTENT}}", standardsContent);
+
+        // Run Claude and capture output
+        var cli = RequireCli();
+        if (cli == null) return 1;
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = cli,
+                Arguments = "-p --dangerously-skip-permissions --output-format text",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = false, // Let errors go to console
+                UseShellExecute = false
+            }
+        };
+
+        process.Start();
+        await process.StandardInput.WriteAsync(rendered);
+        process.StandardInput.Close();
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        if (process.ExitCode != 0)
+        {
+            Out.Error("analysis failed");
+            return 1;
+        }
+
+        // Parse the JSON output
+        var analysisMatch = Regex.Match(output, @"SWEEP_ANALYSIS\s*(\{[\s\S]*\})", RegexOptions.Multiline);
+        if (!analysisMatch.Success)
+        {
+            Out.Warn("could not parse analysis output");
+            Out.Detail("check the sweep-analyze prompt format");
+            return 1;
+        }
+
+        SweepAnalysis? analysis;
+        try
+        {
+            analysis = JsonSerializer.Deserialize(analysisMatch.Groups[1].Value, GhJsonContext.Default.SweepAnalysis);
+        }
+        catch (JsonException ex)
+        {
+            Out.Error($"invalid analysis JSON: {ex.Message}");
+            return 1;
+        }
+
+        if (analysis == null || analysis.Categories.Count == 0)
+        {
+            Out.Blank();
+            Out.Ok("no findings — codebase looks good!");
+            Out.Blank();
+            return 0;
+        }
+
+        // Load existing sweep issues and dismissed findings to filter
+        var existingIssues = GetExistingSweepIssues();
+        var dismissed = ReadDismissedFindings();
+
+        // Filter findings per category
+        var filteredCategories = new List<SweepCategory>();
+        foreach (var category in analysis.Categories)
+        {
+            var filtered = category.Findings
+                .Where(f => !existingIssues.Contains(f.Id.ToLowerInvariant()))
+                .Where(f => !dismissed.Contains(f.Id.ToLowerInvariant()))
+                .ToList();
+
+            if (filtered.Count > 0)
+            {
+                filteredCategories.Add(category with { Findings = filtered });
+            }
+        }
+
+        if (filteredCategories.Count == 0)
+        {
+            Out.Blank();
+            Out.Ok("no new findings (existing issues or dismissed)");
+            Out.Blank();
+            return 0;
+        }
+
+        // Interactive selection per category
+        var selectedFindings = new List<SweepFinding>();
+        var toDismiss = new List<string>();
+
+        Out.Blank();
+        Console.WriteLine($"  found {filteredCategories.Sum(c => c.Findings.Count)} findings in {filteredCategories.Count} categories");
+        Out.Blank();
+
+        foreach (var category in filteredCategories)
+        {
+            Out.Line();
+            Out.Blank();
+            Console.WriteLine($"  {category.Name}");
+            if (!string.IsNullOrEmpty(category.Description))
+                Out.Detail(category.Description);
+            Out.Blank();
+
+            // Display numbered findings
+            for (var i = 0; i < category.Findings.Count; i++)
+            {
+                var f = category.Findings[i];
+                var severity = f.Severity?.ToLowerInvariant() switch
+                {
+                    "high" => "[high]",
+                    "medium" => "[med]",
+                    _ => "[low]"
+                };
+                Console.WriteLine($"    {i + 1}. {severity,-6} {f.Title}");
+                if (!string.IsNullOrEmpty(f.File))
+                    Out.Detail($"{f.File}" + (f.Line > 0 ? $":{f.Line}" : ""));
+            }
+
+            Out.Blank();
+            Out.Prompt($"create issues [1-{category.Findings.Count}, all, none] (enter to skip): ");
+
+            var input = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
+            // Clear line and reprint without blink
+            Console.Write($"\r\x1b[2K  ❯ selection: {(string.IsNullOrEmpty(input) ? "skip" : input)}");
+            Console.WriteLine();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                // Default: skip
+                continue;
+            }
+            else if (input == "all")
+            {
+                selectedFindings.AddRange(category.Findings);
+            }
+            else if (input == "none")
+            {
+                // Prompt to remember as dismissed
+                if (Out.Confirm("remember as dismissed?"))
+                {
+                    toDismiss.AddRange(category.Findings.Select(f => f.Id));
+                }
+            }
+            else
+            {
+                // Parse comma-separated numbers
+                var indices = input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => int.TryParse(s, out var n) ? n : -1)
+                    .Where(n => n >= 1 && n <= category.Findings.Count)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var idx in indices)
+                {
+                    selectedFindings.Add(category.Findings[idx - 1]);
+                }
+            }
+        }
+
+        // Save dismissed findings
+        if (toDismiss.Count > 0)
+        {
+            SaveDismissedFindings(toDismiss);
+            Out.Blank();
+            Out.Ok($"dismissed {toDismiss.Count} findings");
+        }
+
+        // Create issues for selected findings
+        if (selectedFindings.Count == 0)
+        {
+            Out.Blank();
+            Out.Ok("no issues created");
+            Out.Blank();
+            return 0;
+        }
+
+        Out.Blank();
+        Out.Step($"creating {selectedFindings.Count} issues...");
+        Out.Blank();
+
+        var created = 0;
+        foreach (var finding in selectedFindings)
+        {
+            var title = $"[sweep] {finding.Title}";
+            var body = $"""
+                **Finding:** `{finding.Id}`
+
+                {finding.Description}
+
+                **Location:** {finding.File ?? "N/A"}{(finding.Line > 0 ? $":{finding.Line}" : "")}
+                **Severity:** {finding.Severity ?? "low"}
+
+                ---
+                *Generated by `mill sweep`*
+                """;
+
+            var (exitCode, _) = Gh("issue", "create",
+                "--title", title,
+                "--body", body,
+                "--label", "task",
+                "--label", "impact:low",
+                "--label", "sweep");
+
+            if (exitCode == 0)
+            {
+                created++;
+                Out.Detail($"created: {finding.Title}");
+            }
+            else
+            {
+                Out.Warn($"failed: {finding.Title}");
+            }
+        }
+
+        Out.Blank();
+        Out.Ok($"{created} issues created");
+        Out.Detail("run: mill run to see available issues");
+        Out.Blank();
+
+        return 0;
     }
 
     static string? PromptForDraft()
@@ -2924,6 +3193,7 @@ record HealthConfig
 [JsonSerializable(typeof(List<GhIssueDetail>))]
 [JsonSerializable(typeof(GhIssueDetailFull))]
 [JsonSerializable(typeof(GhRelease))]
+[JsonSerializable(typeof(SweepAnalysis))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class GhJsonContext : JsonSerializerContext { }
 
