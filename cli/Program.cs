@@ -1817,15 +1817,26 @@ static partial class Mill
                 {
                     var parentHash = match.Groups[1].Value;
                     var worktreeHead = Git("rev-parse", "HEAD").Output.Trim();
-                    if (parentHash == worktreeHead)
+
+                    // Check commit distance from parent context
+                    var (distance, threshold) = GetContextDistance(parentHash);
+                    if (distance == null)
                     {
+                        warmupReason = $"parent context hash {parentHash[..7]} not in history";
+                    }
+                    else if (distance.Value <= threshold)
+                    {
+                        // Within threshold - inherit parent context
                         Directory.CreateDirectory(CurrentMillDir);
                         File.Copy(parentContextFile, ContextFile, overwrite: true);
-                        Out.Ok("context inherited from parent");
+                        if (distance.Value == 0)
+                            Out.Ok("context inherited from parent");
+                        else
+                            Out.Ok($"context inherited from parent ({distance} commits behind)");
                     }
                     else
                     {
-                        warmupReason = $"parent context stale ({parentHash[..7]} → {worktreeHead[..7]})";
+                        warmupReason = $"parent context stale ({distance} commits behind, threshold {threshold})";
                     }
                 }
             }
@@ -2212,9 +2223,38 @@ static partial class Mill
         var contextHash = match.Groups[1].Value;
         var currentHash = Git("rev-parse", "HEAD").Output.Trim();
 
-        return contextHash != currentHash
-            ? (true, "Context stale")
+        // Exact match - no rebuild needed
+        if (contextHash == currentHash)
+            return (false, "");
+
+        // Check commit distance
+        var (distanceResult, threshold) = GetContextDistance(contextHash);
+        if (distanceResult == null)
+            return (true, $"Context hash {contextHash[..7]} not in history");
+
+        return distanceResult.Value > threshold
+            ? (true, $"Context stale ({distanceResult} commits behind)")
             : (false, "");
+    }
+
+    /// <summary>
+    /// Get number of commits between context hash and HEAD, plus configured threshold.
+    /// Returns null if contextHash is not an ancestor of HEAD (rebased away).
+    /// </summary>
+    static (int? Distance, int Threshold) GetContextDistance(string contextHash)
+    {
+        var config = LoadConfig();
+        var threshold = config.Context.StaleThreshold;
+
+        // Check if contextHash exists and is ancestor of HEAD
+        var result = Git("rev-list", "--count", $"{contextHash}..HEAD");
+        if (result.ExitCode != 0)
+            return (null, threshold);
+
+        if (int.TryParse(result.Output.Trim(), out var distance))
+            return (distance, threshold);
+
+        return (null, threshold);
     }
 
     static bool HasUncommittedChanges() =>
@@ -3233,6 +3273,16 @@ record MillConfig
     public List<string> Exclude { get; init; } = ["backlog", "deferred", "on-hold", "wontfix", "duplicate", "invalid"];
     public ScoringConfig Scoring { get; init; } = new();
     public HealthConfig Health { get; init; } = new();
+    public ContextConfig Context { get; init; } = new();
+}
+
+record ContextConfig
+{
+    /// <summary>
+    /// Number of commits before context is considered stale.
+    /// Context is rebuilt only when HEAD is more than this many commits ahead.
+    /// </summary>
+    public int StaleThreshold { get; init; } = 25;
 }
 
 record ScoringConfig
