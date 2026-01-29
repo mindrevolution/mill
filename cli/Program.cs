@@ -1527,6 +1527,202 @@ static partial class Mill
 
     record DraftInfo(string Path, string Type, string Title, string Status, DateTime Updated, int FieldsComplete, int FieldsPending);
 
+    static async Task<SpecLoadResult> LoadSpec(string issue)
+    {
+        var issueNumber = issue;
+        var isGhIssue = int.TryParse(issueNumber, out _);
+
+        if (isGhIssue)
+        {
+            Out.Step($"fetching issue #{issueNumber}...");
+            var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,state,labels");
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(output))
+            {
+                Out.Error($"failed to fetch issue #{issueNumber}");
+                return new SpecLoadResult(null, 1);
+            }
+
+            var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
+            if (issueDetail == null)
+            {
+                Out.Error("failed to parse issue");
+                return new SpecLoadResult(null, 1);
+            }
+
+            // Guard: check issue state and labels
+            if (issueDetail.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
+            {
+                Out.Warn("issue is closed — work was merged");
+                return new SpecLoadResult(null, 0);
+            }
+
+            var labels = issueDetail.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
+            if (labels.Contains("ready-for-review"))
+            {
+                Out.Warn("issue has 'ready-for-review' — remove label to re-run");
+                return new SpecLoadResult(null, 0);
+            }
+            if (labels.Contains("in-progress"))
+            {
+                Out.Warn("issue has 'in-progress' — already running?");
+                return new SpecLoadResult(null, 0);
+            }
+            if (labels.Contains("blocked"))
+            {
+                Out.Warn("issue has 'blocked' — resolve before running");
+                return new SpecLoadResult(null, 0);
+            }
+
+            var specContent = issueDetail.Body?.Trim() ?? "";
+            var specRef = $"#{issueNumber}";
+            Out.Ok($"loaded issue #{issueNumber}");
+
+            // Add in-progress label
+            Out.Step("marking in-progress...");
+            Gh("issue", "edit", issueNumber, "--remove-label", "ready-for-review,blocked", "--add-label", "in-progress");
+
+            return new SpecLoadResult(new SpecInfo(specContent, specRef, issueNumber, true), null);
+        }
+        else
+        {
+            // Fallback: local file (for offline/gh-unavailable scenarios)
+            if (!File.Exists(issue))
+            {
+                Out.Error($"spec not found: {issue}");
+                return new SpecLoadResult(null, 1);
+            }
+            var specContent = await File.ReadAllTextAsync(issue);
+            var specRef = issue;
+            return new SpecLoadResult(new SpecInfo(specContent, specRef, issueNumber, false), null);
+        }
+    }
+
+    static WorktreeSetupResult SetupWorktree(string issueNumber, bool isGhIssue, string issue)
+    {
+        var worktreeName = isGhIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(issue)}";
+        var workDir = Path.Combine(MillDir, "work");
+        var worktreePath = Path.Combine(workDir, worktreeName);
+        var originalDir = Directory.GetCurrentDirectory();
+
+        Out.Step($"creating worktree {worktreePath}...");
+
+        // Ensure .mill/work directory exists
+        Directory.CreateDirectory(workDir);
+
+        // Remove existing worktree if present (from crashed run)
+        if (Directory.Exists(worktreePath))
+        {
+            var (rmExit, _, rmErr) = Git("worktree", "remove", "--force", worktreePath);
+            if (rmExit != 0)
+                Out.Warn($"failed to remove stale worktree: {rmErr.Trim()}");
+        }
+
+        var branchName = $"issue-{issueNumber}";
+
+        // Delete existing branch if present (from previous run)
+        Git("branch", "-D", branchName);
+        var (wtExit, _, wtErr) = Git("worktree", "add", "-b", branchName, worktreePath, "HEAD");
+        if (wtExit != 0)
+        {
+            Out.Error($"failed to create worktree: {wtErr.Trim()}");
+            return new WorktreeSetupResult(null, 1);
+        }
+        Out.Ok($"worktree created (branch: {branchName})");
+
+        return new WorktreeSetupResult(new WorktreeInfo(worktreePath, branchName, originalDir), null);
+    }
+
+    static async Task<VerificationResult> RunTestsAndVerify(string specContent, string specRef)
+    {
+        var testCommand = ExtractTestCommand(specContent);
+        var criteria = ExtractCriteria(specContent);
+
+        Out.Blank();
+
+        // Step 1: Run tests once (gate before criterion verification)
+        if (!string.IsNullOrEmpty(testCommand))
+        {
+            Out.Step($"running tests: {testCommand}");
+            var (shellCmd, shellArg) = OperatingSystem.IsWindows()
+                ? (FindInPath("pwsh") != null ? ("pwsh", "-c") : ("powershell.exe", "-Command"))
+                : ("sh", "-c");
+            var (testExit, testOut, testErr) = Run(shellCmd, shellArg, testCommand);
+            if (testExit != 0)
+            {
+                Out.Blank();
+                Out.Warn("tests failed");
+                Out.Detail(testErr.Length > 0 ? testErr.Trim() : testOut.Trim());
+                var failureContext = $"Tests failed: {(testErr.Length > 0 ? testErr.Trim() : testOut.Trim())}";
+                return new VerificationResult(false, failureContext);
+            }
+            Out.Ok("tests passed");
+        }
+
+        // Step 2: Verify criteria
+        if (criteria.Count > 0)
+        {
+            Out.Step($"verifying {criteria.Count} acceptance criteria...");
+            Out.Blank();
+
+            var (allPassed, results, failCtx) = await RunCriterionVerification(specContent, specRef, criteria);
+
+            Out.Blank();
+            if (allPassed)
+            {
+                Out.Ok($"all {results.Count} criteria passed");
+            }
+            else
+            {
+                var failures = results.Where(r => !r.Passed).ToList();
+                Out.Warn($"{failures.Count}/{results.Count} criteria failed:");
+                foreach (var f in failures)
+                {
+                    Out.Detail($"[{f.Index}] {f.Title}: {f.Reason}");
+                }
+                return new VerificationResult(false, failCtx);
+            }
+        }
+        else
+        {
+            // No parseable criteria — skip verification with warning
+            Out.Blank();
+            Out.Warn("no acceptance criteria found in spec");
+            Out.Detail("specs should have structured criteria for proper verification");
+            Out.Detail("continuing without criterion verification...");
+        }
+
+        return new VerificationResult(true, null);
+    }
+
+    static PullRequestResult CreatePullRequest(VerifyMetadata metadata, string issueNumber)
+    {
+        // Push branch
+        Out.Step($"pushing branch {metadata.Branch}...");
+        var (pushExit, _, pushErr) = Run("git", "push", "-u", "origin", metadata.Branch);
+        if (pushExit != 0)
+        {
+            Out.Warn($"push failed: {pushErr.Trim()}");
+            return new PullRequestResult(false, $"Push failed: {pushErr.Trim()}");
+        }
+
+        // Create PR
+        Out.Step("creating PR...");
+        var prBody = $"Fixes #{issueNumber}\n\n## Summary\n{metadata.Summary}\n\n## Verification\n{metadata.Verification}";
+        var (prExit, prOut, prErr) = Run("gh", "pr", "create", "--title", metadata.Title, "--body", prBody);
+        if (prExit != 0)
+        {
+            Out.Warn($"PR creation failed: {prErr.Trim()}");
+            return new PullRequestResult(false, $"PR creation failed: {prErr.Trim()}");
+        }
+        Out.Detail(prOut.Trim());
+
+        // Mark ready-for-review
+        Out.Step("marking ready-for-review...");
+        Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
+
+        return new PullRequestResult(true, null);
+    }
+
     public static async Task<int> Execute(string issue, string[] args)
     {
         if (!IsInitialized())
@@ -1558,73 +1754,12 @@ static partial class Mill
         const string verifyToken = "MILL_VERIFY";
         const string doneToken = "MILL_DONE";
 
-        // Check if issue is a GitHub issue number
-        var issueNumber = issue;
-        var isGhIssue = int.TryParse(issueNumber, out _);
+        // Load spec from GitHub issue or local file
+        var specResult = await LoadSpec(issue);
+        if (specResult.ExitCode.HasValue)
+            return specResult.ExitCode.Value;
 
-        string specContent;
-        string specRef;
-
-        if (isGhIssue)
-        {
-            Out.Step($"fetching issue #{issueNumber}...");
-            var (exitCode, output) = Gh("issue", "view", issueNumber, "--json", "body,state,labels");
-            if (exitCode != 0 || string.IsNullOrWhiteSpace(output))
-            {
-                Out.Error($"failed to fetch issue #{issueNumber}");
-                return 1;
-            }
-
-            var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
-            if (issueDetail == null)
-            {
-                Out.Error("failed to parse issue");
-                return 1;
-            }
-
-            // Guard: check issue state and labels
-            if (issueDetail.State.Equals("CLOSED", StringComparison.OrdinalIgnoreCase))
-            {
-                Out.Warn("issue is closed — work was merged");
-                return 0;
-            }
-
-            var labels = issueDetail.Labels.Select(l => l.Name.ToLowerInvariant()).ToList();
-            if (labels.Contains("ready-for-review"))
-            {
-                Out.Warn("issue has 'ready-for-review' — remove label to re-run");
-                return 0;
-            }
-            if (labels.Contains("in-progress"))
-            {
-                Out.Warn("issue has 'in-progress' — already running?");
-                return 0;
-            }
-            if (labels.Contains("blocked"))
-            {
-                Out.Warn("issue has 'blocked' — resolve before running");
-                return 0;
-            }
-
-            specContent = issueDetail.Body?.Trim() ?? "";
-            specRef = $"#{issueNumber}";
-            Out.Ok($"loaded issue #{issueNumber}");
-
-            // Add in-progress label
-            Out.Step("marking in-progress...");
-            Gh("issue", "edit", issueNumber, "--remove-label", "ready-for-review,blocked", "--add-label", "in-progress");
-        }
-        else
-        {
-            // Fallback: local file (for offline/gh-unavailable scenarios)
-            if (!File.Exists(issue))
-            {
-                Out.Error($"spec not found: {issue}");
-                return 1;
-            }
-            specContent = await File.ReadAllTextAsync(issue);
-            specRef = issue;
-        }
+        var (specContent, specRef, issueNumber, isGhIssue) = specResult.Spec!;
 
         // Validate prompts exist before starting
         var iterationPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-iterate.md");
@@ -1643,35 +1778,11 @@ static partial class Mill
         }
 
         // Create isolated worktree for execution
-        var worktreeName = isGhIssue ? $"issue-{issueNumber}" : $"spec-{Path.GetFileNameWithoutExtension(issue)}";
-        var workDir = Path.Combine(MillDir, "work");
-        var worktreePath = Path.Combine(workDir, worktreeName);
-        var originalDir = Directory.GetCurrentDirectory();
+        var worktreeResult = SetupWorktree(issueNumber, isGhIssue, issue);
+        if (worktreeResult.ExitCode.HasValue)
+            return worktreeResult.ExitCode.Value;
 
-        Out.Step($"creating worktree {worktreePath}...");
-
-        // Ensure .mill/work directory exists
-        Directory.CreateDirectory(workDir);
-
-        // Remove existing worktree if present (from crashed run)
-        if (Directory.Exists(worktreePath))
-        {
-            var (rmExit, _, rmErr) = Git("worktree", "remove", "--force", worktreePath);
-            if (rmExit != 0)
-                Out.Warn($"failed to remove stale worktree: {rmErr.Trim()}");
-        }
-
-        var branchName = $"issue-{issueNumber}";
-
-        // Delete existing branch if present (from previous run)
-        Git("branch", "-D", branchName);
-        var (wtExit, _, wtErr) = Git("worktree", "add", "-b", branchName, worktreePath, "HEAD");
-        if (wtExit != 0)
-        {
-            Out.Error($"failed to create worktree: {wtErr.Trim()}");
-            return 1;
-        }
-        Out.Ok($"worktree created (branch: {branchName})");
+        var (worktreePath, branchName, originalDir) = worktreeResult.Worktree!;
 
         var result = 1;
         try
@@ -1771,104 +1882,22 @@ static partial class Mill
                         continue;
                     }
 
-                    // Extract test command and criteria
-                    var testCommand = ExtractTestCommand(specContent);
-                    var criteria = ExtractCriteria(specContent);
+                    // Run tests and verify criteria
+                    var verifyResult = await RunTestsAndVerify(specContent, specRef);
 
-                    Out.Blank();
-
-                    // Step 1: Run tests once (gate before criterion verification)
-                    if (!string.IsNullOrEmpty(testCommand))
+                    if (verifyResult.Passed)
                     {
-                        Out.Step($"running tests: {testCommand}");
-                        var (shellCmd, shellArg) = OperatingSystem.IsWindows()
-                            ? (FindInPath("pwsh") != null ? ("pwsh", "-c") : ("powershell.exe", "-Command"))
-                            : ("sh", "-c");
-                        var (testExit, testOut, testErr) = Run(shellCmd, shellArg, testCommand);
-                        if (testExit != 0)
-                        {
-                            Out.Blank();
-                            Out.Warn("tests failed");
-                            Out.Detail(testErr.Length > 0 ? testErr.Trim() : testOut.Trim());
-                            lastFailureContext = $"Tests failed: {(testErr.Length > 0 ? testErr.Trim() : testOut.Trim())}";
-                            continue;
-                        }
-                        Out.Ok("tests passed");
-                    }
-
-                    bool verificationPassed;
-                    string? criterionFailureContext = null;
-
-                    // Step 2: Verify criteria
-                    if (criteria.Count > 0)
-                    {
-                        Out.Step($"verifying {criteria.Count} acceptance criteria...");
-                        Out.Blank();
-
-                        var (allPassed, results, failCtx) = await RunCriterionVerification(
-                            specContent, specRef, criteria);
-
-                        verificationPassed = allPassed;
-                        criterionFailureContext = failCtx;
-
-                        Out.Blank();
-                        if (allPassed)
-                        {
-                            Out.Ok($"all {results.Count} criteria passed");
-                        }
-                        else
-                        {
-                            var failures = results.Where(r => !r.Passed).ToList();
-                            Out.Warn($"{failures.Count}/{results.Count} criteria failed:");
-                            foreach (var f in failures)
-                            {
-                                Out.Detail($"[{f.Index}] {f.Title}: {f.Reason}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // No parseable criteria — skip verification with warning
-                        Out.Blank();
-                        Out.Warn("no acceptance criteria found in spec");
-                        Out.Detail("specs should have structured criteria for proper verification");
-                        Out.Detail("continuing without criterion verification...");
-                        verificationPassed = true; // Tests passed, that's all we can check
-                    }
-
-                    if (verificationPassed)
-                    {
-                        // Verification passed - create PR
                         Out.Blank();
                         Out.Ok("verification passed");
 
                         if (isGhIssue)
                         {
-                            // Push branch
-                            Out.Step($"pushing branch {metadata.Branch}...");
-                            var (pushExit, _, pushErr) = Run("git", "push", "-u", "origin", metadata.Branch);
-                            if (pushExit != 0)
+                            var prResult = CreatePullRequest(metadata, issueNumber);
+                            if (!prResult.Success)
                             {
-                                Out.Warn($"push failed: {pushErr.Trim()}");
-                                lastFailureContext = $"Push failed: {pushErr.Trim()}";
+                                lastFailureContext = prResult.Error;
                                 continue;
                             }
-
-                            // Create PR
-                            Out.Step("creating PR...");
-                            var prBody = $"Fixes #{issueNumber}\n\n## Summary\n{metadata.Summary}\n\n## Verification\n{metadata.Verification}";
-                            var (prExit, prOut, prErr) = Run("gh", "pr", "create", "--title", metadata.Title, "--body", prBody);
-                            if (prExit != 0)
-                            {
-                                Out.Warn($"PR creation failed: {prErr.Trim()}");
-                                lastFailureContext = $"PR creation failed: {prErr.Trim()}";
-                                continue;
-                            }
-                            Out.Detail(prOut.Trim());
-
-                            // Mark ready-for-review
-                            Out.Step("marking ready-for-review...");
-                            Run("gh", "issue", "edit", issueNumber, "--remove-label", "in-progress", "--add-label", "ready-for-review");
                         }
 
                         Out.Blank();
@@ -1878,9 +1907,7 @@ static partial class Mill
                     }
                     else
                     {
-                        // Verification failed - inject context for next iteration
-                        if (criterionFailureContext != null)
-                            lastFailureContext = criterionFailureContext;
+                        lastFailureContext = verifyResult.FailureContext;
                         continue;
                     }
                 }
@@ -3241,6 +3268,18 @@ record VerifyMetadata(
 [JsonSerializable(typeof(VerifyMetadata))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class VerifyJsonContext : JsonSerializerContext { }
+
+// Spec loading result
+record SpecInfo(string Content, string Ref, string IssueNumber, bool IsGhIssue);
+record SpecLoadResult(SpecInfo? Spec, int? ExitCode);
+
+// Worktree setup result
+record WorktreeInfo(string Path, string BranchName, string OriginalDir);
+record WorktreeSetupResult(WorktreeInfo? Worktree, int? ExitCode);
+
+// Verification result types
+record VerificationResult(bool Passed, string? FailureContext);
+record PullRequestResult(bool Success, string? Error);
 
 // Criterion verification types
 record AcceptanceCriterion(int Index, string Title, string Body);
