@@ -8,16 +8,16 @@ using System.Text.RegularExpressions;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-// Clean up old binary from previous update (silent, on every run)
-Updater.CleanupOldBinary();
+// Clean up old binary from previous install/update (silent, on every run)
+Installer.CleanupOldBinary();
 
 Out.Banner();
 
 return args switch
 {
     ["--version"] or ["-v"] => ShowVersion(),
-    ["update", "--check"] => await RunUpdateCheck(),
-    ["update"] => await RunUpdate(),
+    ["install", "--check"] => await RunInstallCheck(),
+    ["install"] => await RunInstall(),
     ["init"] => await Mill.Init(),
     ["spec", ..] => await Mill.RunSpec(),
     ["personas"] => Mill.RunPersonas(),
@@ -34,66 +34,121 @@ static int ShowVersion()
     return 0;
 }
 
-static async Task<int> RunUpdateCheck()
+static async Task<int> RunInstallCheck()
 {
-    var check = await Updater.Check();
+    var check = await Installer.Check();
 
-    Console.WriteLine($"  current: {check.Current}");
+    Console.WriteLine($"  version: {check.Current}");
+    Console.WriteLine($"  mode:    {(check.Mode == InstallMode.Install ? "install" : "update")}");
 
-    if (check.Error != null)
+    if (check.Mode == InstallMode.Install)
     {
-        Out.Error($"failed to check for updates: {check.Error}");
-        return 1;
-    }
-
-    Console.WriteLine($"  latest:  {check.Latest}");
-    Out.Blank();
-
-    if (check.UpdateAvailable)
-    {
-        Console.WriteLine("  run `mill update` to install");
+        // Install mode: show what would happen
+        if (check.InstalledVersion != null)
+        {
+            Console.WriteLine($"  installed: {check.InstalledVersion}");
+            if (check.IsDowngrade)
+            {
+                Out.Blank();
+                Out.Warn($"would downgrade from {check.InstalledVersion} to {check.Current}");
+            }
+        }
+        Out.Blank();
+        Out.Ok("ready to install");
+        Out.Detail($"binary: {Installer.GetBinaryPath()}");
+        Out.Detail($"data: {Installer.GetDataPath()}");
     }
     else
     {
-        Out.Ok($"already at latest ({check.Current})");
+        // Update mode: check for updates
+        if (check.Error != null)
+        {
+            Out.Error($"failed to check: {check.Error}");
+            return 1;
+        }
+
+        Console.WriteLine($"  latest:  {check.Latest}");
+        Out.Blank();
+
+        if (check.UpdateAvailable)
+            Console.WriteLine("  run `mill install` to update");
+        else
+            Out.Ok("already at latest");
     }
 
     return 0;
 }
 
-static async Task<int> RunUpdate()
+static async Task<int> RunInstall()
 {
-    var check = await Updater.Check();
+    var check = await Installer.Check();
 
-    Console.WriteLine($"  current: {check.Current}");
+    Console.WriteLine($"  version: {check.Current}");
+    Console.WriteLine($"  mode:    {(check.Mode == InstallMode.Install ? "install" : "update")}");
 
-    if (check.Error != null)
+    if (check.Mode == InstallMode.Install)
     {
-        Out.Error($"failed to check for updates: {check.Error}");
-        return 1;
-    }
-
-    if (!check.UpdateAvailable)
-    {
+        // Install mode: copy binary and prompts to system locations
+        if (check.InstalledVersion != null)
+        {
+            Console.WriteLine($"  installed: {check.InstalledVersion}");
+            if (check.IsDowngrade && !Out.Confirm("downgrade?"))
+            {
+                Out.Warn("aborted");
+                return 0;
+            }
+        }
         Out.Blank();
-        Out.Ok($"already at latest ({check.Current})");
-        return 0;
-    }
 
-    Console.WriteLine($"  latest:  {check.Latest}");
-    Out.Blank();
+        var (success, message) = Installer.CopyToSystem();
+        if (success)
+        {
+            Out.Ok(message);
 
-    var (success, message) = await Updater.Apply();
-
-    if (success)
-    {
-        Out.Ok(message);
-        return 0;
+            if (!Installer.IsInPath())
+            {
+                Out.Blank();
+                Out.Warn("not in PATH");
+                Out.Detail(Installer.GetPathInstructions());
+            }
+            return 0;
+        }
+        else
+        {
+            Out.Error(message);
+            return 1;
+        }
     }
     else
     {
-        Out.Error(message);
-        return 1;
+        // Update mode: download latest from GitHub
+        if (check.Error != null)
+        {
+            Out.Error($"failed to check: {check.Error}");
+            return 1;
+        }
+
+        if (!check.UpdateAvailable)
+        {
+            Out.Blank();
+            Out.Ok($"already at latest ({check.Current})");
+            return 0;
+        }
+
+        Console.WriteLine($"  latest:  {check.Latest}");
+        Out.Blank();
+
+        var (success, message) = await Installer.Update();
+        if (success)
+        {
+            Out.Ok(message);
+            return 0;
+        }
+        else
+        {
+            Out.Error(message);
+            return 1;
+        }
     }
 }
 
@@ -109,7 +164,7 @@ static int ShowHelp()
           mill run --auto         autopick best issue
           mill run <number>       execute work loop on issue
 
-          mill update             update to latest version
+          mill install            install or update mill
           mill --version          show version
         """);
     return 0;
@@ -1575,16 +1630,23 @@ static partial class Mill
 
     static string FindMillHome()
     {
+        // 1. Explicit override via environment variable
         var env = Environment.GetEnvironmentVariable("MILL_HOME");
-        if (!string.IsNullOrEmpty(env)) return env;
+        if (!string.IsNullOrEmpty(env) && Directory.Exists(Path.Combine(env, "spec/prompts")))
+            return env;
 
-        // Executable is in bin/, mill root is one level up
+        // 2. System install location (~/.local/share/mill or %LOCALAPPDATA%\mill)
+        var dataPath = Installer.GetDataPath();
+        if (Directory.Exists(Path.Combine(dataPath, "spec/prompts")))
+            return dataPath;
+
+        // 3. Development mode: prompts in repo relative to binary
         var exeDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
         var millRoot = Directory.GetParent(exeDir)?.FullName;
-
         if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "spec/prompts")))
             return millRoot;
 
+        // 4. Fallback to exe directory (will likely fail, but provides useful error)
         return exeDir;
     }
 
@@ -1601,9 +1663,26 @@ static partial class Mill
 }
 
 /// <summary>
-/// Self-update logic: fetch latest release from GitHub, download, and replace the running binary.
+/// Install mode: fresh install (copy to system) vs update (download latest).
 /// </summary>
-static class Updater
+enum InstallMode { Install, Update }
+
+/// <summary>
+/// Install/update check result.
+/// </summary>
+record InstallCheck(
+    InstallMode Mode,
+    string Current,
+    string? Latest,
+    string? InstalledVersion,
+    bool UpdateAvailable,
+    bool IsDowngrade,
+    string? Error);
+
+/// <summary>
+/// Install and update logic for mill.
+/// </summary>
+static class Installer
 {
     const string RepoOwner = "mindrevolution";
     const string RepoName = "mill";
@@ -1617,51 +1696,185 @@ static class Updater
     };
 
     /// <summary>
-    /// Check result: current vs latest version.
+    /// System binary path: ~/.local/bin/mill or %LOCALAPPDATA%\Programs\mill\mill.exe
     /// </summary>
-    public record UpdateCheck(string Current, string? Latest, bool UpdateAvailable, string? Error);
+    public static string GetBinaryPath()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(localAppData, "Programs", "mill", "mill.exe");
+        }
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, ".local", "bin", "mill");
+    }
 
     /// <summary>
-    /// Checks for updates by querying the GitHub Releases API.
+    /// System data path for prompts: ~/.local/share/mill or %LOCALAPPDATA%\mill
     /// </summary>
-    public static async Task<UpdateCheck> Check()
+    public static string GetDataPath()
     {
-        var current = Mill.Version;
+        if (OperatingSystem.IsWindows())
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(localAppData, "mill");
+        }
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, ".local", "share", "mill");
+    }
+
+    /// <summary>
+    /// Check if running from system install location.
+    /// </summary>
+    public static bool IsInstalledLocation()
+    {
+        var exePath = Environment.ProcessPath!;
+        var systemPath = GetBinaryPath();
+        return string.Equals(
+            Path.GetFullPath(exePath),
+            Path.GetFullPath(systemPath),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Get version of installed binary (if any).
+    /// </summary>
+    public static string? GetInstalledVersion()
+    {
+        var systemPath = GetBinaryPath();
+        if (!File.Exists(systemPath)) return null;
+
         try
         {
-            var release = await FetchLatestRelease();
-            if (release == null)
-                return new UpdateCheck(current, null, false, "no releases available");
-
-            var latest = release.TagName.TrimStart('v');
-            var updateAvailable = CompareVersions(current, latest) < 0;
-            return new UpdateCheck(current, latest, updateAvailable, null);
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = systemPath,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                }
+            };
+            process.Start();
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            var parts = output.Trim().Split(' ');
+            return parts.Length >= 2 ? parts[1] : null;
         }
-        catch (HttpRequestException ex)
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// Check install status: mode, versions, update availability.
+    /// </summary>
+    public static async Task<InstallCheck> Check()
+    {
+        var current = Mill.Version;
+        var isInstalled = IsInstalledLocation();
+        var mode = isInstalled ? InstallMode.Update : InstallMode.Install;
+        var installedVersion = isInstalled ? current : GetInstalledVersion();
+
+        var isDowngrade = mode == InstallMode.Install &&
+            installedVersion != null &&
+            CompareVersions(current, installedVersion) < 0;
+
+        // For update mode, check GitHub for latest
+        string? latest = null;
+        string? error = null;
+        var updateAvailable = false;
+
+        if (mode == InstallMode.Update)
         {
-            var message = ex.StatusCode == System.Net.HttpStatusCode.Forbidden
-                ? "rate limited — try again later"
-                : $"connection failed: {ex.Message}";
-            return new UpdateCheck(current, null, false, message);
+            try
+            {
+                var release = await FetchLatestRelease();
+                if (release == null)
+                    error = "no releases available";
+                else
+                {
+                    latest = release.TagName.TrimStart('v');
+                    updateAvailable = CompareVersions(current, latest) < 0;
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                error = ex.StatusCode == System.Net.HttpStatusCode.Forbidden
+                    ? "rate limited — try again later"
+                    : $"connection failed: {ex.Message}";
+            }
+            catch (Exception ex) { error = ex.Message; }
+        }
+
+        return new InstallCheck(mode, current, latest, installedVersion, updateAvailable, isDowngrade, error);
+    }
+
+    /// <summary>
+    /// Copy binary and prompts to system locations.
+    /// </summary>
+    public static (bool Success, string Message) CopyToSystem()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath!;
+            var binaryPath = GetBinaryPath();
+            var dataPath = GetDataPath();
+            var binaryDir = Path.GetDirectoryName(binaryPath)!;
+
+            // Find source prompts directory (relative to running binary)
+            var sourceDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+            var sourceRoot = Directory.GetParent(sourceDir)?.FullName;
+            if (sourceRoot == null || !Directory.Exists(Path.Combine(sourceRoot, "spec/prompts")))
+            {
+                return (false, "prompts not found — run from repo directory");
+            }
+
+            // Copy binary
+            Out.Step("copying binary...");
+            Directory.CreateDirectory(binaryDir);
+            File.Copy(exePath, binaryPath, overwrite: true);
+            if (!OperatingSystem.IsWindows())
+            {
+                var chmod = Process.Start("chmod", ["+x", binaryPath]);
+                chmod?.WaitForExit();
+            }
+
+            // Copy prompts and templates
+            Out.Step("copying prompts...");
+            CopyDirectory(Path.Combine(sourceRoot, "spec/prompts"), Path.Combine(dataPath, "spec/prompts"));
+            CopyDirectory(Path.Combine(sourceRoot, "spec/templates"), Path.Combine(dataPath, "spec/templates"));
+            CopyDirectory(Path.Combine(sourceRoot, "run/prompts"), Path.Combine(dataPath, "run/prompts"));
+
+            return (true, $"installed to {binaryPath}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return (false, "permission denied");
         }
         catch (Exception ex)
         {
-            return new UpdateCheck(current, null, false, ex.Message);
+            return (false, ex.Message);
+        }
+    }
+
+    static void CopyDirectory(string source, string dest)
+    {
+        Directory.CreateDirectory(dest);
+        foreach (var file in Directory.GetFiles(source))
+        {
+            File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), overwrite: true);
+        }
+        foreach (var dir in Directory.GetDirectories(source))
+        {
+            CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
         }
     }
 
     /// <summary>
-    /// Downloads and installs the latest version.
+    /// Download and install latest version from GitHub.
     /// </summary>
-    public static async Task<(bool Success, string Message)> Apply()
+    public static async Task<(bool Success, string Message)> Update()
     {
-        var check = await Check();
-        if (check.Error != null)
-            return (false, check.Error);
-
-        if (!check.UpdateAvailable)
-            return (true, $"already at latest ({check.Current})");
-
         try
         {
             var release = await FetchLatestRelease();
@@ -1673,7 +1886,6 @@ static class Updater
             if (asset == null)
                 return (false, $"no binary for {assetName}");
 
-            // Download to temp file
             var exePath = Environment.ProcessPath!;
             var exeDir = Path.GetDirectoryName(exePath)!;
             var tmpPath = Path.Combine(exeDir, assetName + ".tmp");
@@ -1687,7 +1899,6 @@ static class Updater
                 await response.Content.CopyToAsync(fs);
             }
 
-            // Verify download size
             var downloadedSize = new FileInfo(tmpPath).Length;
             if (downloadedSize == 0 || downloadedSize != asset.Size)
             {
@@ -1695,28 +1906,24 @@ static class Updater
                 return (false, "download corrupted — size mismatch");
             }
 
-            // Self-replace using rename trick
             var oldPath = exePath + ".old";
+            try { File.Delete(oldPath); } catch { }
 
-            // Remove leftover .old from previous update (might fail if locked, that's ok)
-            try { File.Delete(oldPath); } catch { /* ignore */ }
-
-            // Rename current → old, tmp → current
             File.Move(exePath, oldPath);
             File.Move(tmpPath, exePath);
 
-            // On Unix, set executable bit
             if (!OperatingSystem.IsWindows())
             {
                 var chmod = Process.Start("chmod", ["+x", exePath]);
                 chmod?.WaitForExit();
             }
 
-            return (true, $"updated to {check.Latest}");
+            var latest = release.TagName.TrimStart('v');
+            return (true, $"updated to {latest}");
         }
         catch (UnauthorizedAccessException)
         {
-            return (false, "permission denied — check install location");
+            return (false, "permission denied");
         }
         catch (Exception ex)
         {
@@ -1725,7 +1932,33 @@ static class Updater
     }
 
     /// <summary>
-    /// Cleans up old binary from previous update. Call on startup.
+    /// Check if system binary directory is in PATH.
+    /// </summary>
+    public static bool IsInPath()
+    {
+        var binaryDir = Path.GetDirectoryName(GetBinaryPath())!;
+        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var separator = OperatingSystem.IsWindows() ? ';' : ':';
+        return pathEnv.Split(separator).Any(dir =>
+            string.Equals(Path.GetFullPath(dir), Path.GetFullPath(binaryDir),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Get shell-specific PATH instructions.
+    /// </summary>
+    public static string GetPathInstructions()
+    {
+        var binaryDir = Path.GetDirectoryName(GetBinaryPath())!;
+        if (OperatingSystem.IsWindows())
+            return $"setx PATH \"%PATH%;{binaryDir}\"";
+        if (OperatingSystem.IsMacOS())
+            return $"echo 'export PATH=\"{binaryDir}:$PATH\"' >> ~/.zshrc";
+        return $"echo 'export PATH=\"{binaryDir}:$PATH\"' >> ~/.bashrc";
+    }
+
+    /// <summary>
+    /// Clean up old binary from previous update.
     /// </summary>
     public static void CleanupOldBinary()
     {
@@ -1733,10 +1966,9 @@ static class Updater
         {
             var exePath = Environment.ProcessPath!;
             var oldPath = exePath + ".old";
-            if (File.Exists(oldPath))
-                File.Delete(oldPath);
+            if (File.Exists(oldPath)) File.Delete(oldPath);
         }
-        catch { /* silently ignore */ }
+        catch { }
     }
 
     static async Task<GhRelease?> FetchLatestRelease()
@@ -1749,18 +1981,14 @@ static class Updater
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            return null; // no releases published yet
+            return null;
         }
     }
 
-    /// <summary>
-    /// Compares semantic versions. Returns negative if a &lt; b, 0 if equal, positive if a &gt; b.
-    /// </summary>
     static int CompareVersions(string a, string b)
     {
         var aParts = a.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
         var bParts = b.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
-
         for (var i = 0; i < Math.Max(aParts.Length, bParts.Length); i++)
         {
             var av = i < aParts.Length ? aParts[i] : 0;
