@@ -8,6 +8,8 @@ using System.Text.RegularExpressions;
 // Clean up old binary from previous update (silent, on every run)
 Updater.CleanupOldBinary();
 
+Out.Banner();
+
 return args switch
 {
     ["--version"] or ["-v"] => ShowVersion(),
@@ -94,23 +96,7 @@ static async Task<int> RunUpdate()
 
 static int ShowHelp()
 {
-    // #ffcc00 = RGB(255, 204, 0), fallback to ConsoleColor.Yellow
-    var trueColor = Environment.GetEnvironmentVariable("COLORTERM") is "truecolor" or "24bit";
-    if (trueColor)
-    {
-        Console.WriteLine("  \x1b[38;2;255;204;0m■\x1b[0m mill - turning intent into verified deliverables, continuously.");
-    }
-    else
-    {
-        Console.Write("  ");
-        var prev = Console.ForegroundColor;
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Write("■");
-        Console.ForegroundColor = prev;
-        Console.WriteLine(" mill - turning intent into verified deliverables, continuously.");
-    }
     Console.WriteLine("""
-
         usage:
           mill init               initialize repo for MILL
           mill spec               create specification → GitHub issue
@@ -162,6 +148,22 @@ static class Out
 
     public static void Line() => Console.WriteLine("  ---");
     public static void Blank() => Console.WriteLine();
+
+    public static void Banner()
+    {
+        // #ffcc00 = RGB(255, 204, 0), fallback to ConsoleColor.Yellow
+        var trueColor = Environment.GetEnvironmentVariable("COLORTERM") is "truecolor" or "24bit";
+        if (trueColor)
+        {
+            Console.WriteLine($"  \x1b[38;2;255;204;0m■\x1b[0m mill {Mill.Version}");
+        }
+        else
+        {
+            Console.Write("  ");
+            WriteColored("■", ConsoleColor.Yellow);
+            Console.WriteLine($" mill {Mill.Version}");
+        }
+    }
 
     static void WriteColored(string text, ConsoleColor color)
     {
