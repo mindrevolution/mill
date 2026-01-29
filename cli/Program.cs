@@ -150,6 +150,12 @@ static class Out
     public static void Line() => Console.WriteLine("  ---");
     public static void Blank() => Console.WriteLine();
 
+    public static void Prompt(string msg)
+    {
+        // Blinking ❯ symbol using ANSI escape codes
+        Console.Write($"  \x1b[5m❯\x1b[0m {msg}");
+    }
+
     public static void Banner()
     {
         // #ffcc00 = RGB(255, 204, 0), fallback to ConsoleColor.Yellow
@@ -253,7 +259,7 @@ static partial class Mill
             Out.Warn("existing MILL setup detected (.mill/context.md)");
             Out.Detail("continuing will regenerate all context");
             Out.Blank();
-            Console.Write("  continue? [y/n] ");
+            Out.Prompt("continue? [y/n] ");
             var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
             if (confirm != "y")
             {
@@ -585,7 +591,7 @@ static partial class Mill
             Console.WriteLine($"    {i + 1}. {d.Title} ({d.Type}, {progress})");
         }
         Out.Blank();
-        Console.Write($"  [1-{drafts.Count}] or enter for new: ");
+        Out.Prompt($"[1-{drafts.Count}] or enter for new: ");
 
         var input = Console.ReadLine()?.Trim();
         if (string.IsNullOrEmpty(input))
@@ -659,7 +665,7 @@ static partial class Mill
             if (int.TryParse(behindStr.Trim(), out var behind) && behind > 0)
             {
                 Out.Warn($"local branch is {behind} commit{(behind == 1 ? "" : "s")} behind {upstream}");
-                Console.Write("  continue anyway? [y/n] ");
+                Out.Prompt("continue anyway? [y/n] ");
                 var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
                 if (confirm != "y")
                 {
