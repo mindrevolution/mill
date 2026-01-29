@@ -681,6 +681,8 @@ static partial class Mill
         process.StartInfo.ArgumentList.Add("--dangerously-skip-permissions");
         process.StartInfo.ArgumentList.Add("--append-system-prompt");
         process.StartInfo.ArgumentList.Add($"CRITICAL: Before responding, read {promptFile} for your full system context.");
+        // Initial message to kick off analysis
+        process.StartInfo.ArgumentList.Add("analyze this spec against the current codebase");
 
         process.Start();
         process.WaitForExit();
