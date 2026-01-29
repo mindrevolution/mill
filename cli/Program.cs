@@ -1679,7 +1679,8 @@ static partial class Mill
             // Change to worktree directory
             Directory.SetCurrentDirectory(Path.Combine(originalDir, worktreePath));
 
-            // Try to copy parent's context.md if hash matches worktree HEAD
+            // Try to inherit parent context or determine warmup reason
+            string? warmupReason = null;
             var parentContextFile = Path.Combine(ParentMillDir, "context.md");
             if (File.Exists(parentContextFile))
             {
@@ -1695,14 +1696,24 @@ static partial class Mill
                         File.Copy(parentContextFile, ContextFile, overwrite: true);
                         Out.Ok("context inherited from parent");
                     }
+                    else
+                    {
+                        warmupReason = $"parent context stale ({parentHash[..7]} → {worktreeHead[..7]})";
+                    }
                 }
             }
 
-            // Ensure context exists in worktree (uses CurrentMillDir which resolves to worktree)
-            var (needsWarmup, reason) = CheckContextStaleness();
-            if (needsWarmup)
+            // Fall back to staleness check if parent didn't resolve the situation
+            if (warmupReason == null)
             {
-                Out.Warn(reason.ToLower());
+                var (needsWarmup, reason) = CheckContextStaleness();
+                if (needsWarmup)
+                    warmupReason = reason.ToLower();
+            }
+
+            if (warmupReason != null)
+            {
+                Out.Warn(warmupReason);
                 Out.Step("building context...");
                 Out.Blank();
 
