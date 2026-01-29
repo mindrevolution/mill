@@ -575,6 +575,11 @@ static partial class Mill
 
         Out.Ok($"loaded: {issueDetail.Title}");
 
+        // Print clickable URL
+        var (repoExit, repoUrl) = Gh("repo", "view", "--json", "url", "-q", ".url");
+        if (repoExit == 0)
+            Out.Detail($"{repoUrl.Trim()}/issues/{issueNumber}");
+
         // Check context staleness
         var (needsWarmup, reason) = CheckContextStaleness();
         if (needsWarmup)
@@ -1252,6 +1257,7 @@ static partial class Mill
         Console.WriteLine("  available:");
         Out.Blank();
 
+        var baseUrl = repoUrl.Trim();
         var shown = sorted.Take(10).ToList();
         foreach (var issue in shown)
         {
@@ -1259,7 +1265,8 @@ static partial class Mill
             var age = FormatAge(issue.CreatedAt);
             var impactCol = impact != null ? $"[{impact}]".PadRight(7) : "       ";
             var title = issue.Title.Length > 40 ? issue.Title[..37] + "..." : issue.Title;
-            Console.WriteLine($"  #{issue.Number,-4} {impactCol} {title,-40} {age}");
+            var url = $"{baseUrl}/issues/{issue.Number}";
+            Console.WriteLine($"  #{issue.Number,-4} {impactCol} {title,-40} {age,-8} {url}");
         }
 
         var remaining = sorted.Count - 10;

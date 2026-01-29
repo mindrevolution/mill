@@ -43,29 +43,51 @@ For each finding, categorize as:
 | **Missing** | Convention not documented | Suboptimal implementation |
 | **Ambiguous** | "Make it faster" without metric | Unclear success criteria |
 
-### 3. Propose Updates
+### 3. Present Summary
 
-Present findings one by one:
+After analysis, present a brief summary — **do not dump all details at once**:
 
 ```
 found {n} potential updates:
 
-1. [category]: [finding]
-   current: [what the spec says]
-   reality: [what the codebase shows]
-   suggested update: [proposed text]
+1. [category]: [one-line summary]
+2. [category]: [one-line summary]
+3. [category]: [one-line summary]
+
+walk through each? [y/n]
+```
+
+If user declines, skip to step 6 (Iterate).
+
+### 4. Walk Through Findings
+
+Present **one finding at a time**. Wait for user response before showing the next.
+
+```
+[1/{n}] [category]: [brief description]
+
+current spec:
+  [relevant excerpt from spec]
+
+codebase reality:
+  [what you found]
+
+suggested update:
+  [proposed new text]
 
 apply? [y/n/edit]
 ```
 
-For each:
-- **y** — Accept suggestion as-is
-- **n** — Skip this update
-- **edit** — User provides alternative text
+For each response:
+- **y** — Accept suggestion, move to next finding
+- **n** — Skip this update, move to next finding
+- **edit** — User provides alternative text, then move to next
 
-### 4. Add Missing Context
+**IMPORTANT:** Only show one finding per message. Do not batch them.
 
-After addressing gaps, ask:
+### 5. Add Missing Context
+
+After walking through findings, ask:
 
 ```
 any additional context to add?
@@ -77,22 +99,10 @@ any additional context to add?
 
 If user adds context, help structure it into the spec's appropriate section.
 
-### 5. Validate Updated Spec
-
-Run the same validation as spec-draft:
-
-```
-[ ] success criteria testable
-[ ] each criterion verifiable
-[ ] scope clear (in/out)
-[ ] no placeholders
-[ ] Loop Contract present
-```
-
 ### 6. Iterate
 
-After initial analysis and proposed changes, the user may want to:
-- Discuss findings further
+After addressing findings, the user may want to:
+- Discuss changes further
 - Add more context through conversation
 - Refine acceptance criteria
 - Clarify scope boundaries
@@ -107,7 +117,19 @@ anything else to refine?
 3. finalize and update issue
 ```
 
-### 7. Confirm and Update
+### 7. Validate Updated Spec
+
+Before finalizing, run validation:
+
+```
+[ ] success criteria testable
+[ ] each criterion verifiable
+[ ] scope clear (in/out)
+[ ] no placeholders
+[ ] Loop Contract present
+```
+
+### 8. Confirm and Update
 
 When user chooses to finalize, present the complete updated spec:
 
@@ -126,7 +148,7 @@ apply to issue #{{ISSUE_NUMBER}}? [y/n]
 
 **STOP HERE.** Do not update the issue without explicit approval.
 
-### 8. Apply
+### 9. Apply
 
 After explicit user approval:
 
