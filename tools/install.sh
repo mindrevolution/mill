@@ -17,23 +17,9 @@ case "$(uname -m)" in
 esac
 
 rid="$os-$arch"
-install_dir="$HOME/.local/bin"
-target="$install_dir/mill"
 
 echo "  • building for $rid"
 dotnet publish cli/mill-cli.csproj -c Release -r "$rid" -o out --nologo -v q
 
-echo "  • installing to $target"
-mkdir -p "$install_dir"
-cp out/mill "$target"
-chmod +x "$target"
-
-echo "  ✓ installed"
-
-# check if in PATH
-if ! command -v mill &>/dev/null; then
-    echo ""
-    echo "  ▲ ~/.local/bin not in PATH"
-    echo "  add to your shell profile:"
-    echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
-fi
+# delegate to mill install (handles binary, prompts, PATH warnings)
+./out/mill install
