@@ -173,6 +173,7 @@ Minimal, uniform, lowercase messages.
 | `Out.Warn(msg)` | `▲` | Yellow | warnings, non-fatal issues |
 | `Out.Error(msg)` | `✕` | Red | errors (stderr) |
 | `Out.Detail(msg)` | `↳` | Gray | sub-item, additional info |
+| `Out.Agent(text)` | | Gray | LLM output (indented, dimmed) |
 | `Out.Prompt(msg)` | `❯` | Blink | awaiting user input |
 | `Out.Confirm(msg)` | `❯` | Blink | y/n single-keypress confirmation |
 | `Out.Line()` | `---` | | separator |

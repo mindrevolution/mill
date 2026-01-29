@@ -210,6 +210,22 @@ static class Out
         Console.WriteLine(msg);
     }
 
+    /// <summary>
+    /// Write LLM output with indentation and dimmed color.
+    /// Handles multiline text by indenting each line.
+    /// </summary>
+    public static void Agent(string text)
+    {
+        var prev = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        foreach (var line in text.Split('\n'))
+        {
+            Console.Write("    ");
+            Console.WriteLine(line.TrimEnd('\r'));
+        }
+        Console.ForegroundColor = prev;
+    }
+
     public static void Line() => Console.WriteLine("  ---");
     public static void Blank() => Console.WriteLine();
 
@@ -2515,7 +2531,7 @@ static partial class Mill
                             item.TryGetProperty("text", out var text))
                         {
                             var textValue = text.GetString() ?? "";
-                            Console.WriteLine(textValue);
+                            Out.Agent(textValue);
                             output.AppendLine(textValue);
                         }
                     }
@@ -2524,7 +2540,7 @@ static partial class Mill
             catch (JsonException)
             {
                 // Non-JSON line, print as-is
-                Console.WriteLine(line);
+                Out.Agent(line);
                 output.AppendLine(line);
             }
         }
