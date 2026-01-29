@@ -423,6 +423,8 @@ static partial class Mill
             gitignoreUpdates.Add(".mill/work/");
         if (!gitignore.Contains(".mill/.prompt"))
             gitignoreUpdates.Add(".mill/.prompt");
+        if (!gitignore.Contains("issue-*-plan.md"))
+            gitignoreUpdates.Add(".mill/memory/issue-*-plan.md");
 
         if (gitignoreUpdates.Count > 0)
         {
