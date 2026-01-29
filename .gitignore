@@ -28,3 +28,4 @@ CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 
 # MILL ephemeral
 .mill/.prompt
+.mill/memory/issue-*-plan.md
