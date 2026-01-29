@@ -152,6 +152,7 @@ Benefits:
 
 ## Development Notes
 
+- **Cross-platform:** Windows, Linux, macOS (x64/arm64) — use `OperatingSystem.IsWindows()` etc. for platform-specific code
 - **Do not run `dotnet publish`** after each change — the user will build periodically when needed
 
 ## Documentation Standards

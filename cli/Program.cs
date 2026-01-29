@@ -1387,7 +1387,10 @@ static partial class Mill
                     if (!string.IsNullOrEmpty(testCommand))
                     {
                         Out.Step($"running tests: {testCommand}");
-                        var (testExit, testOut, testErr) = Run("sh", "-c", testCommand);
+                        var (shellCmd, shellArg) = OperatingSystem.IsWindows()
+                            ? (FindInPath("pwsh") != null ? ("pwsh", "-c") : ("powershell.exe", "-Command"))
+                            : ("sh", "-c");
+                        var (testExit, testOut, testErr) = Run(shellCmd, shellArg, testCommand);
                         if (testExit != 0)
                         {
                             Out.Blank();
