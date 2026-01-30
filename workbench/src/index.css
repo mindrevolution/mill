@@ -31,10 +31,10 @@
   --color-ring: #ffcc00;
 
   /* Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.2rem;
+  --radius-lg: 0.3rem;
+  --radius-xl: 0.4rem;
 
   /* Font */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
