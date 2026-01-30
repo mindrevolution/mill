@@ -1,0 +1,69 @@
+@baseUrl = http://localhost:5000
+
+### Health check
+GET {{baseUrl}}/api/health
+
+### Get current project
+GET {{baseUrl}}/api/project
+
+### Set project path
+POST {{baseUrl}}/api/project
+Content-Type: application/json
+
+{
+  "path": "C:/path/to/your/repo"
+}
+
+### Get project config
+GET {{baseUrl}}/api/project/config
+
+### Get library items (personas)
+GET {{baseUrl}}/api/library/personas
+
+### Get library items (standards)
+GET {{baseUrl}}/api/library/standards
+
+### Get library items (concepts)
+GET {{baseUrl}}/api/library/concepts
+
+### Get library items (design)
+GET {{baseUrl}}/api/library/design
+
+### Get drafts
+GET {{baseUrl}}/api/spec/drafts
+
+### Get issues
+GET {{baseUrl}}/api/spec/issues
+
+### Start spec session
+POST {{baseUrl}}/api/spec/start
+Content-Type: application/json
+
+{
+  "draftId": null,
+  "type": "feature"
+}
+
+### Send message in spec session
+POST {{baseUrl}}/api/spec/message
+Content-Type: application/json
+
+{
+  "sessionId": "abc123",
+  "content": "I want to add dark mode support"
+}
+
+### Get active runs
+GET {{baseUrl}}/api/run
+
+### Start a run
+POST {{baseUrl}}/api/run/42
+
+### Get run logs
+GET {{baseUrl}}/api/run/abc123/logs
+
+### Abort a run
+DELETE {{baseUrl}}/api/run/abc123
+
+### Get history
+GET {{baseUrl}}/api/history
