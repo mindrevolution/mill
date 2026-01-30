@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Mill.Api.Services.Providers;
+namespace MillApi.Services.Providers;
 
 /// <summary>
 /// Base class for CLI-based issue providers (gh, glab, etc.)

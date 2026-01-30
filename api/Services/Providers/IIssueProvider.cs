@@ -1,6 +1,6 @@
-using Mill.Api.Models;
+using MillApi.Models;
 
-namespace Mill.Api.Services.Providers;
+namespace MillApi.Services.Providers;
 
 /// <summary>
 /// Interface for issue tracking providers (GitHub, GitLab, etc.)

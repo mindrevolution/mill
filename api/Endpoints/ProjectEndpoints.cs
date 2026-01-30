@@ -1,6 +1,7 @@
-using Mill.Api.Services;
+using MillApi.Models;
+using MillApi.Services;
 
-namespace Mill.Api.Endpoints;
+namespace MillApi.Endpoints;
 
 public static class ProjectEndpoints
 {
@@ -13,17 +14,12 @@ public static class ProjectEndpoints
         {
             var path = mill.GetProjectPath();
             if (string.IsNullOrEmpty(path))
-                return Results.Ok(new { configured = false });
+                return Results.Json(new ProjectResponse(false), ApiJsonContext.Default.ProjectResponse);
 
             var provider = await mill.GetIssueProviderName();
-
-            return Results.Ok(new
-            {
-                configured = true,
-                path,
-                name = Path.GetFileName(path),
-                issueProvider = provider
-            });
+            return Results.Json(
+                new ProjectResponse(true, path, Path.GetFileName(path), provider),
+                ApiJsonContext.Default.ProjectResponse);
         })
         .WithName("GetProject")
         .WithSummary("Get current project info including detected issue provider");
@@ -34,11 +30,9 @@ public static class ProjectEndpoints
                 return Results.BadRequest("Path does not exist");
 
             mill.SetProjectPath(request.Path);
-            return Results.Ok(new
-            {
-                path = request.Path,
-                name = Path.GetFileName(request.Path)
-            });
+            return Results.Json(
+                new ProjectSetResponse(request.Path, Path.GetFileName(request.Path)),
+                ApiJsonContext.Default.ProjectSetResponse);
         })
         .WithName("SetProject")
         .WithSummary("Set the active project path");

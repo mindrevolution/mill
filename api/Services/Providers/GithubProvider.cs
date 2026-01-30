@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Mill.Api.Models;
+using MillApi.Models;
 
-namespace Mill.Api.Services.Providers;
+namespace MillApi.Services.Providers;
 
 /// <summary>
 /// GitHub issue provider using the gh CLI

@@ -1,6 +1,6 @@
-using Mill.Api.Endpoints;
-using Mill.Api.Services;
-using Mill.Api.Services.Providers;
+using MillApi.Endpoints;
+using MillApi.Services;
+using MillApi.Services.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,7 +47,7 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok", version = "0.1.0
 
 // Endpoints
 app.MapProjectEndpoints();
-app.MapLibraryEndpoints();
+app.MapKnowledgeEndpoints();
 app.MapSpecEndpoints();
 app.MapRunEndpoints();
 app.MapHistoryEndpoints();

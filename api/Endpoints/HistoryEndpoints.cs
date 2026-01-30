@@ -1,6 +1,7 @@
-using Mill.Api.Services;
+using MillApi.Models;
+using MillApi.Services;
 
-namespace Mill.Api.Endpoints;
+namespace MillApi.Endpoints;
 
 public static class HistoryEndpoints
 {
@@ -12,7 +13,7 @@ public static class HistoryEndpoints
         group.MapGet("/", async (MillService mill) =>
         {
             var history = await mill.GetHistory();
-            return Results.Ok(history);
+            return Results.Json(history, ApiJsonContext.Default.ListHistoryEntry);
         })
         .WithName("GetHistory")
         .WithSummary("Get shipping history");

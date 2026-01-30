@@ -1,4 +1,4 @@
-namespace Mill.Api.Services.Providers;
+namespace MillApi.Services.Providers;
 
 /// <summary>
 /// Factory that detects and creates the appropriate issue provider for a repository

@@ -1,6 +1,6 @@
 using Markdig;
 
-namespace Mill.Api.Services;
+namespace MillApi.Services;
 
 /// <summary>
 /// Renders markdown to HTML using GitHub Flavored Markdown extensions.

@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Mill.Api.Models;
-using Mill.Api.Services.Providers;
+using MillApi.Models;
+using MillApi.Services.Providers;
 
-namespace Mill.Api.Services;
+namespace MillApi.Services;
 
 /// <summary>
 /// Service that wraps the mill CLI for API consumption.
@@ -34,16 +34,16 @@ public class MillService
     public string? GetProjectPath() => _projectPath;
 
     // ─────────────────────────────────────────────────────────────────
-    // Library
+    // Knowledge
     // ─────────────────────────────────────────────────────────────────
 
-    public async Task<List<LibraryItem>> GetLibraryItems(string category)
+    public async Task<List<KnowledgeItem>> GetKnowledgeItems(string category)
     {
         var libraryPath = Path.Combine(_projectPath ?? ".", ".mill", "library", category);
         if (!Directory.Exists(libraryPath))
             return [];
 
-        var items = new List<LibraryItem>();
+        var items = new List<KnowledgeItem>();
         foreach (var file in Directory.GetFiles(libraryPath, "*.md"))
         {
             var info = new FileInfo(file);
@@ -51,7 +51,7 @@ public class MillService
             var content = await File.ReadAllTextAsync(file);
             var description = ExtractDescription(content);
 
-            items.Add(new LibraryItem(
+            items.Add(new KnowledgeItem(
                 Id: name,
                 Category: category,
                 Name: FormatName(name),
@@ -65,7 +65,7 @@ public class MillService
         return items;
     }
 
-    public async Task<string?> GetLibraryItemContent(string category, string id)
+    public async Task<string?> GetKnowledgeItemContent(string category, string id)
     {
         var filePath = Path.Combine(_projectPath ?? ".", ".mill", "library", category, $"{id}.md");
         if (!File.Exists(filePath))

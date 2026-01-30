@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Mill.Api.Models;
+using MillApi.Models;
 
-namespace Mill.Api.Services.Providers;
+namespace MillApi.Services.Providers;
 
 /// <summary>
 /// GitLab issue provider using the glab CLI

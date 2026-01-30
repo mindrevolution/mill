@@ -2,9 +2,9 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Mill.Api.Models;
+using MillApi.Models;
 
-namespace Mill.Api.Services;
+namespace MillApi.Services;
 
 /// <summary>
 /// Caches GitHub issues using ETag-based conditional requests.
