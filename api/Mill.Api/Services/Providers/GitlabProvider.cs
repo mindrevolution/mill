@@ -14,8 +14,11 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public GitlabProvider(ILogger<GitlabProvider> logger) : base(logger)
+    private readonly MarkdownService _markdown;
+
+    public GitlabProvider(ILogger<GitlabProvider> logger, MarkdownService markdown) : base(logger)
     {
+        _markdown = markdown;
     }
 
     public string Name => "gitlab";
@@ -77,10 +80,12 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
             if (glIssue == null)
                 return null;
 
+            var body = glIssue.Description ?? "";
             return new IssueDetail(
                 Number: glIssue.Iid,
                 Title: glIssue.Title,
-                Body: glIssue.Description ?? "",
+                Body: body,
+                BodyHtml: _markdown.ToHtml(body),
                 Type: ExtractType(glIssue.Labels),
                 Status: glIssue.State.Equals("opened", StringComparison.OrdinalIgnoreCase) ? "open" : "closed",
                 Persona: ExtractPersona(glIssue.Labels),

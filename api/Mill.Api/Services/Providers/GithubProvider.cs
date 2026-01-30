@@ -14,8 +14,11 @@ public class GithubProvider : CliProviderBase, IIssueProvider
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public GithubProvider(ILogger<GithubProvider> logger) : base(logger)
+    private readonly MarkdownService _markdown;
+
+    public GithubProvider(ILogger<GithubProvider> logger, MarkdownService markdown) : base(logger)
     {
+        _markdown = markdown;
     }
 
     public string Name => "github";
@@ -74,10 +77,12 @@ public class GithubProvider : CliProviderBase, IIssueProvider
             if (ghIssue == null)
                 return null;
 
+            var body = ghIssue.Body ?? "";
             return new IssueDetail(
                 Number: ghIssue.Number,
                 Title: ghIssue.Title,
-                Body: ghIssue.Body ?? "",
+                Body: body,
+                BodyHtml: _markdown.ToHtml(body),
                 Type: ExtractType(ghIssue.Labels),
                 Status: ghIssue.State.Equals("open", StringComparison.OrdinalIgnoreCase) ? "open" : "closed",
                 Persona: ExtractPersona(ghIssue.Labels),

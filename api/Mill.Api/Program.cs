@@ -4,7 +4,10 @@ using Mill.Api.Services.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Services - Issue providers (registered in order of preference)
+// Services
+builder.Services.AddSingleton<MarkdownService>();
+
+// Issue providers (registered in order of preference)
 builder.Services.AddSingleton<IIssueProvider, GithubProvider>();
 builder.Services.AddSingleton<IIssueProvider, GitlabProvider>();
 builder.Services.AddSingleton<IssueProviderFactory>();

@@ -27,6 +27,7 @@ public record IssueDetail(
     int Number,
     string Title,
     string Body,
+    string BodyHtml,
     string Type,
     string Status,
     string? Persona,
