@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { Tile, TileSplit } from '@/components/layout/tile'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import type { Run, HistoryEntry, RunStatus } from '@/types'
+import { useRuntime } from '@/hooks/useRuntime'
+import type { HistoryEntry, RunStatus, RunEvent } from '@/types'
 import {
-  Play,
   Loader2,
   CheckCircle2,
   XCircle,
@@ -21,7 +21,20 @@ import {
   GitPullRequest,
   History,
   Rocket,
+  Plus,
+  Terminal,
 } from 'lucide-react'
+
+// Live run state derived from runtime events
+interface LiveRun {
+  id: string
+  issue: number
+  status: RunStatus
+  iteration: number
+  maxIterations: number
+  startedAt: Date
+  logs: string[]
+}
 
 const typeIcons = {
   feature: FileText,
@@ -45,42 +58,37 @@ const outcomeConfig = {
   reverted: { color: 'text-red-400', bg: 'bg-red-400/10' },
 }
 
-// Mock data
-const mockRuns: Run[] = [
-  {
-    id: '1',
-    issue: 42,
-    title: 'Implement dark mode toggle',
-    status: 'running',
-    iteration: 2,
-    maxIterations: 5,
-    startedAt: '10 minutes ago',
-    logs: [
-      '• reading spec from issue #42...',
-      '✓ spec loaded',
-      '• implementing dark mode toggle...',
-      '  ↳ added ThemeContext provider',
-      '  ↳ created useTheme hook',
-      '• running tests...',
-    ],
-  },
-  {
-    id: '2',
-    issue: 41,
-    title: 'API rate limiting',
-    status: 'verifying',
-    iteration: 3,
-    maxIterations: 5,
-    startedAt: '25 minutes ago',
-    logs: [
-      '• reading spec from issue #41...',
-      '✓ spec loaded',
-      '• implementing rate limiter...',
-      '✓ implementation complete',
-      '• verifying against acceptance criteria...',
-    ],
-  },
-]
+// Helper to format event as log line
+function eventToLog(event: RunEvent): string | null {
+  switch (event.type) {
+    case 'output':
+      return event.text
+    case 'tool_call':
+      return `• ${event.tool}${event.args ? ` ${event.args}` : ''}`
+    case 'tool_result':
+      return `  ↳ ${event.result || 'ok'}`
+    case 'status':
+      return `• status: ${event.status}`
+    case 'iteration':
+      return null // handled separately
+    case 'error':
+      return `✕ ${event.message}`
+    case 'input_needed':
+      return `❯ ${event.prompt}`
+    default:
+      return null
+  }
+}
+
+// Helper to format relative time
+function formatRelativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ago`
+}
 
 const mockHistory: HistoryEntry[] = [
   {
@@ -124,14 +132,33 @@ const mockHistory: HistoryEntry[] = [
   },
 ]
 
-function ActiveRuns({ runs, onSelect, selectedId }: { runs: Run[]; onSelect: (run: Run) => void; selectedId?: string }) {
+function ActiveRuns({
+  runs,
+  onSelect,
+  selectedId,
+  onStartDemo,
+}: {
+  runs: LiveRun[]
+  onSelect: (run: LiveRun) => void
+  selectedId?: string
+  onStartDemo: () => void
+}) {
   if (runs.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <Rocket className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No active runs</p>
-          <p className="text-xs mt-1">Start a run with `mill run #issue`</p>
+      <div className="h-full flex flex-col">
+        <div className="p-3 border-b flex items-center justify-between">
+          <span className="text-sm font-medium">Active Runs</span>
+          <Button size="sm" variant="outline" className="h-7" onClick={onStartDemo}>
+            <Plus className="h-3 w-3 mr-1" />
+            Demo
+          </Button>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <Rocket className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No active runs</p>
+            <p className="text-xs mt-1">Click Demo to simulate a run</p>
+          </div>
         </div>
       </div>
     )
@@ -139,8 +166,12 @@ function ActiveRuns({ runs, onSelect, selectedId }: { runs: Run[]; onSelect: (ru
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-3 border-b">
+      <div className="p-3 border-b flex items-center justify-between">
         <span className="text-sm font-medium">Active Runs</span>
+        <Button size="sm" variant="outline" className="h-7" onClick={onStartDemo}>
+          <Plus className="h-3 w-3 mr-1" />
+          Demo
+        </Button>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
@@ -166,11 +197,11 @@ function ActiveRuns({ runs, onSelect, selectedId }: { runs: Run[]; onSelect: (ru
                     )}
                   />
                   <span className="text-xs text-muted-foreground">#{run.issue}</span>
-                  <span className="text-sm font-medium truncate flex-1">{run.title}</span>
+                  <span className="text-sm font-medium truncate flex-1">Issue #{run.issue}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Iteration {run.iteration}/{run.maxIterations}</span>
-                  <span>{run.startedAt}</span>
+                  <span>{formatRelativeTime(run.startedAt)}</span>
                 </div>
                 {/* Progress bar */}
                 <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
@@ -188,12 +219,22 @@ function ActiveRuns({ runs, onSelect, selectedId }: { runs: Run[]; onSelect: (ru
   )
 }
 
-function RunDetail({ run }: { run?: Run }) {
+function RunDetail({ run, onAbort }: { run?: LiveRun; onAbort: () => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const isTerminal = run?.status === 'done' || run?.status === 'failed' || run?.status === 'aborted'
+
+  // Auto-scroll to bottom when new logs arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [run?.logs.length])
+
   if (!run) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
-          <Play className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Select a run to view logs</p>
         </div>
       </div>
@@ -209,29 +250,31 @@ function RunDetail({ run }: { run?: Run }) {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Badge variant="secondary">#{run.issue}</Badge>
-            <span className="font-medium">{run.title}</span>
+            <span className="font-medium">Issue #{run.issue}</span>
           </div>
-          <Button size="sm" variant="destructive" className="h-7">
-            <StopCircle className="h-3 w-3 mr-1" />
-            Abort
-          </Button>
+          {!isTerminal && (
+            <Button size="sm" variant="destructive" className="h-7" onClick={onAbort}>
+              <StopCircle className="h-3 w-3 mr-1" />
+              Abort
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className={status.color}>{status.label}</span>
           <span>Iteration {run.iteration}/{run.maxIterations}</span>
-          <span>Started {run.startedAt}</span>
+          <span>Started {formatRelativeTime(run.startedAt)}</span>
         </div>
       </div>
 
       {/* Logs */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" ref={scrollRef}>
         <div className="p-3 font-mono text-xs space-y-1">
           {run.logs.map((log, i) => (
-            <div key={i} className="text-muted-foreground">
+            <div key={i} className="text-muted-foreground whitespace-pre-wrap">
               {log}
             </div>
           ))}
-          {run.status === 'running' && (
+          {(run.status === 'running' || run.status === 'starting') && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>working...</span>
@@ -377,9 +420,70 @@ function HistoryDetail({ entry }: { entry?: HistoryEntry }) {
 }
 
 export function ShipWorkspace() {
-  const [selectedRun, setSelectedRun] = useState<Run | undefined>(mockRuns[0])
+  const runtime = useRuntime()
+  const [runs, setRuns] = useState<Map<string, LiveRun>>(new Map())
+  const [selectedRunId, setSelectedRunId] = useState<string | undefined>()
   const [selectedHistory, setSelectedHistory] = useState<HistoryEntry | undefined>()
   const [focusedTile, setFocusedTile] = useState<'runs' | 'logs' | 'history' | 'detail'>('runs')
+  const [demoIssue, setDemoIssue] = useState(42)
+
+  const selectedRun = selectedRunId ? runs.get(selectedRunId) : undefined
+  const activeRuns = Array.from(runs.values()).filter(
+    (r) => r.status !== 'done' && r.status !== 'failed' && r.status !== 'aborted'
+  )
+
+  // Subscribe to run events when a run is started
+  const subscribeToRun = (runId: string, issue: number) => {
+    const liveRun: LiveRun = {
+      id: runId,
+      issue,
+      status: 'starting',
+      iteration: 1,
+      maxIterations: 5,
+      startedAt: new Date(),
+      logs: [],
+    }
+    setRuns((prev) => new Map(prev).set(runId, liveRun))
+
+    return runtime.subscribe(runId, (event) => {
+      setRuns((prev) => {
+        const updated = new Map(prev)
+        const run = updated.get(runId)
+        if (!run) return prev
+
+        const newRun = { ...run }
+
+        if (event.type === 'status') {
+          newRun.status = event.status
+        } else if (event.type === 'iteration') {
+          newRun.iteration = event.current
+          newRun.maxIterations = event.max
+        }
+
+        const logLine = eventToLog(event)
+        if (logLine) {
+          newRun.logs = [...newRun.logs, logLine]
+        }
+
+        updated.set(runId, newRun)
+        return updated
+      })
+    })
+  }
+
+  const handleStartDemo = async () => {
+    const handle = await runtime.start(demoIssue)
+    subscribeToRun(handle.id, handle.issue)
+    setSelectedRunId(handle.id)
+    setFocusedTile('logs')
+    setDemoIssue((prev) => prev + 1) // increment for next demo
+  }
+
+  const handleAbort = () => {
+    if (selectedRunId) {
+      runtime.abort(selectedRunId)
+    }
+  }
 
   return (
     <div className="h-full p-1">
@@ -392,12 +496,13 @@ export function ShipWorkspace() {
             onFocus={() => setFocusedTile('runs')}
           >
             <ActiveRuns
-              runs={mockRuns}
-              selectedId={selectedRun?.id}
+              runs={activeRuns}
+              selectedId={selectedRunId}
               onSelect={(run) => {
-                setSelectedRun(run)
+                setSelectedRunId(run.id)
                 setFocusedTile('logs')
               }}
+              onStartDemo={handleStartDemo}
             />
           </Tile>
           <Tile
@@ -405,7 +510,7 @@ export function ShipWorkspace() {
             focused={focusedTile === 'logs'}
             onFocus={() => setFocusedTile('logs')}
           >
-            <RunDetail run={selectedRun} />
+            <RunDetail run={selectedRun} onAbort={handleAbort} />
           </Tile>
         </TileSplit>
 
