@@ -51,11 +51,13 @@ export interface Observation {
 }
 
 // Ship workspace
+export type RunStatus = 'starting' | 'running' | 'verifying' | 'done' | 'failed' | 'aborted'
+
 export interface Run {
   id: string
   issue: number
   title: string
-  status: 'running' | 'verifying' | 'done' | 'failed' | 'aborted'
+  status: RunStatus
   iteration: number
   maxIterations: number
   startedAt: string
@@ -80,3 +82,21 @@ export interface Project {
   path: string
   lastOpened: string
 }
+
+// Runtime events
+export type RunEvent =
+  | { type: 'status'; runId: string; status: RunStatus }
+  | { type: 'output'; runId: string; text: string }
+  | { type: 'iteration'; runId: string; current: number; max: number }
+  | { type: 'tool_call'; runId: string; tool: string; args?: string }
+  | { type: 'tool_result'; runId: string; tool: string; result?: string }
+  | { type: 'input_needed'; runId: string; prompt: string }
+  | { type: 'error'; runId: string; message: string }
+
+export interface RunHandle {
+  id: string
+  issue: number
+  status: RunStatus
+}
+
+export type RuntimeType = 'mock' | 'tauri' | 'api'

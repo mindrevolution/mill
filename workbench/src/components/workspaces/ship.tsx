@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import type { Run, HistoryEntry } from '@/types'
+import type { Run, HistoryEntry, RunStatus } from '@/types'
 import {
   Play,
   Loader2,
@@ -30,7 +30,8 @@ const typeIcons = {
   task: Wrench,
 }
 
-const statusConfig = {
+const statusConfig: Record<RunStatus, { icon: typeof Loader2; color: string; label: string; animate: boolean }> = {
+  starting: { icon: Loader2, color: 'text-muted-foreground', label: 'Starting', animate: true },
   running: { icon: Loader2, color: 'text-blue-400', label: 'Running', animate: true },
   verifying: { icon: Loader2, color: 'text-yellow-400', label: 'Verifying', animate: true },
   done: { icon: CheckCircle2, color: 'text-green-400', label: 'Done', animate: false },
