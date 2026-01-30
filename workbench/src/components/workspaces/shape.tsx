@@ -239,6 +239,7 @@ function SpecList({
                               <CommandItem
                                 value={draft.title}
                                 onSelect={() => onSelectDraft(draft)}
+                                onMouseDown={() => onSelectDraft(draft)}
                                 className={cn(
                                   selectedId === draft.id && 'bg-secondary text-foreground'
                                 )}
@@ -291,6 +292,7 @@ function SpecList({
                               <CommandItem
                                 value={`${issue.number} ${issue.title}`}
                                 onSelect={() => onSelectIssue(issue)}
+                                onMouseDown={() => onSelectIssue(issue)}
                                 className={cn(
                                   selectedId === `issue-${issue.number}` && 'bg-secondary text-foreground'
                                 )}
