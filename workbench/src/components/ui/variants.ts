@@ -42,6 +42,11 @@ export const commandItemVariants = cva(
   'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-secondary aria-selected:text-secondary-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
 )
 
+// Accordion
+export const accordionContentVariants = cva(
+  'overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down'
+)
+
 // Dialog
 export const dialogOverlayVariants = cva(
   'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm'

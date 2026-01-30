@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { accordionContentVariants } from './variants'
 
 const Accordion = AccordionPrimitive.Root
 
@@ -39,7 +40,7 @@ const AccordionContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Content
     ref={ref}
-    className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+    className={accordionContentVariants()}
     {...props}
   >
     <div className={cn('pb-2 pt-0', className)}>{children}</div>
