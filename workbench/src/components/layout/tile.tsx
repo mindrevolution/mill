@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface TileProps {
   children: React.ReactNode
@@ -37,15 +38,17 @@ export function Tile({
           <div className="flex items-center gap-1 ml-auto">
             {toolbar}
             {onClose && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={(e) => {
                   e.stopPropagation()
                   onClose()
                 }}
-                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="h-3 w-3" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

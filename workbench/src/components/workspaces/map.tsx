@@ -5,6 +5,23 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import type { LibraryCategory, LibraryItem, Observation } from '@/types'
 import {
   Users,
@@ -15,7 +32,6 @@ import {
   Check,
   X,
   Ban,
-  ChevronRight,
   Sparkles,
   FolderOpen,
   File,
@@ -62,20 +78,6 @@ function LibraryTree({
   selectedId?: string
   onSelect: (item: LibraryItem) => void
 }) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<LibraryCategory>>(
-    new Set(['personas', 'standards', 'concepts', 'design'])
-  )
-
-  const toggleCategory = (category: LibraryCategory) => {
-    const next = new Set(expandedCategories)
-    if (next.has(category)) {
-      next.delete(category)
-    } else {
-      next.add(category)
-    }
-    setExpandedCategories(next)
-  }
-
   const itemsByCategory = items.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = []
     acc[item.category].push(item)
@@ -84,60 +86,77 @@ function LibraryTree({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-3 border-b flex items-center justify-between">
-        <span className="text-sm font-medium">Library</span>
-        <Button size="sm" variant="ghost" className="h-7 px-2">
-          <Plus className="h-3 w-3 mr-1" />
-          Add
-        </Button>
-      </div>
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {(Object.keys(categoryMeta) as LibraryCategory[]).map((category) => {
-            const meta = categoryMeta[category]
-            const Icon = meta.icon
-            const categoryItems = itemsByCategory[category] || []
-            const isExpanded = expandedCategories.has(category)
+      <div className="flex-1 min-h-0">
+        <Command className="h-full">
+          <div className="p-3 border-b flex items-center justify-between">
+            <span className="text-sm font-medium">Knowledge</span>
+            <Button size="sm" variant="ghost" className="h-7 px-2">
+              <Plus className="h-3 w-3 mr-1" />
+              Add
+            </Button>
+          </div>
+          <div className="px-2 pt-2">
+            <CommandInput placeholder="Search..." />
+          </div>
+          <CommandList className="h-full">
+            <ScrollArea className="h-full">
+              <div className="p-2 pb-4 space-y-1">
+                {(Object.keys(categoryMeta) as LibraryCategory[]).map((category, index) => {
+                  const meta = categoryMeta[category]
+                  const Icon = meta.icon
+                  const categoryItems = itemsByCategory[category] || []
 
-            return (
-              <div key={category} className="mb-2">
-                <button
-                  onClick={() => toggleCategory(category)}
-                  className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 transition-colors"
-                >
-                  <ChevronRight
-                    className={cn(
-                      'h-3 w-3 text-muted-foreground transition-transform',
-                      isExpanded && 'rotate-90'
-                    )}
-                  />
-                  <Icon className={cn('h-4 w-4', categoryColors[category].icon)} />
-                  <span className="text-sm font-medium flex-1 text-left">{meta.label}</span>
-                  <span className="text-xs text-muted-foreground">{categoryItems.length}</span>
-                </button>
-
-                {isExpanded && categoryItems.length > 0 && (
-                  <div className="ml-5 mt-1 space-y-0.5">
-                    {categoryItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => onSelect(item)}
-                        className={cn(
-                          'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors',
-                          selectedId === item.id ? 'bg-secondary' : 'hover:bg-secondary/50'
+                  return (
+                    <div key={category}>
+                      {index > 0 && <CommandSeparator />}
+                      <CommandGroup heading={meta.label}>
+                        {categoryItems.map((item) => (
+                          <ContextMenu key={item.id}>
+                            <ContextMenuTrigger asChild>
+                              <CommandItem
+                                value={item.name}
+                                onSelect={() => onSelect(item)}
+                                className={cn(
+                                  selectedId === item.id && 'bg-secondary text-foreground'
+                                )}
+                              >
+                                <Icon className={cn('h-4 w-4', categoryColors[item.category].icon)} />
+                                <span className="text-sm truncate">{item.name}</span>
+                              </CommandItem>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem onSelect={() => onSelect(item)}>
+                                Open
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem onSelect={() => console.log('TODO: reveal file', item.file)}>
+                                Reveal file
+                              </ContextMenuItem>
+                              <ContextMenuItem onSelect={() => console.log('TODO: remove item', item.id)}>
+                                Remove
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        ))}
+                        {categoryItems.length === 0 && (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">No items yet</div>
                         )}
-                      >
-                        <File className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm truncate">{item.name}</span>
-                      </button>
-                    ))}
+                      </CommandGroup>
+                    </div>
+                  )
+                })}
+                <CommandEmpty>
+                  <div className="py-8 text-center text-muted-foreground">
+                    <File className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No matching knowledge entries</p>
+                    <p className="text-xs mt-1">Try a different search</p>
                   </div>
-                )}
+                </CommandEmpty>
               </div>
-            )
-          })}
-        </div>
-      </ScrollArea>
+            </ScrollArea>
+          </CommandList>
+        </Command>
+      </div>
     </div>
   )
 }
@@ -263,74 +282,74 @@ function ObservationsTray({ observations }: { observations: Observation[] }) {
             const isTop = index === 0
 
             return (
-              <div
+              <Card
                 key={obs.id}
                 className={cn(
-                  'group p-3 rounded-lg border bg-card transition-colors',
+                  'group transition-colors shadow-none',
                   isTop
                     ? 'border-primary/40 hover:border-primary/60'
                     : 'hover:border-muted-foreground/40'
                 )}
               >
-                {/* Header: Category badge + Confidence */}
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className={cn(
-                      'text-[10px] font-medium px-1.5 py-0.5 rounded',
-                      categoryColors[obs.category].badge
-                    )}
-                  >
-                    {meta.label}
-                  </span>
-                  <ConfidenceBar confidence={obs.confidence} />
-                </div>
-
-                {/* Title */}
-                <p className="text-sm font-medium">{title}</p>
-
-                {/* Detail (if exists) */}
-                {detail && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>
-                )}
-
-                {/* Footer: Source + Time + Actions */}
-                <div className="flex items-center justify-between mt-3">
-                  <p
-                    className="text-[10px] text-muted-foreground"
-                    title={obs.source}
-                  >
-                    {sourceCount} {sourceCount === 1 ? 'source' : 'sources'} · {obs.createdAt}
-                  </p>
-
-                  {/* Actions - subtle until hover */}
-                  <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-xs hover:bg-primary/20 hover:text-primary"
+                <CardContent className="p-3">
+                  {/* Header: Category badge + Confidence */}
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge
+                      variant="outline"
+                      className={cn('text-[10px] font-medium px-1.5 py-0.5', categoryColors[obs.category].badge)}
                     >
-                      <Check className="h-3 w-3 mr-1" />
-                      Add
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 text-muted-foreground"
-                      title="Dismiss"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 text-muted-foreground/60"
-                      title="Never suggest again"
-                    >
-                      <Ban className="h-3 w-3" />
-                    </Button>
+                      {meta.label}
+                    </Badge>
+                    <ConfidenceBar confidence={obs.confidence} />
                   </div>
-                </div>
-              </div>
+
+                  {/* Title */}
+                  <p className="text-sm font-medium">{title}</p>
+
+                  {/* Detail (if exists) */}
+                  {detail && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>
+                  )}
+
+                  {/* Footer: Source + Time + Actions */}
+                  <div className="flex items-center justify-between mt-3">
+                    <p
+                      className="text-[10px] text-muted-foreground"
+                      title={obs.source}
+                    >
+                      {sourceCount} {sourceCount === 1 ? 'source' : 'sources'} · {obs.createdAt}
+                    </p>
+
+                    {/* Actions - subtle until hover */}
+                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs hover:bg-primary/20 hover:text-primary"
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-muted-foreground"
+                        title="Dismiss"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-muted-foreground/60"
+                        title="Never suggest again"
+                      >
+                        <Ban className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )
           })}
         </div>

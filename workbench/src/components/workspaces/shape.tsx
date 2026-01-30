@@ -5,6 +5,38 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card, CardContent } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
 import type { Draft, Issue, IssueDetail } from '@/lib/api'
@@ -43,44 +75,69 @@ const typeColors = {
 }
 
 function FloatingActionBar({ issueNumber }: { issueNumber: number }) {
+  const issueUrl = `https://github.com/mindrevolution/mill/issues/${issueNumber}`
+
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-      <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-card/80 backdrop-blur-md border shadow-lg">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
-          title="Start Run"
-        >
-          <Play className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          title="Edit Issue"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          title="Open in Browser"
-          onClick={() => window.open(`https://github.com/mindrevolution/mill/issues/${issueNumber}`, '_blank')}
-        >
-          <ExternalLink className="h-4 w-4" />
-        </Button>
-        <div className="w-px h-4 bg-border mx-1" />
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          title="More Actions"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </div>
+      <Card className="bg-card/80 backdrop-blur-md shadow-lg">
+        <CardContent className="flex items-center gap-1 px-2 py-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+            title="Start Run"
+          >
+            <Play className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            title="Edit Issue"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            title="Open in Browser"
+            onClick={() => window.open(issueUrl, '_blank')}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                title="More Actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => console.log('TODO: Start run')}>
+                Start run
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => console.log('TODO: Edit issue')}>
+                Edit issue
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => window.open(issueUrl, '_blank')}>
+                Open in browser
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => navigator.clipboard?.writeText(issueUrl)}
+              >
+                Copy issue link
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -119,6 +176,19 @@ function SpecList({
   onNewSpec: () => void
   selectedId?: string
 }) {
+  const [confirmDelete, setConfirmDelete] = useState<{
+    kind: 'draft' | 'issue'
+    id: string
+    title: string
+  } | null>(null)
+
+  const handleDelete = () => {
+    if (!confirmDelete) return
+    // TODO: wire delete API when available
+    console.log('Delete requested', confirmDelete)
+    setConfirmDelete(null)
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-3 border-b flex items-center justify-between">
@@ -149,83 +219,148 @@ function SpecList({
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : (
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            {/* Drafts */}
-            {drafts.length > 0 && (
-              <div className="mb-4">
-                <div className="px-2 py-1 text-xs text-muted-foreground font-medium">Drafts</div>
-                {drafts.map((draft) => {
-                  const Icon = typeIcons[draft.type] || FileText
-                  const color = typeColors[draft.type] || 'text-muted-foreground'
-                  return (
-                    <button
-                      key={draft.id}
-                      onClick={() => onSelectDraft(draft)}
-                      className={cn(
-                        'w-full text-left p-2 rounded-md transition-colors',
-                        selectedId === draft.id ? 'bg-secondary' : 'hover:bg-secondary/50'
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className={cn('h-3 w-3', color)} />
-                        <span className="text-sm font-medium truncate flex-1">{draft.title}</span>
-                        {draft.status === 'ready' && (
-                          <Badge variant="default" className="text-[10px] px-1 py-0">ready</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatDate(draft.updatedAt)}</span>
-                        {draft.persona && <span>· {draft.persona}</span>}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+        <div className="flex-1 min-h-0">
+          <Command className="h-full">
+            <div className="px-2 pt-2">
+              <CommandInput placeholder="Search..." />
+            </div>
+            <CommandList className="h-full">
+              <ScrollArea className="h-full">
+                <div className="p-2">
+                  {/* Drafts */}
+              {drafts.length > 0 && (
+                    <CommandGroup heading="Drafts">
+                      {drafts.map((draft) => {
+                        const Icon = typeIcons[draft.type] || FileText
+                        const color = typeColors[draft.type] || 'text-muted-foreground'
+                        return (
+                          <ContextMenu key={draft.id}>
+                            <ContextMenuTrigger asChild>
+                              <CommandItem
+                                value={draft.title}
+                                onSelect={() => onSelectDraft(draft)}
+                                className={cn(
+                                  selectedId === draft.id && 'bg-secondary text-foreground'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 w-full">
+                                  <Icon className={cn('h-3 w-3', color)} />
+                                  <span className="text-sm font-medium truncate flex-1">{draft.title}</span>
+                                  {draft.status === 'ready' && (
+                                    <Badge variant="default" className="text-[10px] px-1 py-0">ready</Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 w-full">
+                                  <span>{formatDate(draft.updatedAt)}</span>
+                                  {draft.persona && <span>· {draft.persona}</span>}
+                                </div>
+                              </CommandItem>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem onSelect={() => onSelectDraft(draft)}>
+                                Open
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem
+                                onSelect={() =>
+                                  setConfirmDelete({
+                                    kind: 'draft',
+                                    id: draft.id,
+                                    title: draft.title,
+                                  })
+                                }
+                              >
+                                Delete draft
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        )
+                      })}
+                    </CommandGroup>
+                  )}
 
-            {/* Issues */}
-            {issues.length > 0 && (
-              <div>
-                <div className="px-2 py-1 text-xs text-muted-foreground font-medium">Issues</div>
-                {issues.map((issue) => {
-                  const Icon = typeIcons[issue.type] || FileText
-                  const color = typeColors[issue.type] || 'text-muted-foreground'
-                  return (
-                    <button
-                      key={issue.number}
-                      onClick={() => onSelectIssue(issue)}
-                      className={cn(
-                        'w-full text-left p-2 rounded-md transition-colors',
-                        selectedId === `issue-${issue.number}` ? 'bg-secondary' : 'hover:bg-secondary/50'
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className={cn('h-3 w-3', color)} />
-                        <span className="text-xs text-muted-foreground">#{issue.number}</span>
-                        <span className="text-sm truncate flex-1">{issue.title}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatDate(issue.createdAt)}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1 py-0">{issue.status}</Badge>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+                  {/* Issues */}
+              {issues.length > 0 && (
+                    <CommandGroup heading="Issues">
+                      {issues.map((issue) => {
+                        const Icon = typeIcons[issue.type] || FileText
+                        const color = typeColors[issue.type] || 'text-muted-foreground'
+                        return (
+                          <ContextMenu key={issue.number}>
+                            <ContextMenuTrigger asChild>
+                              <CommandItem
+                                value={`${issue.number} ${issue.title}`}
+                                onSelect={() => onSelectIssue(issue)}
+                                className={cn(
+                                  selectedId === `issue-${issue.number}` && 'bg-secondary text-foreground'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 w-full">
+                                  <Icon className={cn('h-3 w-3', color)} />
+                                  <span className="text-xs text-muted-foreground">#{issue.number}</span>
+                                  <span className="text-sm truncate flex-1">{issue.title}</span>
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0">{issue.status}</Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 w-full">
+                                  <span>{formatDate(issue.createdAt)}</span>
+                                </div>
+                              </CommandItem>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem onSelect={() => onSelectIssue(issue)}>
+                                Open
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem
+                                onSelect={() =>
+                                  setConfirmDelete({
+                                    kind: 'issue',
+                                    id: issue.number.toString(),
+                                    title: issue.title,
+                                  })
+                                }
+                              >
+                                Delete issue
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        )
+                      })}
+                    </CommandGroup>
+                  )}
 
-            {/* Empty state */}
-            {drafts.length === 0 && issues.length === 0 && !loading && (
-              <div className="py-8 text-center text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No specs yet</p>
-                <p className="text-xs mt-1">Create one to get started</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+                  <CommandEmpty>
+                    <div className="py-8 text-center text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No matching specs</p>
+                      <p className="text-xs mt-1">Try a different search</p>
+                    </div>
+                  </CommandEmpty>
+                </div>
+              </ScrollArea>
+            </CommandList>
+          </Command>
+        </div>
       )}
+
+      <Dialog open={confirmDelete !== null} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {confirmDelete?.kind}</DialogTitle>
+            <DialogDescription>
+              This will remove &quot;{confirmDelete?.title}&quot; from the list.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -429,37 +564,43 @@ function SpecPreview({
 
           {/* Sections */}
           <div className="space-y-3">
-            <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium">Summary</h3>
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Add the ability to sync data while offline and reconcile when connection is restored.
-              </p>
-            </section>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-medium">Summary</h3>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Add the ability to sync data while offline and reconcile when connection is restored.
+                </p>
+              </CardContent>
+            </Card>
 
-            <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium">Acceptance Criteria</h3>
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-              </div>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Changes made offline are queued locally</li>
-                <li>• Queue syncs automatically when online</li>
-                <li>• Conflicts are surfaced to user</li>
-              </ul>
-            </section>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-medium">Acceptance Criteria</h3>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Changes made offline are queued locally</li>
+                  <li>• Queue syncs automatically when online</li>
+                  <li>• Conflicts are surfaced to user</li>
+                </ul>
+              </CardContent>
+            </Card>
 
-            <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium">Verification</h3>
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Integration tests for offline queue, unit tests for conflict resolution.
-              </p>
-            </section>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-medium">Verification</h3>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Integration tests for offline queue, unit tests for conflict resolution.
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Actions - auto-save, so only "Create Issue" and "Revert" */}

@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
 import { PenTool, Map, Rocket, Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface WorkspaceNavProps {
   active: Workspace
@@ -26,45 +27,50 @@ export function WorkspaceNav({
   return (
     <div className="flex flex-col h-full w-36 bg-background border-r py-3 px-2 gap-1">
       {/* Project indicator */}
-      <button
+      <Button
+        variant="ghost"
+        className="justify-start gap-2 px-2 mb-3"
         onClick={onProjectSwitch}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/50 transition-colors mb-3"
       >
         <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
           <div className="w-2 h-2 rounded-sm bg-primary" />
         </div>
         <span className="text-sm font-medium truncate">{projectName}</span>
-      </button>
+      </Button>
 
       {/* Workspace tabs */}
       <nav className="flex flex-col gap-0.5 flex-1">
         {workspaces.map(({ id, label, icon: Icon, key }) => (
-          <button
+          <Button
             key={id}
             onClick={() => onSwitch(id)}
+            variant={active === id ? 'secondary' : 'ghost'}
+            size="sm"
             className={cn(
-              'flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-left',
+              'w-full justify-start gap-2 px-2',
               active === id
-                ? 'bg-secondary text-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                ? 'text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <Icon className="h-4 w-4 flex-shrink-0" />
             <span className="text-sm">{label}</span>
             <span className="text-xs text-muted-foreground ml-auto">{key}</span>
-          </button>
+          </Button>
         ))}
       </nav>
 
       {/* Bottom actions */}
       <div className="flex flex-col gap-0.5">
-        <button
+        <Button
           onClick={onSettings}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 px-2 text-muted-foreground hover:text-foreground"
         >
           <Settings className="h-4 w-4 flex-shrink-0" />
           <span className="text-sm">Settings</span>
-        </button>
+        </Button>
       </div>
     </div>
   )

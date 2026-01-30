@@ -180,37 +180,41 @@ function ActiveRuns({
             const StatusIcon = status.icon
 
             return (
-              <button
+              <Button
                 key={run.id}
                 onClick={() => onSelect(run)}
+                variant={selectedId === run.id ? 'secondary' : 'ghost'}
+                size="sm"
                 className={cn(
-                  'w-full text-left p-3 rounded-lg border transition-colors',
-                  selectedId === run.id ? 'bg-card border-primary/50' : 'hover:bg-card/50 border-transparent'
+                  'h-auto w-full justify-start p-3 text-left border',
+                  selectedId === run.id ? 'border-primary/50' : 'border-transparent hover:border-muted-foreground/30'
                 )}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <StatusIcon
-                    className={cn(
-                      'h-4 w-4',
-                      status.color,
-                      status.animate && 'animate-spin'
-                    )}
-                  />
-                  <span className="text-xs text-muted-foreground">#{run.issue}</span>
-                  <span className="text-sm font-medium truncate flex-1">Issue #{run.issue}</span>
+                <div className="w-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    <StatusIcon
+                      className={cn(
+                        'h-4 w-4',
+                        status.color,
+                        status.animate && 'animate-spin'
+                      )}
+                    />
+                    <span className="text-xs text-muted-foreground">#{run.issue}</span>
+                    <span className="text-sm font-medium truncate flex-1">Issue #{run.issue}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Iteration {run.iteration}/{run.maxIterations}</span>
+                    <span>{formatRelativeTime(run.startedAt)}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className={cn('h-full transition-all', status.color.replace('text-', 'bg-'))}
+                      style={{ width: `${(run.iteration / run.maxIterations) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Iteration {run.iteration}/{run.maxIterations}</span>
-                  <span>{formatRelativeTime(run.startedAt)}</span>
-                </div>
-                {/* Progress bar */}
-                <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full transition-all', status.color.replace('text-', 'bg-'))}
-                    style={{ width: `${(run.iteration / run.maxIterations) * 100}%` }}
-                  />
-                </div>
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -310,32 +314,33 @@ function HistoryList({
             const outcome = outcomeConfig[entry.outcome]
 
             return (
-              <button
+              <Button
                 key={`${entry.date}-${entry.issue}`}
                 onClick={() => onSelect(entry)}
-                className={cn(
-                  'w-full text-left p-3 rounded-lg transition-colors',
-                  selectedDate === entry.date ? 'bg-card' : 'hover:bg-card/50'
-                )}
+                variant={selectedDate === entry.date ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-auto w-full justify-start p-3 text-left"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <TypeIcon className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">#{entry.issue}</span>
-                  <span className="text-sm truncate flex-1">{entry.title}</span>
-                  <Badge variant="secondary" className={cn('text-[10px]', outcome.color, outcome.bg)}>
-                    {entry.outcome}
-                  </Badge>
+                <div className="w-full">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TypeIcon className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">#{entry.issue}</span>
+                    <span className="text-sm truncate flex-1">{entry.title}</span>
+                    <Badge variant="secondary" className={cn('text-[10px]', outcome.color, outcome.bg)}>
+                      {entry.outcome}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{entry.date}</span>
+                    {entry.persona && <span>· {entry.persona}</span>}
+                    {entry.pr && (
+                      <span className="flex items-center gap-1">
+                        · <GitPullRequest className="h-3 w-3" /> #{entry.pr}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{entry.date}</span>
-                  {entry.persona && <span>· {entry.persona}</span>}
-                  {entry.pr && (
-                    <span className="flex items-center gap-1">
-                      · <GitPullRequest className="h-3 w-3" /> #{entry.pr}
-                    </span>
-                  )}
-                </div>
-              </button>
+              </Button>
             )
           })}
         </div>
