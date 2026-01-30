@@ -1,10 +1,12 @@
-# MILL
+# mill
 
 Turning intent into verified deliverables, continuously.
 
+> **Branding:** Always "mill" in lowercase. Never "MILL" or "Mill".
+
 ## Overview
 
-MILL is a specification-first delivery system with two main workflows:
+mill is a specification-first delivery system with two main workflows:
 
 1. **Spec Process** — Chat-to-spec: Transform user intent into complete, loop-ready specifications
 2. **Work Loop** — Ralph-style execution: Bounded iteration until verification passes
@@ -35,7 +37,7 @@ mill/
 │       └── run-autopick.md         # Intelligent issue selection
 └── README.md
 
-.mill/                      # Target repo's MILL folder
+.mill/                      # Target repo's mill folder
 ├── project.json            # Project configuration (scoring, excludes, context)
 ├── context.md              # Auto-generated project context
 ├── memory/                 # Machine-generated learnings

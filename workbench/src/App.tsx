@@ -1,30 +1,48 @@
 import './index.css'
-import * as React from 'react'
-import { Sidebar } from '@/components/layout/sidebar'
-import { MessageList } from '@/components/layout/message-list'
-import { MessageDetail } from '@/components/layout/message-detail'
+import { useState, useCallback } from 'react'
+import { WorkspaceNav } from '@/components/layout/workspace-nav'
+import { ShapeWorkspace } from '@/components/workspaces/shape'
+import { MapWorkspace } from '@/components/workspaces/map'
+import { ShipWorkspace } from '@/components/workspaces/ship'
+import { useKeyboard, WORKSPACE_KEYS } from '@/hooks/useKeyboard'
+import type { Workspace } from '@/types'
 
 function App() {
-  const [selectedMessage, setSelectedMessage] = React.useState('1')
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace>('shape')
+  const [projectName] = useState('mill')
+
+  // Keyboard shortcuts
+  useKeyboard({
+    [WORKSPACE_KEYS.shape]: () => setActiveWorkspace('shape'),
+    [WORKSPACE_KEYS.map]: () => setActiveWorkspace('map'),
+    [WORKSPACE_KEYS.ship]: () => setActiveWorkspace('ship'),
+    'mod+o': () => console.log('TODO: Project switcher'),
+  }, [])
+
+  const handleProjectSwitch = useCallback(() => {
+    console.log('TODO: Open project switcher modal')
+  }, [])
+
+  const handleSettings = useCallback(() => {
+    console.log('TODO: Open settings modal')
+  }, [])
 
   return (
     <div className="h-screen flex bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-56 border-r shrink-0">
-        <Sidebar />
-      </aside>
+      {/* Workspace navigation */}
+      <WorkspaceNav
+        active={activeWorkspace}
+        onSwitch={setActiveWorkspace}
+        projectName={projectName}
+        onProjectSwitch={handleProjectSwitch}
+        onSettings={handleSettings}
+      />
 
-      {/* Message List */}
-      <div className="w-[400px] border-r shrink-0">
-        <MessageList
-          selectedId={selectedMessage}
-          onSelect={setSelectedMessage}
-        />
-      </div>
-
-      {/* Message Detail */}
+      {/* Workspace content */}
       <main className="flex-1 min-w-0">
-        <MessageDetail />
+        {activeWorkspace === 'shape' && <ShapeWorkspace />}
+        {activeWorkspace === 'map' && <MapWorkspace />}
+        {activeWorkspace === 'ship' && <ShipWorkspace />}
       </main>
     </div>
   )

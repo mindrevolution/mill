@@ -1,0 +1,292 @@
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import { Tile, TileSplit } from '@/components/layout/tile'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import type { LibraryCategory, LibraryItem, Observation } from '@/types'
+import {
+  Users,
+  BookOpen,
+  Lightbulb,
+  Palette,
+  Plus,
+  Check,
+  X,
+  ChevronRight,
+  Sparkles,
+  FolderOpen,
+  File,
+} from 'lucide-react'
+
+const categoryMeta: Record<LibraryCategory, { label: string; icon: typeof Users; description: string }> = {
+  personas: { label: 'Personas', icon: Users, description: 'Who you build for' },
+  standards: { label: 'Standards', icon: BookOpen, description: 'How you build' },
+  concepts: { label: 'Concepts', icon: Lightbulb, description: 'Domain vocabulary' },
+  design: { label: 'Design', icon: Palette, description: 'Visual language' },
+}
+
+// Mock data
+const mockLibrary: LibraryItem[] = [
+  { id: '1', category: 'personas', name: 'Mobile User', description: 'Users primarily on mobile devices, often with spotty connectivity', file: 'mobile-user.md', createdAt: '2024-01-15', updatedAt: '2024-01-20' },
+  { id: '2', category: 'personas', name: 'Power User', description: 'Technical users who want keyboard shortcuts and advanced features', file: 'power-user.md', createdAt: '2024-01-10', updatedAt: '2024-01-10' },
+  { id: '3', category: 'standards', name: 'Async I/O', description: 'Use async/await for all I/O operations', file: 'async-io.md', createdAt: '2024-01-12', updatedAt: '2024-01-12' },
+  { id: '4', category: 'standards', name: 'Error Handling', description: 'Return Result<T> instead of throwing exceptions', file: 'error-handling.md', createdAt: '2024-01-08', updatedAt: '2024-01-18' },
+  { id: '5', category: 'concepts', name: 'Match', description: 'A game session between two players', file: 'match.md', createdAt: '2024-01-05', updatedAt: '2024-01-05' },
+  { id: '6', category: 'concepts', name: 'Player', description: 'A user participating in matches', file: 'player.md', createdAt: '2024-01-05', updatedAt: '2024-01-05' },
+  { id: '7', category: 'design', name: 'Color Tokens', description: 'Primary, secondary, and accent colors', file: 'colors.md', createdAt: '2024-01-02', updatedAt: '2024-01-15' },
+]
+
+const mockObservations: Observation[] = [
+  { id: '1', category: 'personas', suggestion: 'Enterprise Admin — mentioned in 4 recent specs', source: 'spec:user-roles, spec:permissions', confidence: 0.85, createdAt: '2 hours ago' },
+  { id: '2', category: 'standards', suggestion: 'Validation at boundaries — pattern in auth, API modules', source: 'run:41, run:38', confidence: 0.72, createdAt: '1 day ago' },
+  { id: '3', category: 'concepts', suggestion: 'Tournament — appears in match-related specs', source: 'spec:tournaments, spec:rankings', confidence: 0.68, createdAt: '2 days ago' },
+]
+
+function LibraryTree({
+  items,
+  selectedId,
+  onSelect,
+}: {
+  items: LibraryItem[]
+  selectedId?: string
+  onSelect: (item: LibraryItem) => void
+}) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<LibraryCategory>>(
+    new Set(['personas', 'standards', 'concepts', 'design'])
+  )
+
+  const toggleCategory = (category: LibraryCategory) => {
+    const next = new Set(expandedCategories)
+    if (next.has(category)) {
+      next.delete(category)
+    } else {
+      next.add(category)
+    }
+    setExpandedCategories(next)
+  }
+
+  const itemsByCategory = items.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = []
+    acc[item.category].push(item)
+    return acc
+  }, {} as Record<LibraryCategory, LibraryItem[]>)
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-3 border-b flex items-center justify-between">
+        <span className="text-sm font-medium">Library</span>
+        <Button size="sm" variant="ghost" className="h-7 px-2">
+          <Plus className="h-3 w-3 mr-1" />
+          Add
+        </Button>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {(Object.keys(categoryMeta) as LibraryCategory[]).map((category) => {
+            const meta = categoryMeta[category]
+            const Icon = meta.icon
+            const categoryItems = itemsByCategory[category] || []
+            const isExpanded = expandedCategories.has(category)
+
+            return (
+              <div key={category} className="mb-2">
+                <button
+                  onClick={() => toggleCategory(category)}
+                  className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 transition-colors"
+                >
+                  <ChevronRight
+                    className={cn(
+                      'h-3 w-3 text-muted-foreground transition-transform',
+                      isExpanded && 'rotate-90'
+                    )}
+                  />
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium flex-1 text-left">{meta.label}</span>
+                  <span className="text-xs text-muted-foreground">{categoryItems.length}</span>
+                </button>
+
+                {isExpanded && categoryItems.length > 0 && (
+                  <div className="ml-5 mt-1 space-y-0.5">
+                    {categoryItems.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => onSelect(item)}
+                        className={cn(
+                          'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors',
+                          selectedId === item.id ? 'bg-secondary' : 'hover:bg-secondary/50'
+                        )}
+                      >
+                        <File className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm truncate">{item.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+
+function ItemDetail({ item }: { item?: LibraryItem }) {
+  if (!item) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        <div className="text-center">
+          <FolderOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Select an item to view details</p>
+        </div>
+      </div>
+    )
+  }
+
+  const meta = categoryMeta[item.category]
+  const Icon = meta.icon
+
+  return (
+    <ScrollArea className="h-full">
+      <div className="p-4 space-y-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="secondary">{meta.label}</Badge>
+          </div>
+          <h2 className="text-lg font-semibold">{item.name}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">File</span>
+            <span className="font-mono text-xs">{item.file}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Created</span>
+            <span>{item.createdAt}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Updated</span>
+            <span>{item.updatedAt}</span>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1">Edit</Button>
+          <Button variant="ghost" className="text-destructive">Delete</Button>
+        </div>
+      </div>
+    </ScrollArea>
+  )
+}
+
+function ObservationsTray({ observations }: { observations: Observation[] }) {
+  if (observations.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        <div className="text-center">
+          <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No new observations</p>
+          <p className="text-xs mt-1">Mill will suggest additions as you work</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-3 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Observations</span>
+          <Badge>{observations.length}</Badge>
+        </div>
+        <Button size="sm" variant="ghost" className="h-7 text-xs">
+          Review all
+        </Button>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-2">
+          {observations.map((obs) => {
+            const meta = categoryMeta[obs.category]
+            const Icon = meta.icon
+
+            return (
+              <div
+                key={obs.id}
+                className="p-3 rounded-lg border bg-card hover:border-primary/50 transition-colors"
+              >
+                <div className="flex items-start gap-2 mb-2">
+                  <Icon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">{obs.suggestion}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      from {obs.source} · {obs.createdAt}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Button size="sm" className="h-7 flex-1">
+                    <Check className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+
+export function MapWorkspace() {
+  const [selectedItem, setSelectedItem] = useState<LibraryItem | undefined>()
+  const [focusedTile, setFocusedTile] = useState<'tree' | 'detail' | 'observations'>('tree')
+
+  return (
+    <div className="h-full p-1">
+      <TileSplit direction="horizontal" sizes={[30, 40, 30]}>
+        <Tile
+          title="Library"
+          focused={focusedTile === 'tree'}
+          onFocus={() => setFocusedTile('tree')}
+        >
+          <LibraryTree
+            items={mockLibrary}
+            selectedId={selectedItem?.id}
+            onSelect={(item) => {
+              setSelectedItem(item)
+              setFocusedTile('detail')
+            }}
+          />
+        </Tile>
+        <Tile
+          title="Detail"
+          focused={focusedTile === 'detail'}
+          onFocus={() => setFocusedTile('detail')}
+        >
+          <ItemDetail item={selectedItem} />
+        </Tile>
+        <Tile
+          title="Observations"
+          focused={focusedTile === 'observations'}
+          onFocus={() => setFocusedTile('observations')}
+        >
+          <ObservationsTray observations={mockObservations} />
+        </Tile>
+      </TileSplit>
+    </div>
+  )
+}
