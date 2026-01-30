@@ -12,19 +12,19 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
-            asset: mill-win-x64.exe
+            asset: mill-win-x64.zip
           - os: windows-11-arm
             rid: win-arm64
-            asset: mill-win-arm64.exe
+            asset: mill-win-arm64.zip
           - os: ubuntu-latest
             rid: linux-x64
-            asset: mill-linux-x64
+            asset: mill-linux-x64.tar.gz
           - os: macos-15-intel
             rid: osx-x64
-            asset: mill-osx-x64
+            asset: mill-osx-x64.tar.gz
           - os: macos-latest
             rid: osx-arm64
-            asset: mill-osx-arm64
+            asset: mill-osx-arm64.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -33,24 +33,44 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
-      - name: publish
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: workbench/pnpm-lock.yaml
+
+      - name: build workbench
+        run: |
+          cd workbench
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: publish cli
         run: dotnet publish cli/mill-cli.csproj -c Release -r ${{ matrix.rid }} -o out
 
-      - name: rename artifact
+      - name: copy wwwroot
         shell: bash
-        run: |
-          if [[ "${{ matrix.rid }}" == win-* ]]; then
-            mv out/mill.exe out/${{ matrix.asset }}
-          else
-            mv out/mill out/${{ matrix.asset }}
-          fi
+        run: cp -r workbench/dist out/wwwroot
+
+      - name: package (windows)
+        if: startsWith(matrix.rid, 'win-')
+        shell: pwsh
+        run: Compress-Archive -Path out/* -DestinationPath ${{ matrix.asset }}
+
+      - name: package (unix)
+        if: "!startsWith(matrix.rid, 'win-')"
+        run: tar -czvf ${{ matrix.asset }} -C out .
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}
-          path: out/${{ matrix.asset }}
+          path: ${{ matrix.asset }}
 
   release:
     needs: build

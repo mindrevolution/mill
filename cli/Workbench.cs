@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Photino.NET;
 using Microsoft.AspNetCore.Builder;
@@ -15,8 +16,22 @@ using MillApi;
 /// </summary>
 static class Workbench
 {
+    const int DefaultWidth = 1400;
+    const int DefaultHeight = 900;
+    const int MinWidth = 800;
+    const int MinHeight = 600;
+    const string BackgroundColor = "#09090b";
+
+    // Set WebView2 background color before any Photino code runs - prevents white flash
+    static Workbench()
+    {
+        // Windows: WebView2 environment variable (AARRGGBB format)
+        Environment.SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "FF09090B");
+    }
+
     public static int Run()
     {
+
         var port = FindFreePort();
         var serverUrl = $"http://127.0.0.1:{port}";
         var wwwroot = FindWwwRoot();
@@ -70,12 +85,54 @@ static class Workbench
             }
 
             var window = new PhotinoWindow()
-                .SetTitle("mill workbench")
-                .SetSize(1400, 900)
+                .SetTitle(GetWindowTitle())
                 .SetResizable(true)
-                .Center()
-                .Load(serverUrl);
+                // Start minimized to hide white flash during WebView2 init
+                .SetMinimized(true)
+                // Set dark background for browser control (platform-specific)
+                .SetBrowserControlInitParameters(GetBrowserInitParams());
 
+            // Set icon if available
+            var iconPath = GetIconPath();
+            if (iconPath != null)
+                window.SetIconFile(iconPath);
+
+            // Restore or initialize window position/size
+            var state = LoadWindowState();
+            if (state != null && IsValidWindowState(state))
+            {
+                window.SetLeft(state.Left)
+                      .SetTop(state.Top)
+                      .SetSize(state.Width, state.Height);
+            }
+            else
+            {
+                window.SetSize(DefaultWidth, DefaultHeight).Center();
+            }
+
+            // Save window state on close
+            window.WindowClosing += (sender, e) =>
+            {
+                SaveWindowState(new WindowState(
+                    window.Left,
+                    window.Top,
+                    window.Width,
+                    window.Height
+                ));
+                return false; // allow close
+            };
+
+            // Show window when content signals it's ready
+            window.RegisterWebMessageReceivedHandler((sender, msg) =>
+            {
+                if (msg == "ready")
+                {
+                    window.SetMinimized(false);
+                }
+            });
+
+            // Load dark splash page that signals when app is loaded
+            window.LoadRawString(GetSplashHtml(serverUrl));
             window.WaitForClose();
             return 0;
         }
@@ -83,6 +140,168 @@ static class Workbench
         {
             app?.StopAsync().Wait();
         }
+    }
+
+    static string GetWindowTitle()
+    {
+        var repoName = GetRepoName();
+        return repoName != null ? $"Mill · {repoName}" : "Mill";
+    }
+
+    static string GetBrowserInitParams()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            // WebView2: Chromium command-line arguments
+            return "--background-color=09090b";
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            // WebKitGTK: JSON config for webkit settings
+            // Note: background color is set via webkit_web_view_set_background_color in native code
+            return "{}";
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            // WKWebView: JSON config
+            return "{}";
+        }
+        return "";
+    }
+
+    static string GetSplashHtml(string serverUrl) => $$"""
+        <!DOCTYPE html>
+        <html style="background:#09090b">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                * { margin: 0; padding: 0; }
+                html, body {
+                    background: #09090b;
+                    height: 100%;
+                    width: 100%;
+                    overflow: hidden;
+                }
+                iframe {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    background: #09090b;
+                }
+            </style>
+        </head>
+        <body>
+            <iframe id="app" src="{{serverUrl}}"></iframe>
+            <script>
+                const iframe = document.getElementById('app');
+                iframe.onload = () => {
+                    // Signal to .NET that content is ready
+                    window.external.sendMessage('ready');
+                    // Replace current page with iframe content for proper navigation
+                    setTimeout(() => window.location.replace('{{serverUrl}}'), 50);
+                };
+            </script>
+        </body>
+        </html>
+        """;
+
+    static string? GetRepoName()
+    {
+        try
+        {
+            var gitRoot = FindGitRoot(Directory.GetCurrentDirectory());
+            if (gitRoot == null) return null;
+            return Path.GetFileName(gitRoot);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    static string? FindGitRoot(string? dir)
+    {
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir, ".git")))
+                return dir;
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+        return null;
+    }
+
+    static string? GetIconPath()
+    {
+        // Try published location first
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? ".";
+        var iconPath = Path.Combine(exeDir, "mill.ico");
+        if (File.Exists(iconPath)) return iconPath;
+
+        // Try repo location during development
+        var repoRoot = FindRepoRoot();
+        if (repoRoot != null)
+        {
+            iconPath = Path.Combine(repoRoot, "cli", "mill.ico");
+            if (File.Exists(iconPath)) return iconPath;
+        }
+
+        return null;
+    }
+
+    static string GetWindowStatePath()
+    {
+        // Store in .mill folder if it exists, otherwise use user's local app data
+        var millDir = Path.Combine(Directory.GetCurrentDirectory(), ".mill");
+        if (Directory.Exists(millDir))
+            return Path.Combine(millDir, "workbench.json");
+
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var millAppData = Path.Combine(appData, "mill");
+        Directory.CreateDirectory(millAppData);
+        return Path.Combine(millAppData, "workbench.json");
+    }
+
+    static WindowState? LoadWindowState()
+    {
+        try
+        {
+            var path = GetWindowStatePath();
+            if (!File.Exists(path)) return null;
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize(json, WorkbenchJsonContext.Default.WindowState);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    static void SaveWindowState(WindowState state)
+    {
+        try
+        {
+            var path = GetWindowStatePath();
+            var json = JsonSerializer.Serialize(state, WorkbenchJsonContext.Default.WindowState);
+            File.WriteAllText(path, json);
+        }
+        catch
+        {
+            // Ignore save errors
+        }
+    }
+
+    static bool IsValidWindowState(WindowState state)
+    {
+        // Basic sanity checks - window should be reasonably sized and positioned
+        if (state.Width < MinWidth || state.Height < MinHeight)
+            return false;
+        if (state.Width > 10000 || state.Height > 10000)
+            return false;
+        if (state.Left < -state.Width || state.Top < -state.Height)
+            return false;
+        if (state.Left > 10000 || state.Top > 10000)
+            return false;
+        return true;
     }
 
     static string FindWwwRoot()
@@ -131,6 +350,13 @@ record HealthResponse(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("version")] string Version);
 
+record WindowState(
+    [property: JsonPropertyName("left")] int Left,
+    [property: JsonPropertyName("top")] int Top,
+    [property: JsonPropertyName("width")] int Width,
+    [property: JsonPropertyName("height")] int Height);
+
 [JsonSerializable(typeof(HealthResponse))]
+[JsonSerializable(typeof(WindowState))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 partial class WorkbenchJsonContext : JsonSerializerContext { }

@@ -9,18 +9,12 @@ import type { Workspace } from '@/types'
 
 function App() {
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace>('shape')
-  const [projectName] = useState('mill')
 
   // Keyboard shortcuts
   useKeyboard({
     [WORKSPACE_KEYS.shape]: () => setActiveWorkspace('shape'),
     [WORKSPACE_KEYS.map]: () => setActiveWorkspace('map'),
     [WORKSPACE_KEYS.ship]: () => setActiveWorkspace('ship'),
-    'mod+o': () => console.log('TODO: Project switcher'),
-  }, [])
-
-  const handleProjectSwitch = useCallback(() => {
-    console.log('TODO: Open project switcher modal')
   }, [])
 
   const handleSettings = useCallback(() => {
@@ -33,8 +27,6 @@ function App() {
       <TopBar
         active={activeWorkspace}
         onSwitch={setActiveWorkspace}
-        projectName={projectName}
-        onProjectSwitch={handleProjectSwitch}
         onSettings={handleSettings}
         activeRuns={0}
         openObservations={3}

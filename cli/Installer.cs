@@ -164,6 +164,17 @@ static class Installer
                 File.Copy(nativeLib, destFile, overwrite: true);
             }
 
+            // Copy wwwroot for workbench UI
+            var wwwrootSource = Path.Combine(sourceDir, "wwwroot");
+            if (Directory.Exists(wwwrootSource))
+            {
+                Out.Step("copying wwwroot...");
+                var wwwrootDest = Path.Combine(binaryDir, "wwwroot");
+                if (Directory.Exists(wwwrootDest))
+                    Directory.Delete(wwwrootDest, recursive: true);
+                CopyDirectory(wwwrootSource, wwwrootDest);
+            }
+
             if (!OperatingSystem.IsWindows())
             {
                 var chmod = Process.Start("chmod", ["+x", binaryPath]);

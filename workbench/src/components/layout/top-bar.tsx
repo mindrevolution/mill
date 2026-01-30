@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button'
 interface TopBarProps {
   active: Workspace
   onSwitch: (workspace: Workspace) => void
-  projectName: string
-  onProjectSwitch?: () => void
   onSettings?: () => void
   activeRuns?: number
   openObservations?: number
@@ -22,26 +20,12 @@ const workspaces: { id: Workspace; label: string; icon: typeof PenTool; key: str
 export function TopBar({
   active,
   onSwitch,
-  projectName,
-  onProjectSwitch,
   onSettings,
   activeRuns = 0,
   openObservations = 0,
 }: TopBarProps) {
   return (
     <div className="flex items-center h-12 bg-background border-b px-3 gap-4">
-      {/* Left: Project indicator */}
-      <Button
-        size="icon"
-        className="h-8 w-8"
-        onClick={onProjectSwitch}
-        title={projectName}
-      >
-        <span className="text-primary-foreground font-semibold text-sm">
-          {projectName.charAt(0).toLowerCase()}
-        </span>
-      </Button>
-
       {/* Workspace tabs */}
       <nav className="flex items-center gap-1">
         {workspaces.map(({ id, label, icon: Icon, key }) => (
