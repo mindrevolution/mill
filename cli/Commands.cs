@@ -13,6 +13,9 @@ static class Commands
     {
         Console.WriteLine("""
             usage:
+              mill                    open workbench UI
+              mill --api-only         run API server only (for dev)
+
               mill init               initialize repo for mill
               mill spec               create specification → GitHub issue
               mill spec <number>      refine existing spec against codebase
@@ -22,8 +25,6 @@ static class Commands
               mill run                list available issues
               mill run --auto         autopick best issue
               mill run <number>       execute work loop on issue
-
-              mill workbench          open workbench UI
 
               mill install            install or update mill
               mill --version          show version

@@ -11,9 +11,15 @@ Console.OutputEncoding = Encoding.UTF8;
 Installer.CleanupOldBinary();
 Out.Banner();
 
-// Workbench requires STA thread (Photino/WebView2 quirk)
+// API-only mode for development (no Photino window)
+if (args is ["--api-only"] or ["-a"])
+{
+    return Workbench.RunApiOnly();
+}
+
+// Default: run workbench (requires STA thread for Photino/WebView2)
 // See: https://github.com/tryphotino/photino.NET/issues/180
-if (args is ["workbench"])
+if (args is [])
 {
     var result = 0;
     var thread = new Thread(() => result = Workbench.Run());

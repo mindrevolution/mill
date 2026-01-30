@@ -29,9 +29,76 @@ static class Workbench
         Environment.SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "FF09090B");
     }
 
+    /// <summary>
+    /// Run API server only (no Photino window) for development.
+    /// Uses ASPNETCORE_URLS env var or defaults to port 5218.
+    /// Logs all requests to console for debugging.
+    /// </summary>
+    public static int RunApiOnly()
+    {
+        var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://localhost:5218";
+        var wwwroot = FindWwwRoot();
+
+        Out.Step("starting api server...");
+
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            Args = Array.Empty<string>(),
+            WebRootPath = wwwroot
+        });
+        builder.WebHost.UseUrls(urls);
+        // Enable request logging for dev
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning); // reduce framework noise
+        builder.Logging.AddFilter("Microsoft.Hosting", LogLevel.Warning);
+        builder.Services.AddCors();
+        builder.Services.AddMillApi();
+
+        var app = builder.Build();
+
+        // Log all API requests
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                var start = DateTime.UtcNow;
+                await next();
+                var elapsed = (DateTime.UtcNow - start).TotalMilliseconds;
+                var status = context.Response.StatusCode;
+                var color = status < 400 ? "\u001b[32m" : "\u001b[31m"; // green or red
+                var reset = "\u001b[0m";
+                Console.WriteLine($"  {color}{status}{reset} {context.Request.Method} {context.Request.Path} ({elapsed:F0}ms)");
+            }
+            else
+            {
+                await next();
+            }
+        });
+
+        app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
+        if (Directory.Exists(wwwroot))
+        {
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+            app.MapFallbackToFile("index.html");
+        }
+
+        app.MapGet("/api/health", () =>
+            Results.Json(new HealthResponse("ok", Mill.Version), WorkbenchJsonContext.Default.HealthResponse));
+
+        app.MapMillApi();
+
+        Out.Ok($"api server ready at {urls}");
+        Out.Detail("press Ctrl+C to stop");
+        Out.Blank();
+
+        app.Run();
+        return 0;
+    }
+
     public static int Run()
     {
-
         var port = FindFreePort();
         var serverUrl = $"http://127.0.0.1:{port}";
         var wwwroot = FindWwwRoot();
@@ -128,6 +195,9 @@ static class Workbench
                 if (msg == "ready")
                 {
                     window.SetMinimized(false);
+                    // Bring to front: briefly set topmost, then turn off
+                    window.SetTopMost(true);
+                    window.SetTopMost(false);
                 }
             });
 
