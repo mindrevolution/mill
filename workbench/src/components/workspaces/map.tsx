@@ -205,7 +205,7 @@ function ObservationsTray({ observations }: { observations: Observation[] }) {
     <div className="h-full flex flex-col">
       <div className="p-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Lightbulb className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">Observations</span>
           <Badge>{observations.length}</Badge>
         </div>
