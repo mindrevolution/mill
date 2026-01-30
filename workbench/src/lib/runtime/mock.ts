@@ -1,5 +1,5 @@
 import type { Runtime } from '@/lib/runtime'
-import type { RunEvent, RunHandle, RunStatus } from '@/types'
+import type { RunEvent, RunHandle, RunStatus, TaskRequest, TaskResult } from '@/types'
 
 interface MockRun {
   id: string
@@ -156,6 +156,48 @@ export function createMockRuntime(options: { delay?: number } = {}): Runtime {
     status(runId: string): RunStatus | null {
       const run = runs.get(runId)
       return run?.status ?? null
+    },
+
+    // === Non-interactive task execution (mock) ===
+
+    async execute(task: TaskRequest): Promise<TaskResult> {
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, delay))
+
+      // Mock responses by task type
+      const mockResponses: Record<string, TaskResult> = {
+        'add-observation': {
+          success: true,
+          output: 'Created library entry: .mill/standards/new-standard.md',
+          data: { file: '.mill/standards/new-standard.md' },
+        },
+        'context-warmup': {
+          success: true,
+          output: 'Generated context: .mill/context.md (2.3kb)',
+          data: { file: '.mill/context.md', size: 2300 },
+        },
+        'verify-criterion': {
+          success: true,
+          output: 'Criterion verified: All acceptance criteria pass',
+          data: { passed: true, criterion: task.context?.criterion },
+        },
+        'refine-spec': {
+          success: true,
+          output: 'Spec updated with current codebase context',
+          data: { updated: true },
+        },
+      }
+
+      const result = mockResponses[task.type]
+      if (result) {
+        return result
+      }
+
+      return {
+        success: false,
+        output: '',
+        error: `Unknown task type: ${task.type}`,
+      }
     },
   }
 }

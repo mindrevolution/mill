@@ -1,3 +1,3 @@
 export { createMockRuntime } from './mock'
-export { createTauriRuntime } from './tauri'
+export { createPtyRuntime } from './pty'
 export { createApiRuntime } from './api'

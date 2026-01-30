@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getRuntime, setRuntime, detectRuntime } from '@/lib/runtime'
-import { createMockRuntime, createTauriRuntime, createApiRuntime } from '@/lib/runtime/index'
+import { createMockRuntime, createPtyRuntime, createApiRuntime } from '@/lib/runtime/index'
 import type { Runtime } from '@/lib/runtime'
 import type { RunEvent, RunStatus } from '@/types'
 
@@ -15,8 +15,8 @@ function initializeRuntime(): Runtime {
   let runtime: Runtime
 
   switch (runtimeType) {
-    case 'tauri':
-      runtime = createTauriRuntime()
+    case 'pty':
+      runtime = createPtyRuntime()
       break
     case 'api':
       // ApiRuntime will throw if used before backend is ready

@@ -99,4 +99,25 @@ export interface RunHandle {
   status: RunStatus
 }
 
-export type RuntimeType = 'mock' | 'tauri' | 'api'
+export type RuntimeType = 'mock' | 'pty' | 'api'
+
+// Non-interactive task execution (ApiRuntime)
+export type TaskType =
+  | 'add-observation'
+  | 'context-warmup'
+  | 'verify-criterion'
+  | 'refine-spec'
+
+export interface TaskRequest {
+  type: TaskType
+  prompt: string
+  context?: Record<string, unknown>
+  outputFormat?: 'text' | 'json'
+}
+
+export interface TaskResult {
+  success: boolean
+  output: string
+  data?: unknown  // Parsed JSON if outputFormat was 'json'
+  error?: string
+}

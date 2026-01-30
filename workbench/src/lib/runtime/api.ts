@@ -1,50 +1,75 @@
 import type { Runtime } from '@/lib/runtime'
-import type { RunEvent, RunHandle, RunStatus } from '@/types'
+import type { RunEvent, RunHandle, RunStatus, TaskRequest, TaskResult } from '@/types'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5218'
 
 /**
- * ApiRuntime - Stub for hosted web deployment
+ * ApiRuntime - Non-interactive Claude Code CLI execution via API.
  *
- * When the API backend supports WebSocket streaming, this will:
- * - POST /api/run/{issue}/start to initiate a run
- * - POST /api/run/{id}/input to send input
- * - DELETE /api/run/{id} to abort
- * - WebSocket at /api/run/{id}/stream for events
+ * Primary use: Single prompt → structured response tasks
+ * - Add observation to library
+ * - Context warmup
+ * - Criterion verification
+ * - Spec refinement
+ *
+ * The API server spawns: claude --print "prompt" --output-format json
+ * and returns the parsed result.
+ *
+ * Interactive methods (start/send/abort) throw - use PtyRuntime for those.
+ *
+ * Future (hosted): Can swap CLI spawning for direct Anthropic API calls.
  */
-export function createApiRuntime(_baseUrl?: string): Runtime {
-  const runs = new Map<string, { status: RunStatus; handlers: Set<(event: RunEvent) => void> }>()
-
+export function createApiRuntime(baseUrl = API_BASE): Runtime {
   return {
+    // === Interactive methods: Not supported ===
+
     async start(_issue: number): Promise<RunHandle> {
-      // TODO: POST to /api/run/{issue}/start
-      // TODO: Connect WebSocket to /api/run/{id}/stream
-      throw new Error('ApiRuntime not implemented. Waiting for backend WebSocket support.')
+      throw new Error(
+        'ApiRuntime does not support interactive runs. Use PtyRuntime for interactive sessions.'
+      )
     },
 
     async send(_runId: string, _input: string): Promise<void> {
-      // TODO: POST to /api/run/{runId}/input
-      throw new Error('ApiRuntime not implemented. Waiting for backend WebSocket support.')
+      throw new Error(
+        'ApiRuntime does not support interactive runs. Use PtyRuntime for interactive sessions.'
+      )
     },
 
     async abort(_runId: string): Promise<void> {
-      // TODO: DELETE /api/run/{runId}
-      throw new Error('ApiRuntime not implemented. Waiting for backend WebSocket support.')
+      throw new Error(
+        'ApiRuntime does not support interactive runs. Use PtyRuntime for interactive sessions.'
+      )
     },
 
-    subscribe(runId: string, handler: (event: RunEvent) => void): () => void {
-      // TODO: WebSocket subscription
-      let run = runs.get(runId)
-      if (!run) {
-        run = { status: 'starting', handlers: new Set() }
-        runs.set(runId, run)
-      }
-      run.handlers.add(handler)
-      return () => {
-        run?.handlers.delete(handler)
-      }
+    subscribe(_runId: string, _handler: (event: RunEvent) => void): () => void {
+      console.warn('ApiRuntime.subscribe: No-op, interactive runs not supported')
+      return () => {}
     },
 
-    status(runId: string): RunStatus | null {
-      return runs.get(runId)?.status ?? null
+    status(_runId: string): RunStatus | null {
+      return null
+    },
+
+    // === Non-interactive task execution ===
+
+    async execute(task: TaskRequest): Promise<TaskResult> {
+      const res = await fetch(`${baseUrl}/api/task/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        return {
+          success: false,
+          output: '',
+          error: `API error: ${res.status} ${res.statusText} - ${text}`,
+        }
+      }
+
+      const result = await res.json() as TaskResult
+      return result
     },
   }
 }

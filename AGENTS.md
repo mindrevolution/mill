@@ -4,7 +4,7 @@ Turning intent into verified deliverables, continuously.
 
 > **Branding:** Always "mill" in lowercase. Never "MILL" or "Mill".
 
-> **Focus:** The Tauri desktop app is the primary target. Web/container deployment will come later.
+> **Focus:** The Photino desktop app is the primary target. Web/container deployment will come later.
 
 ## Overview
 
@@ -21,7 +21,7 @@ mill/
 │   └── Program.cs
 ├── api/                    # ASP.NET Minimal API (backend for UI)
 │   └── Mill.Api/
-├── workbench/              # React + Tauri UI
+├── workbench/              # React UI (Photino hosts this)
 │   └── src/
 ├── bin/                    # Published binary
 │   └── mill
@@ -157,6 +157,61 @@ Benefits:
 4. **Learning is explicit** — Memory improves the model, not the agent
 5. **Hybrid worktree inheritance** — Config and standards are shared from parent; context and memory are per-worktree (rebuilt only if stale)
 6. **Humans drive product direction** — Humans decide what gets built and when it ships; AI improves the code
+
+## Desktop Architecture
+
+Single .NET binary providing CLI and GUI:
+
+```
+mill.exe (.NET)
+├── CLI commands (mill spec, mill run, mill ui)
+├── API server (in-process)
+├── Photino webview (React UI)
+├── Pty.Net (cross-platform PTY for interactive sessions)
+└── xterm.js (terminal emulator in React)
+```
+
+**Usage modes:**
+- `mill spec` — CLI, runs in terminal
+- `mill run 42` — CLI, runs in terminal
+- `mill ui` — Opens Photino window with React workbench
+
+### Key Dependencies
+
+| Component | Purpose | Package |
+|-----------|---------|---------|
+| Photino.NET | Native webview wrapper | `Photino.NET` |
+| Pty.Net | Cross-platform PTY | `Pty.Net` (microsoft/vs-pty.net) |
+| xterm.js | Terminal UI in browser | `@xterm/xterm` |
+
+### Communication
+
+Photino IPC bridges React ↔ .NET directly (no WebSocket needed):
+
+```csharp
+// .NET → JS
+window.SendWebMessage(ptyOutput);
+
+// JS → .NET
+window.RegisterWebMessageReceivedHandler((_, msg) => pty.Write(msg));
+```
+
+## Claude Runtime
+
+mill uses Claude Code CLI for all LLM work. Two runtimes handle different interaction modes:
+
+| Runtime | Mode | Execution |
+|---------|------|-----------|
+| **PtyRuntime** | Interactive (TTY) | Pty.Net spawns claude, xterm.js renders |
+| **ApiRuntime** | Non-interactive | API spawns CLI, returns structured response |
+
+**PtyRuntime** — For tasks requiring user interaction: spec elicitation, work loop with input prompts. Uses Pty.Net to spawn Claude Code with full TTY support, xterm.js renders output in React UI, Photino IPC bridges the two.
+
+**ApiRuntime** — For single prompt → response tasks: add observation to library, context warmup, criterion verification. The API server spawns `claude --print "..." --output-format json`, awaits completion, parses response. Enables development/testing without Photino.
+
+Both implement the same `Runtime` interface. UI code is agnostic to which runtime executes the task.
+
+**Future (hosted):** ApiRuntime can swap CLI spawning for direct Anthropic API calls. Same interface, different backend. Interactive tasks would require alternative UX (no embedded terminal in browser).
 
 ## Development Notes
 

@@ -1,7 +1,16 @@
-import type { RunEvent, RunHandle, RunStatus, RuntimeType } from '@/types'
+import type { RunEvent, RunHandle, RunStatus, RuntimeType, TaskRequest, TaskResult } from '@/types'
 
+/**
+ * Runtime interface for Claude Code CLI integration.
+ *
+ * Two implementations with different purposes:
+ * - PtyRuntime: Interactive sessions (embedded PTY) - spec elicitation, work loop
+ * - ApiRuntime: Non-interactive tasks (HTTP → CLI spawn) - observations, warmup, verification
+ */
 export interface Runtime {
-  /** Start a run for the given issue */
+  // === Interactive methods (PtyRuntime) ===
+
+  /** Start an interactive run for the given issue */
   start(issue: number): Promise<RunHandle>
 
   /** Send input to a running session (when input_needed) */
@@ -15,6 +24,15 @@ export interface Runtime {
 
   /** Get current status of a run */
   status(runId: string): RunStatus | null
+
+  // === Non-interactive methods (ApiRuntime) ===
+
+  /**
+   * Execute a non-interactive task via API.
+   * API spawns: claude --print "prompt" --output-format json
+   * Returns structured result.
+   */
+  execute?(task: TaskRequest): Promise<TaskResult>
 }
 
 let currentRuntime: Runtime | null = null
@@ -31,9 +49,9 @@ export function getRuntime(): Runtime {
 }
 
 export function detectRuntime(): RuntimeType {
-  // Check for Tauri environment
-  if (typeof window !== 'undefined' && '__TAURI__' in window) {
-    return 'tauri'
+  // Check for Photino environment (window.external.sendMessage available)
+  if (typeof window !== 'undefined' && 'external' in window && typeof (window as any).external?.sendMessage === 'function') {
+    return 'pty'
   }
 
   // In production (not localhost), use API
