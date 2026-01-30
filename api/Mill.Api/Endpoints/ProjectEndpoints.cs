@@ -9,21 +9,24 @@ public static class ProjectEndpoints
         var group = app.MapGroup("/api/project")
             .WithTags("Project");
 
-        group.MapGet("/", (MillService mill) =>
+        group.MapGet("/", async (MillService mill) =>
         {
             var path = mill.GetProjectPath();
             if (string.IsNullOrEmpty(path))
                 return Results.Ok(new { configured = false });
 
+            var provider = await mill.GetIssueProviderName();
+
             return Results.Ok(new
             {
                 configured = true,
                 path,
-                name = Path.GetFileName(path)
+                name = Path.GetFileName(path),
+                issueProvider = provider
             });
         })
         .WithName("GetProject")
-        .WithSummary("Get current project info");
+        .WithSummary("Get current project info including detected issue provider");
 
         group.MapPost("/", (SetProjectRequest request, MillService mill) =>
         {

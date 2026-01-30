@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
-import type { Draft, Issue } from '@/lib/api'
+import type { Draft, Issue, IssueDetail } from '@/lib/api'
 import type { ChatMessage } from '@/types'
 import {
   Plus,
@@ -289,80 +289,155 @@ function SpecChat({ draft, sessionId }: { draft?: Draft; sessionId?: string }) {
   )
 }
 
-function SpecPreview({ draft }: { draft?: Draft }) {
-  if (!draft) {
+function SpecPreview({
+  draft,
+  issueDetail,
+  loadingIssue,
+}: {
+  draft?: Draft
+  issueDetail?: IssueDetail
+  loadingIssue?: boolean
+}) {
+  // Show loading state for issue
+  if (loadingIssue) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Spec preview will appear here</p>
-          <p className="text-xs mt-1">Start a conversation to build your spec</p>
-        </div>
+        <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     )
   }
 
-  return (
-    <ScrollArea className="h-full">
-      <div className="p-4 space-y-4">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Badge variant="secondary">{draft.type}</Badge>
-            {draft.persona && <span>· {draft.persona}</span>}
+  // Show issue detail
+  if (issueDetail) {
+    const Icon = typeIcons[issueDetail.type] || FileText
+    const color = typeColors[issueDetail.type] || 'text-muted-foreground'
+
+    return (
+      <ScrollArea className="h-full">
+        <div className="p-4 space-y-4">
+          {/* Header */}
+          <div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Icon className={cn('h-3 w-3', color)} />
+              <span>#{issueDetail.number}</span>
+              <Badge variant="secondary">{issueDetail.type}</Badge>
+              <Badge variant={issueDetail.status === 'open' ? 'default' : 'secondary'}>
+                {issueDetail.status}
+              </Badge>
+              {issueDetail.persona && <span>· {issueDetail.persona}</span>}
+            </div>
+            <h2 className="text-lg font-semibold">{issueDetail.title}</h2>
           </div>
-          <h2 className="text-lg font-semibold">{draft.title}</h2>
-        </div>
 
-        {/* Sections */}
-        <div className="space-y-3">
-          <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-sm font-medium">Summary</h3>
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          {/* Labels */}
+          {issueDetail.labels.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {issueDetail.labels.map((label) => (
+                <Badge key={label} variant="outline" className="text-xs">
+                  {label}
+                </Badge>
+              ))}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Add the ability to sync data while offline and reconcile when connection is restored.
-            </p>
-          </section>
+          )}
 
-          <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-sm font-medium">Acceptance Criteria</h3>
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          {/* Body */}
+          <div className="prose prose-sm prose-invert max-w-none">
+            <div className="text-sm text-foreground whitespace-pre-wrap">
+              {issueDetail.body || (
+                <span className="text-muted-foreground italic">No description provided</span>
+              )}
             </div>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Changes made offline are queued locally</li>
-              <li>• Queue syncs automatically when online</li>
-              <li>• Conflicts are surfaced to user</li>
-            </ul>
-          </section>
+          </div>
 
-          <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-sm font-medium">Verification</h3>
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          {/* Meta */}
+          <div className="text-xs text-muted-foreground pt-2 border-t">
+            Created {formatDate(issueDetail.createdAt)}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button className="flex-1">Start Run</Button>
+          </div>
+        </div>
+      </ScrollArea>
+    )
+  }
+
+  // Show draft preview
+  if (draft) {
+    return (
+      <ScrollArea className="h-full">
+        <div className="p-4 space-y-4">
+          {/* Header */}
+          <div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Badge variant="secondary">{draft.type}</Badge>
+              {draft.persona && <span>· {draft.persona}</span>}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Integration tests for offline queue, unit tests for conflict resolution.
-            </p>
-          </section>
-        </div>
+            <h2 className="text-lg font-semibold">{draft.title}</h2>
+          </div>
 
-        {/* Actions - auto-save, so only "Create Issue" and "Revert" */}
-        <div className="flex gap-2 pt-2">
-          <Button className="flex-1">Create Issue</Button>
-          <Button variant="outline" size="icon" title="Revert changes">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-        </div>
+          {/* Sections */}
+          <div className="space-y-3">
+            <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium">Summary</h3>
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Add the ability to sync data while offline and reconcile when connection is restored.
+              </p>
+            </section>
 
-        {/* Auto-save indicator */}
-        <div className="text-xs text-muted-foreground text-center">
-          Auto-saved · Last change {formatDate(draft.updatedAt)}
+            <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium">Acceptance Criteria</h3>
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              </div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Changes made offline are queued locally</li>
+                <li>• Queue syncs automatically when online</li>
+                <li>• Conflicts are surfaced to user</li>
+              </ul>
+            </section>
+
+            <section className="p-3 rounded-md bg-card border hover:border-primary/50 cursor-pointer transition-colors">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium">Verification</h3>
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Integration tests for offline queue, unit tests for conflict resolution.
+              </p>
+            </section>
+          </div>
+
+          {/* Actions - auto-save, so only "Create Issue" and "Revert" */}
+          <div className="flex gap-2 pt-2">
+            <Button className="flex-1">Create Issue</Button>
+            <Button variant="outline" size="icon" title="Revert changes">
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Auto-save indicator */}
+          <div className="text-xs text-muted-foreground text-center">
+            Auto-saved · Last change {formatDate(draft.updatedAt)}
+          </div>
         </div>
+      </ScrollArea>
+    )
+  }
+
+  // Empty state
+  return (
+    <div className="h-full flex items-center justify-center text-muted-foreground">
+      <div className="text-center">
+        <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">Spec preview will appear here</p>
+        <p className="text-xs mt-1">Start a conversation to build your spec</p>
       </div>
-    </ScrollArea>
+    </div>
   )
 }
 
@@ -372,17 +447,31 @@ export function ShapeWorkspace() {
   const [selectedId, setSelectedId] = useState<string | undefined>()
   const [focusedTile, setFocusedTile] = useState<'list' | 'chat' | 'preview'>('list')
   const [sessionId, setSessionId] = useState<string | undefined>()
+  const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
+  const [loadingIssue, setLoadingIssue] = useState(false)
 
   const handleSelectDraft = (draft: Draft) => {
     setSelectedDraft(draft)
+    setIssueDetail(undefined)
     setSelectedId(draft.id)
     setFocusedTile('chat')
   }
 
-  const handleSelectIssue = (issue: Issue) => {
+  const handleSelectIssue = async (issue: Issue) => {
     setSelectedDraft(undefined)
+    setIssueDetail(undefined)
     setSelectedId(`issue-${issue.number}`)
-    setFocusedTile('chat')
+    setFocusedTile('preview')
+    setLoadingIssue(true)
+
+    try {
+      const detail = await api.spec.issue(issue.number)
+      setIssueDetail(detail)
+    } catch (e) {
+      console.error('Failed to fetch issue details:', e)
+    } finally {
+      setLoadingIssue(false)
+    }
   }
 
   const handleNewSpec = async () => {
@@ -430,7 +519,11 @@ export function ShapeWorkspace() {
           focused={focusedTile === 'preview'}
           onFocus={() => setFocusedTile('preview')}
         >
-          <SpecPreview draft={selectedDraft} />
+          <SpecPreview
+            draft={selectedDraft}
+            issueDetail={issueDetail}
+            loadingIssue={loadingIssue}
+          />
         </Tile>
       </TileSplit>
     </div>

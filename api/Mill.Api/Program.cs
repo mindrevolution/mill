@@ -1,9 +1,13 @@
 using Mill.Api.Endpoints;
 using Mill.Api.Services;
+using Mill.Api.Services.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Services
+// Services - Issue providers (registered in order of preference)
+builder.Services.AddSingleton<IIssueProvider, GithubProvider>();
+builder.Services.AddSingleton<IIssueProvider, GitlabProvider>();
+builder.Services.AddSingleton<IssueProviderFactory>();
 builder.Services.AddSingleton<MillService>();
 builder.Services.AddOpenApi();
 

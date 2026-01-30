@@ -36,6 +36,17 @@ export interface Issue {
   createdAt: string
 }
 
+export interface IssueDetail {
+  number: number
+  title: string
+  body: string
+  type: 'feature' | 'bug' | 'security' | 'task'
+  status: 'open' | 'closed'
+  persona?: string
+  labels: string[]
+  createdAt: string
+}
+
 export interface SpecSession {
   id: string
   draftId?: string
@@ -97,6 +108,7 @@ export const api = {
   spec: {
     drafts: () => request<Draft[]>('/api/spec/drafts'),
     issues: () => request<Issue[]>('/api/spec/issues'),
+    issue: (number: number) => request<IssueDetail>(`/api/spec/issues/${number}`),
     start: (draftId?: string, type?: string) => request<SpecSession>('/api/spec/start', {
       method: 'POST',
       body: JSON.stringify({ draftId, type }),

@@ -23,6 +23,17 @@ public record Issue(
     DateTime CreatedAt
 );
 
+public record IssueDetail(
+    int Number,
+    string Title,
+    string Body,
+    string Type,
+    string Status,
+    string? Persona,
+    List<string> Labels,
+    DateTime CreatedAt
+);
+
 // Library
 public record LibraryItem(
     string Id,

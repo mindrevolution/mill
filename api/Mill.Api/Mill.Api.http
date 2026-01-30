@@ -35,6 +35,9 @@ GET {{baseUrl}}/api/spec/drafts
 ### Get issues
 GET {{baseUrl}}/api/spec/issues
 
+### Get single issue details
+GET {{baseUrl}}/api/spec/issues/42
+
 ### Start spec session
 POST {{baseUrl}}/api/spec/start
 Content-Type: application/json

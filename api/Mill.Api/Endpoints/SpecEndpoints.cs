@@ -26,6 +26,16 @@ public static class SpecEndpoints
         .WithName("GetIssues")
         .WithSummary("List GitHub issues (specs)");
 
+        group.MapGet("/issues/{number:int}", async (int number, MillService mill) =>
+        {
+            var issue = await mill.GetIssueDetail(number);
+            return issue != null
+                ? Results.Ok(issue)
+                : Results.NotFound(new { error = $"Issue #{number} not found" });
+        })
+        .WithName("GetIssueDetail")
+        .WithSummary("Get single GitHub issue with full details");
+
         group.MapPost("/start", (StartSpecRequest request, MillService mill) =>
         {
             // TODO: Start interactive spec session

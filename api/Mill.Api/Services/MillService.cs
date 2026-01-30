@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Mill.Api.Models;
+using Mill.Api.Services.Providers;
 
 namespace Mill.Api.Services;
 
@@ -11,12 +12,17 @@ namespace Mill.Api.Services;
 public class MillService
 {
     private readonly ILogger<MillService> _logger;
+    private readonly IssueProviderFactory _providerFactory;
     private readonly string _millPath;
     private string? _projectPath;
 
-    public MillService(ILogger<MillService> logger, IConfiguration config)
+    public MillService(
+        ILogger<MillService> logger,
+        IConfiguration config,
+        IssueProviderFactory providerFactory)
     {
         _logger = logger;
+        _providerFactory = providerFactory;
         _millPath = config["Mill:CliPath"] ?? "mill";
         _projectPath = config["Mill:ProjectPath"];
     }
@@ -98,36 +104,45 @@ public class MillService
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Issues (via gh CLI)
+    // Issues (via provider - GitHub, GitLab, etc.)
     // ─────────────────────────────────────────────────────────────────
 
     public async Task<List<Issue>> GetIssues()
     {
-        // Shell out to gh CLI to get issues
-        var result = await RunCommand("gh", "issue list --json number,title,labels,state,createdAt --limit 50", _projectPath);
-        if (string.IsNullOrEmpty(result))
-            return [];
+        var workingDir = _projectPath ?? Directory.GetCurrentDirectory();
+        var provider = await _providerFactory.GetProvider(workingDir);
 
-        try
+        if (provider == null)
         {
-            var ghIssues = JsonSerializer.Deserialize<List<GhIssue>>(result, JsonOptions);
-            if (ghIssues == null)
-                return [];
-
-            return ghIssues.Select(i => new Issue(
-                Number: i.Number,
-                Title: i.Title,
-                Type: ExtractType(i.Labels),
-                Status: i.State.ToLowerInvariant() == "open" ? "open" : "closed",
-                Persona: ExtractPersona(i.Labels),
-                CreatedAt: i.CreatedAt
-            )).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to parse gh issue list output");
+            _logger.LogWarning("No issue provider available for {WorkingDir}", workingDir);
             return [];
         }
+
+        return await provider.GetIssues(workingDir);
+    }
+
+    public async Task<IssueDetail?> GetIssueDetail(int number)
+    {
+        var workingDir = _projectPath ?? Directory.GetCurrentDirectory();
+        var provider = await _providerFactory.GetProvider(workingDir);
+
+        if (provider == null)
+        {
+            _logger.LogWarning("No issue provider available for {WorkingDir}", workingDir);
+            return null;
+        }
+
+        return await provider.GetIssueDetail(number, workingDir);
+    }
+
+    /// <summary>
+    /// Get the name of the detected issue provider (github, gitlab, etc.)
+    /// </summary>
+    public async Task<string?> GetIssueProviderName()
+    {
+        var workingDir = _projectPath ?? Directory.GetCurrentDirectory();
+        var provider = await _providerFactory.GetProvider(workingDir);
+        return provider?.Name;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -298,28 +313,5 @@ public class MillService
         return (title, type, persona, status);
     }
 
-    private static string ExtractType(List<GhLabel>? labels)
-    {
-        if (labels == null)
-            return "task";
-
-        var typeLabels = new[] { "feature", "bug", "security", "task" };
-        var label = labels.FirstOrDefault(l =>
-            typeLabels.Contains(l.Name.ToLowerInvariant()));
-
-        return label?.Name.ToLowerInvariant() ?? "task";
-    }
-
-    private static string? ExtractPersona(List<GhLabel>? labels)
-    {
-        var personaLabel = labels?.FirstOrDefault(l =>
-            l.Name.StartsWith("persona:", StringComparison.OrdinalIgnoreCase));
-
-        return personaLabel?.Name.Split(':').ElementAtOrDefault(1)?.Trim();
-    }
-
-    // GitHub CLI response types
-    private record GhIssue(int Number, string Title, List<GhLabel>? Labels, string State, DateTime CreatedAt);
-    private record GhLabel(string Name);
     private record HistoryFile(List<HistoryEntry> Entries);
 }
