@@ -19,6 +19,9 @@ public partial class IssueCacheService
     private readonly ConcurrentDictionary<string, CacheEntry<List<Issue>>> _issuesCache = new();
     private readonly ConcurrentDictionary<string, CacheEntry<IssueDetail>> _issueDetailCache = new();
 
+    // Return cached data immediately if fresher than this (skip gh call entirely)
+    private static readonly TimeSpan FreshCacheTtl = TimeSpan.FromMinutes(2);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -44,6 +47,12 @@ public partial class IssueCacheService
         {
             _logger.LogDebug("Force refresh requested for issues");
             cached = null;
+        }
+        // Return fresh cache immediately (skip gh call)
+        else if (cached != null && DateTime.UtcNow - cached.CachedAt < FreshCacheTtl)
+        {
+            _logger.LogDebug("Issues cache fresh, returning immediately");
+            return cached.Data;
         }
 
         var (response, etag, notModified) = await FetchWithETag(
@@ -101,6 +110,12 @@ public partial class IssueCacheService
         {
             _logger.LogDebug("Force refresh requested for issue #{Number}", number);
             cached = null;
+        }
+        // Return fresh cache immediately (skip gh call)
+        else if (cached != null && DateTime.UtcNow - cached.CachedAt < FreshCacheTtl)
+        {
+            _logger.LogDebug("Issue #{Number} cache fresh, returning immediately", number);
+            return cached.Data;
         }
 
         var (response, etag, notModified) = await FetchWithETag(

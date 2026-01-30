@@ -14,6 +14,7 @@ import {
   Plus,
   Check,
   X,
+  Ban,
   ChevronRight,
   Sparkles,
   FolderOpen,
@@ -233,13 +234,15 @@ function ObservationsTray({ observations }: { observations: Observation[] }) {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <Button size="sm" className="h-7 flex-1">
-                    <Check className="h-3 w-3 mr-1" />
-                    Add
+                <div className="flex items-center gap-1 mt-2">
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0" title="Add to library">
+                    <Check className="h-3 w-3" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="h-7">
+                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Dismiss">
                     <X className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground" title="Never suggest again">
+                    <Ban className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
