@@ -66,7 +66,6 @@ export function LibraryTree({ items, selectedId, onSelect }: LibraryTreeProps) {
                               <CommandItem
                                 value={item.name}
                                 onSelect={() => onSelect(item)}
-                                onMouseDown={() => onSelect(item)}
                                 className={cn(
                                   selectedId === item.id && 'bg-secondary text-foreground'
                                 )}

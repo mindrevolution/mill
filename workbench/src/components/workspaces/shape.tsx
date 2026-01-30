@@ -287,45 +287,25 @@ function SpecList({
                         const Icon = typeIcons[issue.type] || FileText
                         const color = typeColors[issue.type] || 'text-muted-foreground'
                         return (
-                          <ContextMenu key={issue.number}>
-                            <ContextMenuTrigger asChild>
-                              <CommandItem
-                                value={`${issue.number} ${issue.title}`}
-                                onSelect={() => onSelectIssue(issue)}
-                                onMouseDown={() => onSelectIssue(issue)}
-                                className={cn(
-                                  selectedId === `issue-${issue.number}` && 'bg-secondary text-foreground'
-                                )}
-                              >
-                                <div className="flex items-center gap-2 w-full">
-                                  <Icon className={cn('h-3 w-3', color)} />
-                                  <span className="text-xs text-muted-foreground">#{issue.number}</span>
-                                  <span className="text-sm truncate flex-1">{issue.title}</span>
-                                  <Badge variant="secondary" className="text-[10px] px-1 py-0">{issue.status}</Badge>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 w-full">
-                                  <span>{formatDate(issue.createdAt)}</span>
-                                </div>
-                              </CommandItem>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent>
-                              <ContextMenuItem onSelect={() => onSelectIssue(issue)}>
-                                Open
-                              </ContextMenuItem>
-                              <ContextMenuSeparator />
-                              <ContextMenuItem
-                                onSelect={() =>
-                                  setConfirmDelete({
-                                    kind: 'issue',
-                                    id: issue.number.toString(),
-                                    title: issue.title,
-                                  })
-                                }
-                              >
-                                Delete issue
-                              </ContextMenuItem>
-                            </ContextMenuContent>
-                          </ContextMenu>
+                          <CommandItem
+                            key={issue.number}
+                            value={`${issue.number} ${issue.title}`}
+                            onSelect={() => onSelectIssue(issue)}
+                            className={cn(
+                              'flex-col items-start gap-1',
+                              selectedId === `issue-${issue.number}` && 'bg-secondary text-foreground'
+                            )}
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Icon className={cn('h-3 w-3', color)} />
+                              <span className="text-xs text-muted-foreground">#{issue.number}</span>
+                              <span className="text-sm truncate flex-1">{issue.title}</span>
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">{issue.status}</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground w-full">
+                              <span>{formatDate(issue.createdAt)}</span>
+                            </div>
+                          </CommandItem>
                         )
                       })}
                     </CommandGroup>
