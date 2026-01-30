@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Dark minimal palette with #ffcc00 accent */
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+
+  --color-card: #121215;
+  --color-card-foreground: #fafafa;
+
+  --color-popover: #121215;
+  --color-popover-foreground: #fafafa;
+
+  --color-primary: #ffcc00;
+  --color-primary-foreground: #09090b;
+
+  --color-secondary: #27272a;
+  --color-secondary-foreground: #fafafa;
+
+  --color-muted: #27272a;
+  --color-muted-foreground: #a1a1aa;
+
+  --color-accent: #ffcc00;
+  --color-accent-foreground: #09090b;
+
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #fafafa;
+
+  --color-border: #27272a;
+  --color-input: #27272a;
+  --color-ring: #ffcc00;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Font */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
