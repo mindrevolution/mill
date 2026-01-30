@@ -5,19 +5,22 @@ interface UseQueryResult<T> {
   data: T | undefined
   loading: boolean
   error: Error | undefined
-  refetch: () => void
+  refetch: (forceRefresh?: boolean) => void
 }
 
-function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): UseQueryResult<T> {
+function useQuery<T>(
+  fetcher: (refresh: boolean) => Promise<T>,
+  deps: unknown[] = []
+): UseQueryResult<T> {
   const [data, setData] = useState<T | undefined>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | undefined>()
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (forceRefresh = false) => {
     setLoading(true)
     setError(undefined)
     try {
-      const result = await fetcher()
+      const result = await fetcher(forceRefresh)
       setData(result)
     } catch (e) {
       setError(e instanceof Error ? e : new Error(String(e)))
@@ -27,7 +30,7 @@ function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): UseQueryR
   }, deps)
 
   useEffect(() => {
-    fetch()
+    fetch(false)
   }, [fetch])
 
   return { data, loading, error, refetch: fetch }
@@ -39,7 +42,7 @@ export function useDrafts() {
 }
 
 export function useIssues() {
-  return useQuery(() => api.spec.issues(), [])
+  return useQuery((refresh) => api.spec.issues(refresh), [])
 }
 
 export function useSpecs() {
@@ -51,9 +54,9 @@ export function useSpecs() {
     issues: issues.data ?? [],
     loading: drafts.loading || issues.loading,
     error: drafts.error || issues.error,
-    refetch: () => {
+    refetch: (forceRefresh = false) => {
       drafts.refetch()
-      issues.refetch()
+      issues.refetch(forceRefresh)
     },
   }
 }

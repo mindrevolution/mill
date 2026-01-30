@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Services
 builder.Services.AddSingleton<MarkdownService>();
+builder.Services.AddSingleton<IssueCacheService>();
 
 // Issue providers (registered in order of preference)
 builder.Services.AddSingleton<IIssueProvider, GithubProvider>();

@@ -108,8 +108,8 @@ export const api = {
   // Specs
   spec: {
     drafts: () => request<Draft[]>('/api/spec/drafts'),
-    issues: () => request<Issue[]>('/api/spec/issues'),
-    issue: (number: number) => request<IssueDetail>(`/api/spec/issues/${number}`),
+    issues: (refresh = false) => request<Issue[]>(`/api/spec/issues${refresh ? '?refresh=true' : ''}`),
+    issue: (number: number, refresh = false) => request<IssueDetail>(`/api/spec/issues/${number}${refresh ? '?refresh=true' : ''}`),
     start: (draftId?: string, type?: string) => request<SpecSession>('/api/spec/start', {
       method: 'POST',
       body: JSON.stringify({ draftId, type }),

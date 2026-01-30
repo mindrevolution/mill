@@ -13,16 +13,19 @@ public class MillService
 {
     private readonly ILogger<MillService> _logger;
     private readonly IssueProviderFactory _providerFactory;
+    private readonly IssueCacheService _issueCache;
     private readonly string _millPath;
     private string? _projectPath;
 
     public MillService(
         ILogger<MillService> logger,
         IConfiguration config,
-        IssueProviderFactory providerFactory)
+        IssueProviderFactory providerFactory,
+        IssueCacheService issueCache)
     {
         _logger = logger;
         _providerFactory = providerFactory;
+        _issueCache = issueCache;
         _millPath = config["Mill:CliPath"] ?? "mill";
         _projectPath = config["Mill:ProjectPath"];
     }
@@ -104,10 +107,10 @@ public class MillService
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Issues (via provider - GitHub, GitLab, etc.)
+    // Issues (via cache service for GitHub, provider for others)
     // ─────────────────────────────────────────────────────────────────
 
-    public async Task<List<Issue>> GetIssues()
+    public async Task<List<Issue>> GetIssues(bool forceRefresh = false)
     {
         var workingDir = _projectPath ?? Directory.GetCurrentDirectory();
         var provider = await _providerFactory.GetProvider(workingDir);
@@ -118,10 +121,17 @@ public class MillService
             return [];
         }
 
+        // Use cache service for GitHub (ETag support)
+        if (provider.Name == "github")
+        {
+            return await _issueCache.GetIssues(workingDir, forceRefresh);
+        }
+
+        // Fall back to direct provider for others
         return await provider.GetIssues(workingDir);
     }
 
-    public async Task<IssueDetail?> GetIssueDetail(int number)
+    public async Task<IssueDetail?> GetIssueDetail(int number, bool forceRefresh = false)
     {
         var workingDir = _projectPath ?? Directory.GetCurrentDirectory();
         var provider = await _providerFactory.GetProvider(workingDir);
@@ -132,8 +142,20 @@ public class MillService
             return null;
         }
 
+        // Use cache service for GitHub (ETag support)
+        if (provider.Name == "github")
+        {
+            return await _issueCache.GetIssueDetail(number, workingDir, forceRefresh);
+        }
+
+        // Fall back to direct provider for others
         return await provider.GetIssueDetail(number, workingDir);
     }
+
+    /// <summary>
+    /// Clear the issue cache (for manual refresh)
+    /// </summary>
+    public void ClearIssueCache() => _issueCache.ClearCache();
 
     /// <summary>
     /// Get the name of the detected issue provider (github, gitlab, etc.)

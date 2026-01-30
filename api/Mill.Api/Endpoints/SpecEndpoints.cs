@@ -18,23 +18,23 @@ public static class SpecEndpoints
         .WithName("GetDrafts")
         .WithSummary("List all spec drafts");
 
-        group.MapGet("/issues", async (MillService mill) =>
+        group.MapGet("/issues", async (MillService mill, bool refresh = false) =>
         {
-            var issues = await mill.GetIssues();
+            var issues = await mill.GetIssues(forceRefresh: refresh);
             return Results.Ok(issues);
         })
         .WithName("GetIssues")
-        .WithSummary("List GitHub issues (specs)");
+        .WithSummary("List GitHub issues (specs). Use ?refresh=true to bypass cache.");
 
-        group.MapGet("/issues/{number:int}", async (int number, MillService mill) =>
+        group.MapGet("/issues/{number:int}", async (int number, MillService mill, bool refresh = false) =>
         {
-            var issue = await mill.GetIssueDetail(number);
+            var issue = await mill.GetIssueDetail(number, forceRefresh: refresh);
             return issue != null
                 ? Results.Ok(issue)
                 : Results.NotFound(new { error = $"Issue #{number} not found" });
         })
         .WithName("GetIssueDetail")
-        .WithSummary("Get single GitHub issue with full details");
+        .WithSummary("Get single GitHub issue with full details. Use ?refresh=true to bypass cache.");
 
         group.MapPost("/start", (StartSpecRequest request, MillService mill) =>
         {

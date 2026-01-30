@@ -549,7 +549,7 @@ export function ShapeWorkspace() {
             issues={issues}
             loading={loading}
             error={error}
-            onRefresh={refetch}
+            onRefresh={() => refetch(true)}
             onSelectDraft={handleSelectDraft}
             onSelectIssue={handleSelectIssue}
             onNewSpec={handleNewSpec}
