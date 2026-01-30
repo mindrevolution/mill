@@ -1,39 +1,62 @@
 import type { Runtime } from '@/lib/runtime'
-import type { RunEvent, RunHandle, RunStatus } from '@/types'
+import type { RunEvent, RunHandle, RunStatus, TaskRequest, TaskResult } from '@/types'
 
 /**
- * TauriRuntime - Stub for Tauri desktop integration
+ * TauriRuntime - Interactive Claude Code CLI sessions via embedded PTY.
  *
- * When src-tauri/ is added, this will:
- * - Call Rust commands via @tauri-apps/api: start_run, send_input, abort_run
- * - Subscribe to Tauri events for run updates
- * - Handle process spawning for the mill CLI
+ * Primary use: Multi-turn conversations requiring user interaction
+ * - Spec elicitation (chat to build spec)
+ * - Work loop with input prompts
+ * - Debug sessions
+ *
+ * Runs Claude Code in an embedded terminal within the Tauri app.
+ * User sees output in real-time, can interrupt, provide input.
+ *
+ * Non-interactive tasks (execute) should use ApiRuntime instead.
+ *
+ * Implementation requires src-tauri/ setup with:
+ * - Rust commands: start_run, send_input, abort_run
+ * - PTY handling for terminal emulation
+ * - Tauri event system for streaming output
  */
 export function createTauriRuntime(): Runtime {
-  // This will be populated when Tauri is integrated
+  // Will be populated when Tauri is integrated:
   // const { invoke } = await import('@tauri-apps/api/core')
   // const { listen } = await import('@tauri-apps/api/event')
 
   const runs = new Map<string, { status: RunStatus; handlers: Set<(event: RunEvent) => void> }>()
 
   return {
-    async start(_issue: number): Promise<RunHandle> {
+    // === Interactive methods ===
+
+    async start(issue: number): Promise<RunHandle> {
       // TODO: invoke('start_run', { issue })
-      throw new Error('TauriRuntime not implemented. Waiting for src-tauri/ setup.')
+      // Returns run ID, spawns Claude Code with PTY
+      // Events streamed via Tauri event system
+      throw new Error(
+        `TauriRuntime.start(${issue}): Not implemented. Requires src-tauri/ setup.`
+      )
     },
 
-    async send(_runId: string, _input: string): Promise<void> {
+    async send(runId: string, _input: string): Promise<void> {
       // TODO: invoke('send_input', { runId, input })
-      throw new Error('TauriRuntime not implemented. Waiting for src-tauri/ setup.')
+      // Writes to PTY stdin
+      throw new Error(
+        `TauriRuntime.send(${runId}): Not implemented. Requires src-tauri/ setup.`
+      )
     },
 
-    async abort(_runId: string): Promise<void> {
+    async abort(runId: string): Promise<void> {
       // TODO: invoke('abort_run', { runId })
-      throw new Error('TauriRuntime not implemented. Waiting for src-tauri/ setup.')
+      // Sends SIGINT to process
+      throw new Error(
+        `TauriRuntime.abort(${runId}): Not implemented. Requires src-tauri/ setup.`
+      )
     },
 
     subscribe(runId: string, handler: (event: RunEvent) => void): () => void {
       // TODO: listen(`run:${runId}`, handler)
+      // Subscribes to Tauri events for this run
       let run = runs.get(runId)
       if (!run) {
         run = { status: 'starting', handlers: new Set() }
@@ -47,6 +70,14 @@ export function createTauriRuntime(): Runtime {
 
     status(runId: string): RunStatus | null {
       return runs.get(runId)?.status ?? null
+    },
+
+    // === Non-interactive: Not supported ===
+
+    async execute(_task: TaskRequest): Promise<TaskResult> {
+      throw new Error(
+        'TauriRuntime does not support non-interactive tasks. Use ApiRuntime.execute() instead.'
+      )
     },
   }
 }
