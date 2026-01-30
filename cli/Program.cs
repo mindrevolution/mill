@@ -9,7 +9,7 @@ using Photino.NET;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 Console.OutputEncoding = Encoding.UTF8;
@@ -18,6 +18,21 @@ Console.OutputEncoding = Encoding.UTF8;
 Installer.CleanupOldBinary();
 
 Out.Banner();
+
+// Handle workbench on STA thread - Photino requires non-async context
+// See: https://github.com/tryphotino/photino.NET/issues/180
+if (args is ["workbench"])
+{
+    var result = 0;
+    var thread = new Thread(() => result = RunWorkbench());
+    if (OperatingSystem.IsWindows())
+    {
+        thread.SetApartmentState(ApartmentState.STA);
+    }
+    thread.Start();
+    thread.Join();
+    return result;
+}
 
 return args switch
 {
@@ -34,7 +49,6 @@ return args switch
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
     ["run"] => Mill.ListAvailableIssues(),
-    ["workbench"] => RunWorkbench(),
     _ => ShowHelp()
 };
 
@@ -46,9 +60,7 @@ static int ShowVersion()
 
 static int RunWorkbench()
 {
-    var useDevServer = Environment.GetEnvironmentVariable("MILL_DEV") == "1";
-    var serverUrl = "http://localhost:5218";
-    var devServerUrl = "http://localhost:5173";
+    var serverUrl = "http://127.0.0.1:5218";
 
     // Find wwwroot directory
     var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? ".";
@@ -65,69 +77,60 @@ static int RunWorkbench()
     }
 
     WebApplication? app = null;
-    Task? serverTask = null;
 
     try
     {
-        if (!useDevServer)
+        // Start embedded web server
+        Out.Step("starting server...");
+
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            // Start embedded web server
-            Out.Step("starting server...");
+            Args = Array.Empty<string>(),
+            WebRootPath = wwwroot
+        });
+        builder.WebHost.UseUrls(serverUrl);
+        builder.Logging.ClearProviders();
+        builder.Services.AddCors();
 
-            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-            {
-                Args = Array.Empty<string>()
-            });
-            builder.WebHost.UseUrls(serverUrl);
+        app = builder.Build();
 
-            // Disable request logging for cleaner output
-            builder.Logging.ClearProviders();
+        app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
-            app = builder.Build();
+        if (Directory.Exists(wwwroot))
+        {
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+            app.MapFallbackToFile("index.html");
+        }
+        else
+        {
+            Out.Warn("wwwroot not found");
+        }
 
-            // CORS for local requests
-            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        // Health endpoint (AOT-compatible: use Dictionary instead of anonymous type)
+        app.MapGet("/api/health", () => Results.Json(new Dictionary<string, string>
+        {
+            ["status"] = "ok",
+            ["version"] = Mill.Version
+        }));
 
-            // Serve static files if wwwroot exists
-            if (Directory.Exists(wwwroot))
-            {
-                var fileProvider = new PhysicalFileProvider(wwwroot);
-                app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
-                app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
-
-                // SPA fallback - serve index.html for non-file routes
-                var indexPath = Path.Combine(wwwroot, "index.html");
-                app.MapFallback(async context =>
-                {
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(await File.ReadAllTextAsync(indexPath));
-                });
-            }
-
-            // Health endpoint
-            app.MapGet("/api/health", () => new { status = "ok", version = Mill.Version });
-
-            // TODO: Add more API endpoints or proxy to Mill.Api
-
-            serverTask = app.RunAsync();
-            Thread.Sleep(500); // Wait for server to start
+        try
+        {
+            app.StartAsync().Wait();
+            Out.Ok("server ready");
+        }
+        catch (Exception ex)
+        {
+            Out.Error($"server failed: {ex.Message}");
+            return 1;
         }
 
         var window = new PhotinoWindow()
             .SetTitle("mill workbench")
             .SetSize(1400, 900)
             .SetResizable(true)
-            .Center();
-
-        if (useDevServer)
-        {
-            Out.Step("connecting to dev server...");
-            window.Load(devServerUrl);
-        }
-        else
-        {
-            window.Load(serverUrl);
-        }
+            .Center()
+            .Load(serverUrl);
 
         window.WaitForClose();
         return 0;
