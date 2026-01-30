@@ -541,7 +541,6 @@ export function ShapeWorkspace() {
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[25, 40, 35]}>
         <Tile
-          title="Specs"
           focused={focusedTile === 'list'}
           onFocus={() => setFocusedTile('list')}
         >
@@ -558,14 +557,12 @@ export function ShapeWorkspace() {
           />
         </Tile>
         <Tile
-          title="Chat"
           focused={focusedTile === 'chat'}
           onFocus={() => setFocusedTile('chat')}
         >
           <SpecChat draft={selectedDraft} sessionId={sessionId} />
         </Tile>
         <Tile
-          title="Spec"
           focused={focusedTile === 'preview'}
           onFocus={() => setFocusedTile('preview')}
         >

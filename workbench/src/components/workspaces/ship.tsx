@@ -491,7 +491,6 @@ export function ShipWorkspace() {
         {/* Top: Active runs */}
         <TileSplit direction="horizontal" sizes={[40, 60]}>
           <Tile
-            title="Runs"
             focused={focusedTile === 'runs'}
             onFocus={() => setFocusedTile('runs')}
           >
@@ -506,7 +505,6 @@ export function ShipWorkspace() {
             />
           </Tile>
           <Tile
-            title="Logs"
             focused={focusedTile === 'logs'}
             onFocus={() => setFocusedTile('logs')}
           >
@@ -517,7 +515,6 @@ export function ShipWorkspace() {
         {/* Bottom: History */}
         <TileSplit direction="horizontal" sizes={[50, 50]}>
           <Tile
-            title="History"
             focused={focusedTile === 'history'}
             onFocus={() => setFocusedTile('history')}
           >
@@ -531,7 +528,6 @@ export function ShipWorkspace() {
             />
           </Tile>
           <Tile
-            title="Detail"
             focused={focusedTile === 'detail'}
             onFocus={() => setFocusedTile('detail')}
           >

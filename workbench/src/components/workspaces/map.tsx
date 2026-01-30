@@ -259,7 +259,6 @@ export function MapWorkspace() {
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[30, 40, 30]}>
         <Tile
-          title="Library"
           focused={focusedTile === 'tree'}
           onFocus={() => setFocusedTile('tree')}
         >
@@ -273,14 +272,12 @@ export function MapWorkspace() {
           />
         </Tile>
         <Tile
-          title="Detail"
           focused={focusedTile === 'detail'}
           onFocus={() => setFocusedTile('detail')}
         >
           <ItemDetail item={selectedItem} />
         </Tile>
         <Tile
-          title="Observations"
           focused={focusedTile === 'observations'}
           onFocus={() => setFocusedTile('observations')}
         >
