@@ -1,7 +1,8 @@
 import type { Runtime } from '@/lib/runtime'
 import type { RunEvent, RunHandle, RunStatus, TaskRequest, TaskResult } from '@/types'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5218'
+// Use relative URLs - works with any port since frontend is served from same origin
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 /**
  * ApiRuntime - Non-interactive Claude Code CLI execution via API.

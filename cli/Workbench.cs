@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json.Serialization;
 using Photino.NET;
 using Microsoft.AspNetCore.Builder;
@@ -15,7 +17,8 @@ static class Workbench
 {
     public static int Run()
     {
-        var serverUrl = "http://127.0.0.1:5218";
+        var port = FindFreePort();
+        var serverUrl = $"http://127.0.0.1:{port}";
         var wwwroot = FindWwwRoot();
 
         WebApplication? app = null;
@@ -111,6 +114,15 @@ static class Workbench
             dir = Directory.GetParent(dir)?.FullName;
         }
         return null;
+    }
+
+    static int FindFreePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
     }
 }
 

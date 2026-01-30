@@ -61,9 +61,9 @@ export function useSpecs() {
   }
 }
 
-// Library hooks
-export function useLibrary(category: string) {
-  return useQuery(() => api.library.list(category), [category])
+// Knowledge hooks
+export function useKnowledge(category: string) {
+  return useQuery(() => api.knowledge.list(category), [category])
 }
 
 // Runs hooks

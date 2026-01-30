@@ -17,14 +17,14 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import type { LibraryCategory, LibraryItem } from '@/types'
+import type { KnowledgeCategory, KnowledgeItem } from '@/types'
 import { Plus, File } from 'lucide-react'
 import { categoryMeta, categoryColors } from './utils'
 
 interface LibraryTreeProps {
-  items: LibraryItem[]
+  items: KnowledgeItem[]
   selectedId?: string
-  onSelect: (item: LibraryItem) => void
+  onSelect: (item: KnowledgeItem) => void
 }
 
 export function LibraryTree({ items, selectedId, onSelect }: LibraryTreeProps) {
@@ -32,7 +32,7 @@ export function LibraryTree({ items, selectedId, onSelect }: LibraryTreeProps) {
     if (!acc[item.category]) acc[item.category] = []
     acc[item.category].push(item)
     return acc
-  }, {} as Record<LibraryCategory, LibraryItem[]>)
+  }, {} as Record<KnowledgeCategory, KnowledgeItem[]>)
 
   return (
     <div className="h-full flex flex-col">
@@ -51,7 +51,7 @@ export function LibraryTree({ items, selectedId, onSelect }: LibraryTreeProps) {
           <CommandList className="h-full">
             <ScrollArea className="h-full">
               <div className="p-2 pb-4 space-y-1">
-                {(Object.keys(categoryMeta) as LibraryCategory[]).map((category, index) => {
+                {(Object.keys(categoryMeta) as KnowledgeCategory[]).map((category, index) => {
                   const meta = categoryMeta[category]
                   const Icon = meta.icon
                   const categoryItems = itemsByCategory[category] || []

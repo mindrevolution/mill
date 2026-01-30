@@ -29,11 +29,11 @@ export interface ChatMessage {
 }
 
 // Map workspace
-export type LibraryCategory = 'personas' | 'standards' | 'concepts' | 'design'
+export type KnowledgeCategory = 'personas' | 'standards' | 'concepts' | 'design'
 
-export interface LibraryItem {
+export interface KnowledgeItem {
   id: string
-  category: LibraryCategory
+  category: KnowledgeCategory
   name: string
   description: string
   file: string
@@ -43,7 +43,7 @@ export interface LibraryItem {
 
 export interface Observation {
   id: string
-  category: LibraryCategory
+  category: KnowledgeCategory
   suggestion: string
   source: string // what triggered this observation
   confidence: number

@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5218'
+// Use relative URLs - works with any port since frontend is served from same origin
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -59,7 +60,7 @@ export interface ChatResponse {
   updatedDraft?: Draft
 }
 
-export interface LibraryItem {
+export interface KnowledgeItem {
   id: string
   category: string
   name: string
@@ -120,11 +121,11 @@ export const api = {
     }),
   },
 
-  // Library
-  library: {
-    list: (category: string) => request<LibraryItem[]>(`/api/library/${category}`),
+  // Knowledge
+  knowledge: {
+    list: (category: string) => request<KnowledgeItem[]>(`/api/knowledge/${category}`),
     get: (category: string, id: string) => request<{ id: string; category: string; content: string }>(
-      `/api/library/${category}/${id}`
+      `/api/knowledge/${category}/${id}`
     ),
   },
 

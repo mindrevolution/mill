@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Tile, TileSplit } from '@/components/layout/tile'
-import type { LibraryItem } from '@/types'
+import type { KnowledgeItem } from '@/types'
 import { LibraryTree } from './library-tree'
 import { ItemDetail } from './item-detail'
 import { ObservationsTray } from './observations-tray'
 import { mockLibrary, mockObservations } from './utils'
 
 export function MapWorkspace() {
-  const [selectedItem, setSelectedItem] = useState<LibraryItem | undefined>()
+  const [selectedItem, setSelectedItem] = useState<KnowledgeItem | undefined>()
   const [focusedTile, setFocusedTile] = useState<'tree' | 'detail' | 'observations'>('tree')
 
   return (

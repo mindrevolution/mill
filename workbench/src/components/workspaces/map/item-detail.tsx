@@ -2,12 +2,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import type { LibraryItem } from '@/types'
+import type { KnowledgeItem } from '@/types'
 import { FolderOpen } from 'lucide-react'
 import { categoryMeta } from './utils'
 
 interface ItemDetailProps {
-  item?: LibraryItem
+  item?: KnowledgeItem
 }
 
 export function ItemDetail({ item }: ItemDetailProps) {

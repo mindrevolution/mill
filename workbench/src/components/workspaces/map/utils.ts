@@ -1,14 +1,14 @@
 import { Users, BookOpen, Lightbulb, Palette } from 'lucide-react'
-import type { LibraryCategory, LibraryItem, Observation } from '@/types'
+import type { KnowledgeCategory, KnowledgeItem, Observation } from '@/types'
 
-export const categoryMeta: Record<LibraryCategory, { label: string; icon: typeof Users; description: string }> = {
+export const categoryMeta: Record<KnowledgeCategory, { label: string; icon: typeof Users; description: string }> = {
   personas: { label: 'Personas', icon: Users, description: 'Who you build for' },
   standards: { label: 'Standards', icon: BookOpen, description: 'How you build' },
   concepts: { label: 'Concepts', icon: Lightbulb, description: 'Domain vocabulary' },
   design: { label: 'Design', icon: Palette, description: 'Visual language' },
 }
 
-export const categoryColors: Record<LibraryCategory, { badge: string; icon: string }> = {
+export const categoryColors: Record<KnowledgeCategory, { badge: string; icon: string }> = {
   personas: { badge: 'bg-blue-500/15 text-blue-400', icon: 'text-blue-400' },
   standards: { badge: 'bg-emerald-500/15 text-emerald-400', icon: 'text-emerald-400' },
   concepts: { badge: 'bg-violet-500/15 text-violet-400', icon: 'text-violet-400' },
@@ -16,7 +16,7 @@ export const categoryColors: Record<LibraryCategory, { badge: string; icon: stri
 }
 
 // Mock data - will be replaced with API calls
-export const mockLibrary: LibraryItem[] = [
+export const mockLibrary: KnowledgeItem[] = [
   { id: '1', category: 'personas', name: 'Mobile User', description: 'Users primarily on mobile devices, often with spotty connectivity', file: 'mobile-user.md', createdAt: '2024-01-15', updatedAt: '2024-01-20' },
   { id: '2', category: 'personas', name: 'Power User', description: 'Technical users who want keyboard shortcuts and advanced features', file: 'power-user.md', createdAt: '2024-01-10', updatedAt: '2024-01-10' },
   { id: '3', category: 'standards', name: 'Async I/O', description: 'Use async/await for all I/O operations', file: 'async-io.md', createdAt: '2024-01-12', updatedAt: '2024-01-12' },
