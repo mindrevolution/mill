@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
-import { PenTool, Map, Rocket, Settings, Bell } from 'lucide-react'
+import { PenTool, Map, Rocket, Settings, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TopBarProps {
@@ -10,6 +10,7 @@ interface TopBarProps {
   onProjectSwitch?: () => void
   onSettings?: () => void
   activeRuns?: number
+  openObservations?: number
 }
 
 const workspaces: { id: Workspace; label: string; icon: typeof PenTool; key: string }[] = [
@@ -25,6 +26,7 @@ export function TopBar({
   onProjectSwitch,
   onSettings,
   activeRuns = 0,
+  openObservations = 0,
 }: TopBarProps) {
   return (
     <div className="flex items-center h-12 bg-background border-b px-3 gap-4">
@@ -72,10 +74,17 @@ export function TopBar({
           </div>
         )}
 
-        {/* Notifications */}
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <Bell className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        {/* Observations indicator */}
+        {openObservations > 0 && (
+          <button
+            onClick={() => onSwitch('map')}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors text-sm"
+            title="Open observations - click to view in Map"
+          >
+            <Lightbulb className="h-3.5 w-3.5 text-primary" />
+            <span className="text-primary">{openObservations}</span>
+          </button>
+        )}
 
         {/* Settings */}
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onSettings}>

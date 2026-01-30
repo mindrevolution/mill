@@ -37,6 +37,7 @@ function App() {
         onProjectSwitch={handleProjectSwitch}
         onSettings={handleSettings}
         activeRuns={0}
+        openObservations={3}
       />
 
       {/* Workspace content */}
