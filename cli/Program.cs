@@ -5,30 +5,20 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Photino.NET;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-// Clean up old binary from previous install/update (silent, on every run)
 Installer.CleanupOldBinary();
-
 Out.Banner();
 
-// Handle workbench on STA thread - Photino requires non-async context
+// Workbench requires STA thread (Photino/WebView2 quirk)
 // See: https://github.com/tryphotino/photino.NET/issues/180
 if (args is ["workbench"])
 {
     var result = 0;
-    var thread = new Thread(() => result = RunWorkbench());
+    var thread = new Thread(() => result = Workbench.Run());
     if (OperatingSystem.IsWindows())
-    {
         thread.SetApartmentState(ApartmentState.STA);
-    }
     thread.Start();
     thread.Join();
     return result;
@@ -36,9 +26,9 @@ if (args is ["workbench"])
 
 return args switch
 {
-    ["--version"] or ["-v"] => ShowVersion(),
-    ["install", "--check"] => await RunInstallCheck(),
-    ["install"] => await RunInstall(),
+    ["--version"] or ["-v"] => Commands.ShowVersion(),
+    ["install", "--check"] => await Commands.InstallCheck(),
+    ["install"] => await Commands.Install(),
     ["init"] => await Mill.Init(),
     ["spec", var issue] when int.TryParse(issue, out _) => await Mill.RunSpecRefine(issue),
     ["spec", ..] => await Mill.RunSpec(),
@@ -49,247 +39,12 @@ return args switch
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
     ["run"] => Mill.ListAvailableIssues(),
-    _ => ShowHelp()
+    _ => Commands.ShowHelp()
 };
 
-static int ShowVersion()
-{
-    Console.WriteLine($"mill {Mill.Version}");
-    return 0;
-}
-
-static int RunWorkbench()
-{
-    var serverUrl = "http://127.0.0.1:5218";
-
-    // Find wwwroot directory
-    var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? ".";
-    var wwwroot = Path.Combine(exeDir, "wwwroot");
-
-    if (!Directory.Exists(wwwroot))
-    {
-        // Try repo location during development
-        var repoRoot = FindRepoRoot();
-        if (repoRoot != null)
-        {
-            wwwroot = Path.Combine(repoRoot, "workbench", "dist");
-        }
-    }
-
-    WebApplication? app = null;
-
-    try
-    {
-        // Start embedded web server
-        Out.Step("starting server...");
-
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-        {
-            Args = Array.Empty<string>(),
-            WebRootPath = wwwroot
-        });
-        builder.WebHost.UseUrls(serverUrl);
-        builder.Logging.ClearProviders();
-        builder.Services.AddCors();
-
-        app = builder.Build();
-
-        app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
-
-        if (Directory.Exists(wwwroot))
-        {
-            app.UseDefaultFiles();
-            app.UseStaticFiles();
-            app.MapFallbackToFile("index.html");
-        }
-        else
-        {
-            Out.Warn("wwwroot not found");
-        }
-
-        // Health endpoint (AOT-compatible: use Dictionary instead of anonymous type)
-        app.MapGet("/api/health", () => Results.Json(new Dictionary<string, string>
-        {
-            ["status"] = "ok",
-            ["version"] = Mill.Version
-        }));
-
-        try
-        {
-            app.StartAsync().Wait();
-            Out.Ok("server ready");
-        }
-        catch (Exception ex)
-        {
-            Out.Error($"server failed: {ex.Message}");
-            return 1;
-        }
-
-        var window = new PhotinoWindow()
-            .SetTitle("mill workbench")
-            .SetSize(1400, 900)
-            .SetResizable(true)
-            .Center()
-            .Load(serverUrl);
-
-        window.WaitForClose();
-        return 0;
-    }
-    finally
-    {
-        app?.StopAsync().Wait();
-    }
-}
-
-static string? FindRepoRoot()
-{
-    var dir = Directory.GetCurrentDirectory();
-    while (dir != null)
-    {
-        if (Directory.Exists(Path.Combine(dir, ".git")))
-            return dir;
-        dir = Directory.GetParent(dir)?.FullName;
-    }
-    return null;
-}
-
-static async Task<int> RunInstallCheck()
-{
-    var check = await Installer.Check();
-
-    Console.WriteLine($"  version: {check.Current}");
-    Console.WriteLine($"  mode:    {(check.Mode == InstallMode.Install ? "install" : "update")}");
-
-    if (check.Mode == InstallMode.Install)
-    {
-        // Install mode: show what would happen
-        if (check.InstalledVersion != null)
-        {
-            Console.WriteLine($"  installed: {check.InstalledVersion}");
-            if (check.IsDowngrade)
-            {
-                Out.Blank();
-                Out.Warn($"would downgrade from {check.InstalledVersion} to {check.Current}");
-            }
-        }
-        Out.Blank();
-        Out.Ok("ready to install");
-        Out.Detail($"binary: {Installer.GetBinaryPath()}");
-        Out.Detail($"data: {Installer.GetDataPath()}");
-    }
-    else
-    {
-        // Update mode: check for updates
-        if (check.Error != null)
-        {
-            Out.Error($"failed to check: {check.Error}");
-            return 1;
-        }
-
-        Console.WriteLine($"  latest:  {check.Latest}");
-        Out.Blank();
-
-        if (check.UpdateAvailable)
-            Console.WriteLine("  run `mill install` to update");
-        else
-            Out.Ok("already at latest");
-    }
-
-    return 0;
-}
-
-static async Task<int> RunInstall()
-{
-    var check = await Installer.Check();
-
-    Console.WriteLine($"  version: {check.Current}");
-    Console.WriteLine($"  mode:    {(check.Mode == InstallMode.Install ? "install" : "update")}");
-
-    if (check.Mode == InstallMode.Install)
-    {
-        // Install mode: copy binary and prompts to system locations
-        if (check.InstalledVersion != null)
-        {
-            Console.WriteLine($"  installed: {check.InstalledVersion}");
-            if (check.IsDowngrade && !Out.Confirm("downgrade?"))
-            {
-                Out.Warn("aborted");
-                return 0;
-            }
-        }
-        Out.Blank();
-
-        var (success, message) = Installer.CopyToSystem();
-        if (success)
-        {
-            Out.Ok(message);
-
-            if (!Installer.IsInPath())
-            {
-                Out.Blank();
-                Out.Warn("not in PATH");
-                Out.Detail(Installer.GetPathInstructions());
-            }
-            return 0;
-        }
-        else
-        {
-            Out.Error(message);
-            return 1;
-        }
-    }
-    else
-    {
-        // Update mode: download latest from GitHub
-        if (check.Error != null)
-        {
-            Out.Error($"failed to check: {check.Error}");
-            return 1;
-        }
-
-        if (!check.UpdateAvailable)
-        {
-            Out.Blank();
-            Out.Ok($"already at latest ({check.Current})");
-            return 0;
-        }
-
-        Console.WriteLine($"  latest:  {check.Latest}");
-        Out.Blank();
-
-        var (success, message) = await Installer.Update();
-        if (success)
-        {
-            Out.Ok(message);
-            return 0;
-        }
-        else
-        {
-            Out.Error(message);
-            return 1;
-        }
-    }
-}
-
-static int ShowHelp()
-{
-    Console.WriteLine("""
-        usage:
-          mill init               initialize repo for MILL
-          mill spec               create specification → GitHub issue
-          mill spec <number>      refine existing spec against codebase
-          mill personas           create or update user personas
-          mill standards          infer or update codebase standards
-
-          mill run                list available issues
-          mill run --auto         autopick best issue
-          mill run <number>       execute work loop on issue
-
-          mill install            install or update mill
-          mill --version          show version
-        """);
-    return 0;
-}
+// ============================================================================
+// Supporting classes below - to be refactored into separate files over time
+// ============================================================================
 
 /// <summary>
 /// Standardized console output helpers. Minimal, uniform, hacker style.
