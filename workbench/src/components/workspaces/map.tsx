@@ -218,14 +218,20 @@ function ItemDetail({ item }: { item?: LibraryItem }) {
 
 // Confidence indicator component - thin progress bar
 function ConfidenceBar({ confidence }: { confidence: number }) {
+  const percent = Math.round(confidence * 100)
   return (
     <div
+      role="meter"
+      aria-label="Confidence"
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
       className="w-8 h-1 rounded-full bg-muted-foreground/20 overflow-hidden"
-      title={`${Math.round(confidence * 100)}% confidence`}
+      title={`${percent}% confidence`}
     >
       <div
         className="h-full bg-muted-foreground/60 rounded-full transition-all"
-        style={{ width: `${confidence * 100}%` }}
+        style={{ width: `${percent}%` }}
       />
     </div>
   )
