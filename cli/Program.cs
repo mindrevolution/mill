@@ -311,7 +311,7 @@ static partial class Mill
 
     // Parent .mill/ paths - project-level, inherited by worktrees
     static string ParentMillDir => Path.Combine(ParentGitRoot, ".mill");
-    static string ConfigFile => Path.Combine(ParentMillDir, "config.json");
+    static string ConfigFile => Path.Combine(ParentMillDir, "project.json");
     static string StandardsDir => Path.Combine(ParentMillDir, "standards");
     static string DraftsDir => Path.Combine(ParentMillDir, "drafts");
 

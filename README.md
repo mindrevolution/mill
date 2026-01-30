@@ -82,7 +82,7 @@ Regardless of autonomy level, humans drive product direction — deciding *what*
 
 ```
 .mill/
-├── config.json      # scoring, excludes
+├── project.json     # scoring, excludes, context
 ├── context.md       # auto-generated
 ├── personas.md      # user personas (optional)
 ├── memory/          # learnings

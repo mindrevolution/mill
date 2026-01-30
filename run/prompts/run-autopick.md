@@ -4,7 +4,7 @@ Select the highest-value issue based on project health and priorities.
 
 ## Inputs
 
-- `{{CONFIG}}` — MILL configuration JSON (`.mill/config.json`)
+- `{{CONFIG}}` — MILL configuration JSON (`.mill/project.json`)
 - `{{OPEN_ISSUES}}` — Open issues JSON
 
 ## Workflow

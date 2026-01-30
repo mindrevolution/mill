@@ -36,7 +36,7 @@ mill/
 └── README.md
 
 .mill/                      # Target repo's MILL folder
-├── config.json             # Project configuration (scoring, excludes)
+├── project.json            # Project configuration (scoring, excludes, context)
 ├── context.md              # Auto-generated project context
 ├── memory/                 # Machine-generated learnings
 │   └── project.md

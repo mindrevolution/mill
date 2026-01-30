@@ -7,7 +7,7 @@ Analyze this codebase against its standards and surface findings for potential c
 ## Context
 
 - **Standards:** `.mill/standards/code.md` (loaded below)
-- **Config:** `.mill/config.json` (source filtering)
+- **Config:** `.mill/project.json` (source filtering)
 - **Project:** `.mill/context.md` (codebase overview)
 
 ## Standards to Check Against
