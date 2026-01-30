@@ -14,6 +14,13 @@ Execute ONE slice against the spec. Honor standards and Loop Contract.
 3. Read `.mill/standards/` and architecture docs
 4. Verify Loop Contract present (stop if missing)
 
+### Cleanup/Removal Tasks
+
+For specs that involve removing files or cleaning up resources:
+- **Check filesystem first** — use `ls`, `test -f`, or Read tool to verify files exist
+- Don't rely solely on git history — files may be untracked or already deleted
+- If the target doesn't exist → `MILL_ABORT: file/resource not found`
+
 ---
 
 ## Slicing (MANDATORY)
@@ -141,6 +148,17 @@ MILL_VERIFY
 }
 ```
 
-**Blocked:** report error, prompt user for help
+**Spec is invalid or impossible:**
+```
+MILL_ABORT: <reason the spec cannot be implemented>
+```
+
+Use MILL_ABORT when:
+- Referenced files/resources don't exist
+- Requirements are contradictory
+- Spec describes already-completed work
+- External dependencies are unavailable
+
+The CLI will close the issue automatically with your reason.
 
 Do NOT output `MILL_DONE` — only the verify step can authorize completion.

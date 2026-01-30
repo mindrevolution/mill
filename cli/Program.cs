@@ -1899,6 +1899,28 @@ static partial class Mill
                     continue;
                 }
 
+                if (output.Contains("MILL_ABORT"))
+                {
+                    // Spec is invalid or impossible - abort cleanly
+                    var abortReason = ExtractAbortReason(output);
+                    Out.Blank();
+                    Out.Warn("spec aborted");
+                    if (abortReason != null)
+                        Out.Detail(abortReason);
+
+                    if (isGhIssue)
+                    {
+                        // Add comment explaining why and close the issue
+                        var comment = $"🤖 **MILL_ABORT**: {abortReason ?? "Spec is invalid or impossible to implement."}";
+                        Gh("issue", "comment", issueNumber, "--body", comment);
+                        Gh("issue", "close", issueNumber, "--reason", "not planned");
+                        Out.Ok($"issue #{issueNumber} closed");
+                    }
+
+                    result = 0; // Clean exit - abort is not an error
+                    break;
+                }
+
                 if (output.Contains(verifyToken))
                 {
                     // Parse metadata from MILL_VERIFY output
@@ -1942,7 +1964,7 @@ static partial class Mill
                 {
                     // No recognized signal - warn and continue
                     Out.Blank();
-                    Out.Warn("no signal (expected MILL_CONTINUE or MILL_VERIFY)");
+                    Out.Warn("no signal (expected MILL_CONTINUE, MILL_VERIFY, or MILL_ABORT)");
                     continue;
                 }
             }
@@ -2866,6 +2888,28 @@ static partial class Mill
 
     [GeneratedRegex(@"Next slice:\s*(.+)", RegexOptions.IgnoreCase)]
     private static partial Regex NextSlicePattern();
+
+    static string? ExtractAbortReason(string output)
+    {
+        // Look for "MILL_ABORT" followed by reason text
+        // Format: MILL_ABORT\n\n<reason> or MILL_ABORT: <reason>
+        var abortIndex = output.IndexOf("MILL_ABORT");
+        if (abortIndex < 0) return null;
+
+        var afterToken = output[(abortIndex + "MILL_ABORT".Length)..].TrimStart();
+
+        // Check for colon format: MILL_ABORT: reason
+        if (afterToken.StartsWith(':'))
+        {
+            var colonReason = afterToken[1..].Trim();
+            var endOfLine = colonReason.IndexOf('\n');
+            return endOfLine > 0 ? colonReason[..endOfLine].Trim() : colonReason;
+        }
+
+        // Otherwise take the next non-empty line as the reason
+        var lines = afterToken.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length > 0 ? lines[0].Trim() : null;
+    }
 
     static string FindMillHome()
     {
