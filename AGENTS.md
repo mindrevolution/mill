@@ -4,6 +4,8 @@ Turning intent into verified deliverables, continuously.
 
 > **Branding:** Always "mill" in lowercase. Never "MILL" or "Mill".
 
+> **Focus:** The Tauri desktop app is the primary target. Web/container deployment will come later.
+
 ## Overview
 
 mill is a specification-first delivery system with two main workflows:
@@ -17,6 +19,10 @@ mill is a specification-first delivery system with two main workflows:
 mill/
 ├── cli/                    # .NET CLI source
 │   └── Program.cs
+├── api/                    # ASP.NET Minimal API (backend for UI)
+│   └── Mill.Api/
+├── workbench/              # React + Tauri UI
+│   └── src/
 ├── bin/                    # Published binary
 │   └── mill
 ├── spec/                   # Spec creation (prompts + templates)
