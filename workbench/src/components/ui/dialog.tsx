@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { dialogOverlayVariants, dialogContentVariants } from './variants'
 
 const Dialog = DialogPrimitive.Root
 const DialogTrigger = DialogPrimitive.Trigger
@@ -14,10 +15,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn(
-      'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm',
-      className
-    )}
+    className={cn(dialogOverlayVariants(), className)}
     {...props}
   />
 ))
@@ -31,10 +29,7 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg',
-        className
-      )}
+      className={cn(dialogContentVariants(), className)}
       {...props}
     >
       {children}

@@ -42,6 +42,15 @@ export const commandItemVariants = cva(
   'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-secondary aria-selected:text-secondary-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
 )
 
+// Dialog
+export const dialogOverlayVariants = cva(
+  'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm'
+)
+
+export const dialogContentVariants = cva(
+  'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg'
+)
+
 // Button
 export const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
