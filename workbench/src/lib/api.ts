@@ -40,6 +40,7 @@ export interface IssueDetail {
   number: number
   title: string
   body: string
+  bodyHtml: string
   type: 'feature' | 'bug' | 'security' | 'task'
   status: 'open' | 'closed'
   persona?: string

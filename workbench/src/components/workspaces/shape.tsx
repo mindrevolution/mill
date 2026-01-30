@@ -389,13 +389,16 @@ function SpecPreview({
             )}
 
             {/* Body */}
-            <div className="prose prose-sm prose-invert max-w-none">
-              <div className="text-sm text-foreground whitespace-pre-wrap">
-                {issueDetail.body || (
-                  <span className="text-muted-foreground italic">No description provided</span>
-                )}
+            {issueDetail.bodyHtml ? (
+              <div
+                className="prose prose-sm prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: issueDetail.bodyHtml }}
+              />
+            ) : (
+              <div className="text-sm text-muted-foreground italic">
+                No description provided
               </div>
-            </div>
+            )}
 
             {/* Meta */}
             <div className="text-xs text-muted-foreground pt-2 border-t">
@@ -562,7 +565,7 @@ export function ShapeWorkspace() {
           <SpecChat draft={selectedDraft} sessionId={sessionId} />
         </Tile>
         <Tile
-          title="Preview"
+          title="Spec"
           focused={focusedTile === 'preview'}
           onFocus={() => setFocusedTile('preview')}
         >

@@ -1,6 +1,6 @@
 import './index.css'
 import { useState, useCallback } from 'react'
-import { WorkspaceNav } from '@/components/layout/workspace-nav'
+import { TopBar } from '@/components/layout/top-bar'
 import { ShapeWorkspace } from '@/components/workspaces/shape'
 import { MapWorkspace } from '@/components/workspaces/map'
 import { ShipWorkspace } from '@/components/workspaces/ship'
@@ -28,18 +28,19 @@ function App() {
   }, [])
 
   return (
-    <div className="h-screen flex bg-background text-foreground overflow-hidden">
-      {/* Workspace navigation */}
-      <WorkspaceNav
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+      {/* Top bar with workspace tabs */}
+      <TopBar
         active={activeWorkspace}
         onSwitch={setActiveWorkspace}
         projectName={projectName}
         onProjectSwitch={handleProjectSwitch}
         onSettings={handleSettings}
+        activeRuns={0}
       />
 
       {/* Workspace content */}
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-h-0">
         {activeWorkspace === 'shape' && <ShapeWorkspace />}
         {activeWorkspace === 'map' && <MapWorkspace />}
         {activeWorkspace === 'ship' && <ShipWorkspace />}
