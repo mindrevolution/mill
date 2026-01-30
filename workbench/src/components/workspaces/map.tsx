@@ -45,6 +45,14 @@ const mockObservations: Observation[] = [
   { id: '3', category: 'concepts', suggestion: 'Tournament — appears in match-related specs', source: 'spec:tournaments, spec:rankings', confidence: 0.68, createdAt: '2 days ago' },
 ]
 
+// Category colors
+const categoryColors: Record<LibraryCategory, { badge: string; icon: string }> = {
+  personas: { badge: 'bg-blue-500/15 text-blue-400', icon: 'text-blue-400' },
+  standards: { badge: 'bg-emerald-500/15 text-emerald-400', icon: 'text-emerald-400' },
+  concepts: { badge: 'bg-violet-500/15 text-violet-400', icon: 'text-violet-400' },
+  design: { badge: 'bg-pink-500/15 text-pink-400', icon: 'text-pink-400' },
+}
+
 function LibraryTree({
   items,
   selectedId,
@@ -103,7 +111,7 @@ function LibraryTree({
                       isExpanded && 'rotate-90'
                     )}
                   />
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <Icon className={cn('h-4 w-4', categoryColors[category].icon)} />
                   <span className="text-sm font-medium flex-1 text-left">{meta.label}</span>
                   <span className="text-xs text-muted-foreground">{categoryItems.length}</span>
                 </button>
@@ -189,6 +197,35 @@ function ItemDetail({ item }: { item?: LibraryItem }) {
   )
 }
 
+// Confidence indicator component - thin progress bar
+function ConfidenceBar({ confidence }: { confidence: number }) {
+  return (
+    <div
+      className="w-8 h-1 rounded-full bg-muted-foreground/20 overflow-hidden"
+      title={`${Math.round(confidence * 100)}% confidence`}
+    >
+      <div
+        className="h-full bg-muted-foreground/60 rounded-full transition-all"
+        style={{ width: `${confidence * 100}%` }}
+      />
+    </div>
+  )
+}
+
+// Parse suggestion into title and detail
+function parseSuggestion(suggestion: string): { title: string; detail: string } {
+  const parts = suggestion.split(' — ')
+  return {
+    title: parts[0],
+    detail: parts[1] || '',
+  }
+}
+
+// Count sources from comma-separated string
+function parseSourceCount(source: string): number {
+  return source.split(',').length
+}
+
 function ObservationsTray({ observations }: { observations: Observation[] }) {
   if (observations.length === 0) {
     return (
@@ -201,6 +238,9 @@ function ObservationsTray({ observations }: { observations: Observation[] }) {
       </div>
     )
   }
+
+  // Sort by confidence (highest first)
+  const sorted = [...observations].sort((a, b) => b.confidence - a.confidence)
 
   return (
     <div className="h-full flex flex-col">
@@ -216,34 +256,79 @@ function ObservationsTray({ observations }: { observations: Observation[] }) {
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
-          {observations.map((obs) => {
+          {sorted.map((obs, index) => {
             const meta = categoryMeta[obs.category]
-            const Icon = meta.icon
+            const { title, detail } = parseSuggestion(obs.suggestion)
+            const sourceCount = parseSourceCount(obs.source)
+            const isTop = index === 0
 
             return (
               <div
                 key={obs.id}
-                className="p-3 rounded-lg border bg-card hover:border-primary/50 transition-colors"
+                className={cn(
+                  'group p-3 rounded-lg border bg-card transition-colors',
+                  isTop
+                    ? 'border-primary/40 hover:border-primary/60'
+                    : 'hover:border-muted-foreground/40'
+                )}
               >
-                <div className="flex items-start gap-2 mb-2">
-                  <Icon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">{obs.suggestion}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      from {obs.source} · {obs.createdAt}
-                    </p>
-                  </div>
+                {/* Header: Category badge + Confidence */}
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className={cn(
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded',
+                      categoryColors[obs.category].badge
+                    )}
+                  >
+                    {meta.label}
+                  </span>
+                  <ConfidenceBar confidence={obs.confidence} />
                 </div>
-                <div className="flex items-center gap-1 mt-2">
-                  <Button size="sm" variant="outline" className="h-6 w-6 p-0" title="Add to library">
-                    <Check className="h-3 w-3" />
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Dismiss">
-                    <X className="h-3 w-3" />
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground" title="Never suggest again">
-                    <Ban className="h-3 w-3" />
-                  </Button>
+
+                {/* Title */}
+                <p className="text-sm font-medium">{title}</p>
+
+                {/* Detail (if exists) */}
+                {detail && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>
+                )}
+
+                {/* Footer: Source + Time + Actions */}
+                <div className="flex items-center justify-between mt-3">
+                  <p
+                    className="text-[10px] text-muted-foreground"
+                    title={obs.source}
+                  >
+                    {sourceCount} {sourceCount === 1 ? 'source' : 'sources'} · {obs.createdAt}
+                  </p>
+
+                  {/* Actions - subtle until hover */}
+                  <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs hover:bg-primary/20 hover:text-primary"
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-muted-foreground"
+                      title="Dismiss"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-muted-foreground/60"
+                      title="Never suggest again"
+                    >
+                      <Ban className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )

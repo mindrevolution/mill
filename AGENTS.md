@@ -196,3 +196,35 @@ Example output:
   ▲ context stale
     ↳ uncommitted changes read on demand
 ```
+
+## Workbench UI
+
+### Library Categories
+
+The library organizes project knowledge into four categories. Each has a consistent color used across the UI (badges, icons, accents).
+
+| Category | Color | Tailwind | Purpose |
+|----------|-------|----------|---------|
+| **Personas** | Blue | `blue-400`, `blue-500/15` | Who you build for |
+| **Standards** | Emerald | `emerald-400`, `emerald-500/15` | How you build |
+| **Concepts** | Violet | `violet-400`, `violet-500/15` | Domain vocabulary |
+| **Design** | Pink | `pink-400`, `pink-500/15` | Visual language |
+
+Usage pattern for badges:
+```tsx
+const categoryColors: Record<LibraryCategory, string> = {
+  personas: 'bg-blue-500/15 text-blue-400',
+  standards: 'bg-emerald-500/15 text-emerald-400',
+  concepts: 'bg-violet-500/15 text-violet-400',
+  design: 'bg-pink-500/15 text-pink-400',
+}
+```
+
+### Accent Color
+
+Primary accent is `#ffcc00` (yellow). Use sparingly for:
+- Active/selected states
+- Primary actions
+- Key indicators (e.g., observations count in top bar)
+
+Avoid overusing accent color — it should draw attention to what matters.
