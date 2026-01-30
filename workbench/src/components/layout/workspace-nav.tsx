@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils'
-import { Tooltip } from '@/components/ui/tooltip'
 import type { Workspace } from '@/types'
 import { PenTool, Map, Rocket, Settings } from 'lucide-react'
 
@@ -25,48 +24,47 @@ export function WorkspaceNav({
   onSettings,
 }: WorkspaceNavProps) {
   return (
-    <div className="flex flex-col h-full w-14 bg-background border-r items-center py-3 gap-1">
+    <div className="flex flex-col h-full w-36 bg-background border-r py-3 px-2 gap-1">
       {/* Project indicator */}
-      <Tooltip content={`${projectName} (⌘O)`} side="right">
-        <button
-          onClick={onProjectSwitch}
-          className="w-9 h-9 rounded-md bg-primary flex items-center justify-center mb-4 hover:opacity-90 transition-opacity"
-        >
-          <span className="text-primary-foreground font-semibold text-sm">
-            {projectName.charAt(0).toLowerCase()}
-          </span>
-        </button>
-      </Tooltip>
+      <button
+        onClick={onProjectSwitch}
+        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/50 transition-colors mb-3"
+      >
+        <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+          <div className="w-2 h-2 rounded-sm bg-primary" />
+        </div>
+        <span className="text-sm font-medium truncate">{projectName}</span>
+      </button>
 
       {/* Workspace tabs */}
-      <nav className="flex flex-col gap-1 flex-1">
+      <nav className="flex flex-col gap-0.5 flex-1">
         {workspaces.map(({ id, label, icon: Icon, key }) => (
-          <Tooltip key={id} content={`${label} (${key})`} side="right">
-            <button
-              onClick={() => onSwitch(id)}
-              className={cn(
-                'w-9 h-9 rounded-md flex items-center justify-center transition-colors',
-                active === id
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              )}
-            >
-              <Icon className="h-4 w-4" />
-            </button>
-          </Tooltip>
+          <button
+            key={id}
+            onClick={() => onSwitch(id)}
+            className={cn(
+              'flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-left',
+              active === id
+                ? 'bg-secondary text-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            )}
+          >
+            <Icon className="h-4 w-4 flex-shrink-0" />
+            <span className="text-sm">{label}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{key}</span>
+          </button>
         ))}
       </nav>
 
       {/* Bottom actions */}
-      <div className="flex flex-col gap-1">
-        <Tooltip content="Settings" side="right">
-          <button
-            onClick={onSettings}
-            className="w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-        </Tooltip>
+      <div className="flex flex-col gap-0.5">
+        <button
+          onClick={onSettings}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+        >
+          <Settings className="h-4 w-4 flex-shrink-0" />
+          <span className="text-sm">Settings</span>
+        </button>
       </div>
     </div>
   )
