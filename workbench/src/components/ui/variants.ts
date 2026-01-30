@@ -1,5 +1,20 @@
 import { cva } from 'class-variance-authority'
 
+/**
+ * Centralized component variants using CVA (class-variance-authority)
+ *
+ * Usage:
+ *   import { buttonVariants } from './variants'
+ *   <button className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), className)} />
+ *
+ * Responsive variants (when needed):
+ *   For responsive sizing, compose with Tailwind directly:
+ *   <Button className="h-8 md:h-9 lg:h-10" />
+ *
+ *   Or create responsive helper:
+ *   const responsiveSize = { sm: 'h-8 px-3', md: 'md:h-9 md:px-4', lg: 'lg:h-10 lg:px-6' }
+ */
+
 // Input
 export const inputVariants = cva(
   'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
