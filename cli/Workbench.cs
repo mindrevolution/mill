@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
 using Photino.NET;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MillApi;
 
 /// <summary>
 /// Photino workbench window with embedded web server.
@@ -28,8 +30,9 @@ static class Workbench
                 WebRootPath = wwwroot
             });
             builder.WebHost.UseUrls(serverUrl);
-            builder.Logging.ClearProviders();
+            builder.Logging.SetMinimumLevel(LogLevel.Warning);
             builder.Services.AddCors();
+            builder.Services.AddMillApi();
 
             app = builder.Build();
 
@@ -46,12 +49,11 @@ static class Workbench
                 Out.Warn("wwwroot not found");
             }
 
-            // Health endpoint (AOT-compatible: use Dictionary instead of anonymous type)
-            app.MapGet("/api/health", () => Results.Json(new Dictionary<string, string>
-            {
-                ["status"] = "ok",
-                ["version"] = Mill.Version
-            }));
+            // Health endpoint
+            app.MapGet("/api/health", () =>
+                Results.Json(new HealthResponse("ok", Mill.Version), WorkbenchJsonContext.Default.HealthResponse));
+
+            app.MapMillApi();
 
             try
             {
@@ -111,3 +113,12 @@ static class Workbench
         return null;
     }
 }
+
+// AOT-compatible types for workbench API
+record HealthResponse(
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("version")] string Version);
+
+[JsonSerializable(typeof(HealthResponse))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+partial class WorkbenchJsonContext : JsonSerializerContext { }

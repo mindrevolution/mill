@@ -9,7 +9,10 @@
     <Nullable>enable</Nullable>
     <Version>0.3.0-alpha</Version>
 
-    <!-- AOT -->
+  </PropertyGroup>
+
+  <!-- AOT only for Release builds -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <StripSymbols>true</StripSymbols>
@@ -18,6 +21,10 @@
   <ItemGroup>
     <PackageReference Include="Photino.NET" Version="3.2.3" />
     <PackageReference Include="Markdig" Version="0.44.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\api\Mill.Api.csproj" />
   </ItemGroup>
 
   <!-- ASP.NET Core for embedded web server -->
