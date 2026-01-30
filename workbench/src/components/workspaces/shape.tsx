@@ -22,6 +22,10 @@ import {
   AlertCircle,
   RotateCcw,
   RefreshCw,
+  Play,
+  Pencil,
+  ExternalLink,
+  MoreHorizontal,
 } from 'lucide-react'
 
 const typeIcons = {
@@ -36,6 +40,49 @@ const typeColors = {
   bug: 'text-red-400',
   security: 'text-yellow-400',
   task: 'text-muted-foreground',
+}
+
+function FloatingActionBar({ issueNumber }: { issueNumber: number }) {
+  return (
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+      <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-card/80 backdrop-blur-md border shadow-lg">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+          title="Start Run"
+        >
+          <Play className="h-4 w-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          title="Edit Issue"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          title="Open in Browser"
+          onClick={() => window.open(`https://github.com/mindrevolution/mill/issues/${issueNumber}`, '_blank')}
+        >
+          <ExternalLink className="h-4 w-4" />
+        </Button>
+        <div className="w-px h-4 bg-border mx-1" />
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          title="More Actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 function formatDate(dateStr: string): string {
@@ -313,53 +360,53 @@ function SpecPreview({
     const color = typeColors[issueDetail.type] || 'text-muted-foreground'
 
     return (
-      <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
-          {/* Header */}
-          <div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Icon className={cn('h-3 w-3', color)} />
-              <span>#{issueDetail.number}</span>
-              <Badge variant="secondary">{issueDetail.type}</Badge>
-              <Badge variant={issueDetail.status === 'open' ? 'default' : 'secondary'}>
-                {issueDetail.status}
-              </Badge>
-              {issueDetail.persona && <span>· {issueDetail.persona}</span>}
-            </div>
-            <h2 className="text-lg font-semibold">{issueDetail.title}</h2>
-          </div>
-
-          {/* Labels */}
-          {issueDetail.labels.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {issueDetail.labels.map((label) => (
-                <Badge key={label} variant="outline" className="text-xs">
-                  {label}
+      <div className="h-full relative">
+        <ScrollArea className="h-full">
+          <div className="p-4 pb-16 space-y-4">
+            {/* Header */}
+            <div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Icon className={cn('h-3 w-3', color)} />
+                <span>#{issueDetail.number}</span>
+                <Badge variant="secondary">{issueDetail.type}</Badge>
+                <Badge variant={issueDetail.status === 'open' ? 'default' : 'secondary'}>
+                  {issueDetail.status}
                 </Badge>
-              ))}
+                {issueDetail.persona && <span>· {issueDetail.persona}</span>}
+              </div>
+              <h2 className="text-lg font-semibold">{issueDetail.title}</h2>
             </div>
-          )}
 
-          {/* Body */}
-          <div className="prose prose-sm prose-invert max-w-none">
-            <div className="text-sm text-foreground whitespace-pre-wrap">
-              {issueDetail.body || (
-                <span className="text-muted-foreground italic">No description provided</span>
-              )}
+            {/* Labels */}
+            {issueDetail.labels.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {issueDetail.labels.map((label) => (
+                  <Badge key={label} variant="outline" className="text-xs">
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Body */}
+            <div className="prose prose-sm prose-invert max-w-none">
+              <div className="text-sm text-foreground whitespace-pre-wrap">
+                {issueDetail.body || (
+                  <span className="text-muted-foreground italic">No description provided</span>
+                )}
+              </div>
+            </div>
+
+            {/* Meta */}
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              Created {formatDate(issueDetail.createdAt)}
             </div>
           </div>
+        </ScrollArea>
 
-          {/* Meta */}
-          <div className="text-xs text-muted-foreground pt-2 border-t">
-            Created {formatDate(issueDetail.createdAt)}
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button className="flex-1">Start Run</Button>
-          </div>
-        </div>
-      </ScrollArea>
+        {/* Floating Action Bar */}
+        <FloatingActionBar issueNumber={issueDetail.number} />
+      </div>
     )
   }
 
