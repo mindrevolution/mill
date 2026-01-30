@@ -31,6 +31,10 @@ var app = builder.Build();
 // Middleware
 app.UseCors();
 
+// Serve static files (bundled frontend)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -47,5 +51,8 @@ app.MapLibraryEndpoints();
 app.MapSpecEndpoints();
 app.MapRunEndpoints();
 app.MapHistoryEndpoints();
+
+// SPA fallback - serve index.html for non-API routes
+app.MapFallbackToFile("index.html");
 
 app.Run();
