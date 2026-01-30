@@ -164,7 +164,7 @@ Single .NET binary providing CLI and GUI:
 
 ```
 mill.exe (.NET)
-├── CLI commands (mill spec, mill run, mill ui)
+├── CLI commands (mill spec, mill run, mill workbench)
 ├── API server (in-process)
 ├── Photino webview (React UI)
 ├── Pty.Net (cross-platform PTY for interactive sessions)
@@ -174,7 +174,7 @@ mill.exe (.NET)
 **Usage modes:**
 - `mill spec` — CLI, runs in terminal
 - `mill run 42` — CLI, runs in terminal
-- `mill ui` — Opens Photino window with React workbench
+- `mill workbench` — Opens Photino window with React workbench
 
 ### Key Dependencies
 

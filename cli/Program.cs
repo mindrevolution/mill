@@ -5,6 +5,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Photino.NET;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -28,6 +34,7 @@ return args switch
     ["run", "-a"] => await Mill.RunAutopick(),
     ["run", var issue, ..] => await Mill.Execute(issue, args),
     ["run"] => Mill.ListAvailableIssues(),
+    ["workbench"] => RunWorkbench(),
     _ => ShowHelp()
 };
 
@@ -35,6 +42,112 @@ static int ShowVersion()
 {
     Console.WriteLine($"mill {Mill.Version}");
     return 0;
+}
+
+static int RunWorkbench()
+{
+    var useDevServer = Environment.GetEnvironmentVariable("MILL_DEV") == "1";
+    var serverUrl = "http://localhost:5218";
+    var devServerUrl = "http://localhost:5173";
+
+    // Find wwwroot directory
+    var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? ".";
+    var wwwroot = Path.Combine(exeDir, "wwwroot");
+
+    if (!Directory.Exists(wwwroot))
+    {
+        // Try repo location during development
+        var repoRoot = FindRepoRoot();
+        if (repoRoot != null)
+        {
+            wwwroot = Path.Combine(repoRoot, "workbench", "dist");
+        }
+    }
+
+    WebApplication? app = null;
+    Task? serverTask = null;
+
+    try
+    {
+        if (!useDevServer)
+        {
+            // Start embedded web server
+            Out.Step("starting server...");
+
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                Args = Array.Empty<string>()
+            });
+            builder.WebHost.UseUrls(serverUrl);
+
+            // Disable request logging for cleaner output
+            builder.Logging.ClearProviders();
+
+            app = builder.Build();
+
+            // CORS for local requests
+            app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
+            // Serve static files if wwwroot exists
+            if (Directory.Exists(wwwroot))
+            {
+                var fileProvider = new PhysicalFileProvider(wwwroot);
+                app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
+                app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
+
+                // SPA fallback - serve index.html for non-file routes
+                var indexPath = Path.Combine(wwwroot, "index.html");
+                app.MapFallback(async context =>
+                {
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(await File.ReadAllTextAsync(indexPath));
+                });
+            }
+
+            // Health endpoint
+            app.MapGet("/api/health", () => new { status = "ok", version = Mill.Version });
+
+            // TODO: Add more API endpoints or proxy to Mill.Api
+
+            serverTask = app.RunAsync();
+            Thread.Sleep(500); // Wait for server to start
+        }
+
+        var window = new PhotinoWindow()
+            .SetTitle("mill workbench")
+            .SetSize(1400, 900)
+            .SetResizable(true)
+            .Center();
+
+        if (useDevServer)
+        {
+            Out.Step("connecting to dev server...");
+            window.Load(devServerUrl);
+        }
+        else
+        {
+            window.Load(serverUrl);
+        }
+
+        window.WaitForClose();
+        return 0;
+    }
+    finally
+    {
+        app?.StopAsync().Wait();
+    }
+}
+
+static string? FindRepoRoot()
+{
+    var dir = Directory.GetCurrentDirectory();
+    while (dir != null)
+    {
+        if (Directory.Exists(Path.Combine(dir, ".git")))
+            return dir;
+        dir = Directory.GetParent(dir)?.FullName;
+    }
+    return null;
 }
 
 static async Task<int> RunInstallCheck()
@@ -3112,14 +3225,31 @@ static class Installer
                 return (false, "prompts not found — run from repo directory");
             }
 
-            // Copy binary
+            // Copy binary and native libraries
             Out.Step("copying binary...");
             Directory.CreateDirectory(binaryDir);
             File.Copy(exePath, binaryPath, overwrite: true);
+
+            // Copy native Photino libraries (Photino.Native.dll, WebView2Loader.dll, etc.)
+            foreach (var nativeLib in Directory.GetFiles(sourceDir, "*.dll")
+                .Where(f => !f.EndsWith("mill.dll", StringComparison.OrdinalIgnoreCase)))
+            {
+                var destFile = Path.Combine(binaryDir, Path.GetFileName(nativeLib));
+                File.Copy(nativeLib, destFile, overwrite: true);
+            }
+
             if (!OperatingSystem.IsWindows())
             {
                 var chmod = Process.Start("chmod", ["+x", binaryPath]);
                 chmod?.WaitForExit();
+
+                // Copy native libs for Linux/macOS (.so, .dylib)
+                foreach (var nativeLib in Directory.GetFiles(sourceDir, "*.so")
+                    .Concat(Directory.GetFiles(sourceDir, "*.dylib")))
+                {
+                    var destFile = Path.Combine(binaryDir, Path.GetFileName(nativeLib));
+                    File.Copy(nativeLib, destFile, overwrite: true);
+                }
             }
 
             // Copy prompts and templates

@@ -7,11 +7,33 @@
     <AssemblyName>mill</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.2.0-alpha</Version>
+    <Version>0.3.0-alpha</Version>
 
     <!-- AOT -->
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.NET" Version="3.2.3" />
+    <PackageReference Include="Markdig" Version="0.44.0" />
+  </ItemGroup>
+
+  <!-- ASP.NET Core for embedded web server -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+
+  <!-- Copy native Photino libraries after publish -->
+  <Target Name="CopyPhotinoNative" AfterTargets="Publish">
+    <ItemGroup>
+      <PhotinoNativeFiles Include="$(NuGetPackageRoot)photino.native\3.2.3\runtimes\win-x64\native\*.*" Condition="$(RuntimeIdentifier.StartsWith('win'))" />
+      <PhotinoNativeFiles Include="$(NuGetPackageRoot)photino.native\3.2.3\runtimes\linux-x64\native\*.*" Condition="$(RuntimeIdentifier.StartsWith('linux'))" />
+      <PhotinoNativeFiles Include="$(NuGetPackageRoot)photino.native\3.2.3\runtimes\osx-x64\native\*.*" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PhotinoNativeFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
