@@ -167,32 +167,20 @@ function DraftActionBar({
       >
         <Terminal className="h-4 w-4" />
       </Button>
-      {hasRelevance ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 text-green-400"
-          title="View relevance"
-          onClick={onViewRelevance}
-        >
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0"
+        title={hasRelevance ? 'View relevance' : 'Validate relevance'}
+        onClick={hasRelevance ? onViewRelevance : onValidate}
+        disabled={validating}
+      >
+        {validating ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
           <SearchCheck className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          title="Validate relevance"
-          onClick={onValidate}
-          disabled={validating}
-        >
-          {validating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <SearchCheck className="h-4 w-4" />
-          )}
-        </Button>
-      )}
+        )}
+      </Button>
       <Separator orientation="vertical" className="h-4 mx-1" />
       <Button
         size="sm"
@@ -787,6 +775,41 @@ export function ShapeWorkspace() {
   const [draftDetail, setDraftDetail] = useState<DraftDetail | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
   const [loadingSpec, setLoadingSpec] = useState(false)
+
+  // Watch for job result viewing
+  const viewingJobId = useJobsStore((s) => s.viewingJobId)
+  const setViewingJob = useJobsStore((s) => s.setViewingJob)
+  const jobs = useJobsStore((s) => s.jobs)
+
+  useEffect(() => {
+    if (!viewingJobId) return
+    const job = jobs.find((j) => j.id === viewingJobId)
+    if (!job || job.type !== 'DraftValidation') return
+
+    const draftId = job.params?.draftId as string | undefined
+    if (!draftId) return
+
+    // Find the draft and select it
+    const draft = drafts.find((d) => d.id === draftId)
+    if (draft) {
+      // Select the draft (this will load details and show validation result)
+      setSelectedDraft(draft)
+      setSelectedId(draft.id)
+      setDraftDetail(undefined)
+      setIssueDetail(undefined)
+      setLoadingSpec(true)
+
+      api.spec.draft(draft.id).then((detail) => {
+        setDraftDetail(detail)
+        setLoadingSpec(false)
+      }).catch(() => {
+        setLoadingSpec(false)
+      })
+    }
+
+    // Clear viewing state
+    setViewingJob(null)
+  }, [viewingJobId, jobs, drafts, setViewingJob])
 
   const handleSelectDraft = async (draft: Draft) => {
     setSelectedDraft(draft)

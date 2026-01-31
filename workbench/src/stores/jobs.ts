@@ -6,9 +6,11 @@ interface JobsState {
   jobs: Job[]
   connected: boolean
   activeWorkspace: string
+  viewingJobId: string | null
 
   // Actions
   setActiveWorkspace: (workspace: string) => void
+  setViewingJob: (jobId: string | null) => void
   createJob: (request: CreateJobRequest) => Promise<string>
   cancelJob: (id: string) => Promise<void>
   clearCompleted: () => Promise<void>
@@ -25,9 +27,11 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   jobs: [],
   connected: false,
   activeWorkspace: 'ground',
+  viewingJobId: null,
   _eventSource: null,
 
   setActiveWorkspace: (workspace) => set({ activeWorkspace: workspace }),
+  setViewingJob: (jobId) => set({ viewingJobId: jobId }),
 
   createJob: async (request) => {
     const { id } = await api.jobs.create(request)

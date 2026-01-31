@@ -13,6 +13,7 @@ import type { Job } from '@/lib/api'
 function App() {
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace>('ground')
   const setActiveWorkspaceInStore = useJobsStore((s) => s.setActiveWorkspace)
+  const setViewingJob = useJobsStore((s) => s.setViewingJob)
 
   // Sync active workspace to jobs store
   useEffect(() => {
@@ -32,13 +33,13 @@ function App() {
   }, [])
 
   const handleViewJobResult = useCallback((job: Job) => {
+    // Set the job to view - workspace will react to this
+    setViewingJob(job.id)
     // Navigate to source workspace if different
     if (job.sourceWorkspace && job.sourceWorkspace !== activeWorkspace) {
       setActiveWorkspace(job.sourceWorkspace as Workspace)
     }
-    // The workspace component will handle showing the result based on the job
-    // For now, just navigate - workspaces can subscribe to job store for auto-open
-  }, [activeWorkspace])
+  }, [activeWorkspace, setViewingJob])
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
