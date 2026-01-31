@@ -143,10 +143,10 @@ static class Installer
             var dataPath = GetDataPath();
             var binaryDir = Path.GetDirectoryName(binaryPath)!;
 
-            // Find source prompts directory (relative to running binary)
+            // Find repo root by traversing up from binary location
             var sourceDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-            var sourceRoot = Directory.GetParent(sourceDir)?.FullName;
-            if (sourceRoot == null || !Directory.Exists(Path.Combine(sourceRoot, "shape/prompts")))
+            var sourceRoot = FindRepoRoot(sourceDir);
+            if (sourceRoot == null)
             {
                 return (false, "prompts not found — run from repo directory");
             }
@@ -189,13 +189,13 @@ static class Installer
                 }
             }
 
-            // Copy prompts and templates by workspace
+            // Copy prompts and templates by workspace (to binary dir, alongside the exe)
             Out.Step("copying prompts...");
-            CopyDirectory(Path.Combine(sourceRoot, "ground/prompts"), Path.Combine(dataPath, "ground/prompts"));
-            CopyDirectory(Path.Combine(sourceRoot, "ground/templates"), Path.Combine(dataPath, "ground/templates"));
-            CopyDirectory(Path.Combine(sourceRoot, "shape/prompts"), Path.Combine(dataPath, "shape/prompts"));
-            CopyDirectory(Path.Combine(sourceRoot, "shape/templates"), Path.Combine(dataPath, "shape/templates"));
-            CopyDirectory(Path.Combine(sourceRoot, "ship/prompts"), Path.Combine(dataPath, "ship/prompts"));
+            CopyDirectory(Path.Combine(sourceRoot, "ground/prompts"), Path.Combine(binaryDir, "ground/prompts"));
+            CopyDirectory(Path.Combine(sourceRoot, "ground/templates"), Path.Combine(binaryDir, "ground/templates"));
+            CopyDirectory(Path.Combine(sourceRoot, "shape/prompts"), Path.Combine(binaryDir, "shape/prompts"));
+            CopyDirectory(Path.Combine(sourceRoot, "shape/templates"), Path.Combine(binaryDir, "shape/templates"));
+            CopyDirectory(Path.Combine(sourceRoot, "ship/prompts"), Path.Combine(binaryDir, "ship/prompts"));
 
             return (true, $"installed to {binaryPath}");
         }
@@ -209,8 +209,21 @@ static class Installer
         }
     }
 
+    static string? FindRepoRoot(string startDir)
+    {
+        var dir = new DirectoryInfo(startDir);
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir.FullName, "shape/prompts")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        return null;
+    }
+
     static void CopyDirectory(string source, string dest)
     {
+        if (!Directory.Exists(source)) return; // Skip if source doesn't exist
         Directory.CreateDirectory(dest);
         foreach (var file in Directory.GetFiles(source))
         {
