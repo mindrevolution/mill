@@ -49,8 +49,14 @@ static class Workbench
         builder.WebHost.UseUrls(urls);
         // Enable request logging for dev
         builder.Logging.SetMinimumLevel(LogLevel.Information);
-        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning); // reduce framework noise
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
         builder.Logging.AddFilter("Microsoft.Hosting", LogLevel.Warning);
+        builder.Logging.AddFilter("MillApi", LogLevel.Information);
+        builder.Logging.AddSimpleConsole(options =>
+        {
+            options.TimestampFormat = "HH:mm:ss.fff ";
+            options.SingleLine = true;
+        });
         builder.Services.AddCors();
         builder.Services.AddMillApi();
 
@@ -61,13 +67,30 @@ static class Workbench
         {
             if (context.Request.Path.StartsWithSegments("/api"))
             {
+                var method = context.Request.Method;
+                var path = context.Request.Path;
+
+                // Log request start for non-OPTIONS
+                if (method != "OPTIONS")
+                    Console.WriteLine($"  ... {method} {path}");
+
                 var start = DateTime.UtcNow;
-                await next();
-                var elapsed = (DateTime.UtcNow - start).TotalMilliseconds;
-                var status = context.Response.StatusCode;
-                var color = status < 400 ? "\u001b[32m" : "\u001b[31m"; // green or red
-                var reset = "\u001b[0m";
-                Console.WriteLine($"  {color}{status}{reset} {context.Request.Method} {context.Request.Path} ({elapsed:F0}ms)");
+                try
+                {
+                    await next();
+                    var elapsed = (DateTime.UtcNow - start).TotalMilliseconds;
+                    var status = context.Response.StatusCode;
+                    var color = status < 400 ? "\u001b[32m" : "\u001b[31m"; // green or red
+                    var reset = "\u001b[0m";
+                    Console.WriteLine($"  {color}{status}{reset} {method} {path} ({elapsed:F0}ms)");
+                }
+                catch (Exception ex)
+                {
+                    var elapsed = (DateTime.UtcNow - start).TotalMilliseconds;
+                    Console.WriteLine($"  \u001b[31m500\u001b[0m {method} {path} ({elapsed:F0}ms)");
+                    Console.WriteLine($"      \u001b[31m{ex.GetType().Name}: {ex.Message}\u001b[0m");
+                    throw;
+                }
             }
             else
             {

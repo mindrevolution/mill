@@ -429,7 +429,6 @@ export function ShipWorkspace() {
   const [runs, setRuns] = useState<Map<string, LiveRun>>(new Map())
   const [selectedRunId, setSelectedRunId] = useState<string | undefined>()
   const [selectedHistory, setSelectedHistory] = useState<HistoryEntry | undefined>()
-  const [focusedTile, setFocusedTile] = useState<'runs' | 'logs' | 'history' | 'detail'>('runs')
   const [demoIssue, setDemoIssue] = useState(42)
 
   const selectedRun = selectedRunId ? runs.get(selectedRunId) : undefined
@@ -480,7 +479,6 @@ export function ShipWorkspace() {
     const handle = await runtime.start(demoIssue)
     subscribeToRun(handle.id, handle.issue)
     setSelectedRunId(handle.id)
-    setFocusedTile('logs')
     setDemoIssue((prev) => prev + 1) // increment for next demo
   }
 
@@ -495,47 +493,29 @@ export function ShipWorkspace() {
       <TileSplit direction="vertical" sizes={[50, 50]}>
         {/* Top: Active runs */}
         <TileSplit direction="horizontal" sizes={[40, 60]}>
-          <Tile
-            focused={focusedTile === 'runs'}
-            onFocus={() => setFocusedTile('runs')}
-          >
+          <Tile>
             <ActiveRuns
               runs={activeRuns}
               selectedId={selectedRunId}
-              onSelect={(run) => {
-                setSelectedRunId(run.id)
-                setFocusedTile('logs')
-              }}
+              onSelect={(run) => setSelectedRunId(run.id)}
               onStartDemo={handleStartDemo}
             />
           </Tile>
-          <Tile
-            focused={focusedTile === 'logs'}
-            onFocus={() => setFocusedTile('logs')}
-          >
+          <Tile>
             <RunDetail run={selectedRun} onAbort={handleAbort} />
           </Tile>
         </TileSplit>
 
         {/* Bottom: History */}
         <TileSplit direction="horizontal" sizes={[50, 50]}>
-          <Tile
-            focused={focusedTile === 'history'}
-            onFocus={() => setFocusedTile('history')}
-          >
+          <Tile>
             <HistoryList
               entries={mockHistory}
               selectedDate={selectedHistory?.date}
-              onSelect={(entry) => {
-                setSelectedHistory(entry)
-                setFocusedTile('detail')
-              }}
+              onSelect={setSelectedHistory}
             />
           </Tile>
-          <Tile
-            focused={focusedTile === 'detail'}
-            onFocus={() => setFocusedTile('detail')}
-          >
+          <Tile>
             <HistoryDetail entry={selectedHistory} />
           </Tile>
         </TileSplit>

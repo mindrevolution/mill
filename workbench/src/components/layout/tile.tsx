@@ -6,8 +6,6 @@ interface TileProps {
   children: React.ReactNode
   title?: string
   className?: string
-  focused?: boolean
-  onFocus?: () => void
   onClose?: () => void
   toolbar?: React.ReactNode
 }
@@ -16,29 +14,13 @@ export function Tile({
   children,
   title,
   className,
-  focused,
-  onFocus,
   onClose,
   toolbar,
 }: TileProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (onFocus && (e.key === 'Enter' || e.key === ' ')) {
-      e.preventDefault()
-      onFocus()
-    }
-  }
-
   return (
     <div
-      role="region"
-      tabIndex={onFocus ? 0 : undefined}
-      onClick={onFocus}
-      onKeyDown={onFocus ? handleKeyDown : undefined}
-      aria-label={title}
       className={cn(
-        'flex flex-col h-full bg-background border rounded-lg overflow-hidden transition-colors',
-        focused ? 'border-primary/50' : 'border-border',
-        onFocus && 'cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring',
+        'flex flex-col h-full bg-background border border-border rounded-lg overflow-hidden',
         className
       )}
     >

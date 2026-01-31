@@ -618,7 +618,6 @@ export function ShapeWorkspace() {
   const { drafts, issues, loading, error, refetch } = useSpecs()
   const [selectedDraft, setSelectedDraft] = useState<Draft | undefined>()
   const [selectedId, setSelectedId] = useState<string | undefined>()
-  const [focusedTile, setFocusedTile] = useState<'list' | 'chat' | 'preview'>('list')
   const [sessionId, setSessionId] = useState<string | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
   const [loadingIssue, setLoadingIssue] = useState(false)
@@ -627,14 +626,12 @@ export function ShapeWorkspace() {
     setSelectedDraft(draft)
     setIssueDetail(undefined)
     setSelectedId(draft.id)
-    setFocusedTile('chat')
   }
 
   const handleSelectIssue = async (issue: Issue) => {
     setSelectedDraft(undefined)
     setIssueDetail(undefined)
     setSelectedId(`issue-${issue.number}`)
-    setFocusedTile('preview')
     setLoadingIssue(true)
 
     try {
@@ -653,7 +650,6 @@ export function ShapeWorkspace() {
       setSessionId(session.id)
       setSelectedDraft(undefined)
       setSelectedId(undefined)
-      setFocusedTile('chat')
     } catch {
       // TODO: Show error toast
       console.error('Failed to start spec session')
@@ -663,10 +659,7 @@ export function ShapeWorkspace() {
   return (
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[25, 40, 35]}>
-        <Tile
-          focused={focusedTile === 'list'}
-          onFocus={() => setFocusedTile('list')}
-        >
+        <Tile>
           <SpecList
             drafts={drafts}
             issues={issues}
@@ -679,16 +672,10 @@ export function ShapeWorkspace() {
             selectedId={selectedId}
           />
         </Tile>
-        <Tile
-          focused={focusedTile === 'chat'}
-          onFocus={() => setFocusedTile('chat')}
-        >
+        <Tile>
           <SpecChat draft={selectedDraft} sessionId={sessionId} />
         </Tile>
-        <Tile
-          focused={focusedTile === 'preview'}
-          onFocus={() => setFocusedTile('preview')}
-        >
+        <Tile>
           <SpecPreview
             draft={selectedDraft}
             issueDetail={issueDetail}

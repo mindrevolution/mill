@@ -8,34 +8,21 @@ import { mockLibrary, mockObservations } from './utils'
 
 export function MapWorkspace() {
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | undefined>()
-  const [focusedTile, setFocusedTile] = useState<'tree' | 'detail' | 'observations'>('tree')
 
   return (
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[30, 40, 30]}>
-        <Tile
-          focused={focusedTile === 'tree'}
-          onFocus={() => setFocusedTile('tree')}
-        >
+        <Tile>
           <LibraryTree
             items={mockLibrary}
             selectedId={selectedItem?.id}
-            onSelect={(item) => {
-              setSelectedItem(item)
-              setFocusedTile('detail')
-            }}
+            onSelect={setSelectedItem}
           />
         </Tile>
-        <Tile
-          focused={focusedTile === 'detail'}
-          onFocus={() => setFocusedTile('detail')}
-        >
+        <Tile>
           <ItemDetail item={selectedItem} />
         </Tile>
-        <Tile
-          focused={focusedTile === 'observations'}
-          onFocus={() => setFocusedTile('observations')}
-        >
+        <Tile>
           <ObservationsTray observations={mockObservations} />
         </Tile>
       </TileSplit>
