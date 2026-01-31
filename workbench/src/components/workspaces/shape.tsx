@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
+import { DetailView } from '@/components/ui/detail-view'
 import { Separator } from '@/components/ui/separator'
 import {
   DropdownMenu,
@@ -504,36 +505,32 @@ function SpecPreview({
     const bodyHtml = 'bodyHtml' in spec ? spec.bodyHtml : undefined
 
     return (
-      <div className="h-full relative">
-        <ScrollArea className="h-full">
-          <div className="p-4 pb-16 space-y-4">
-            {/* Header */}
-            <div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Icon className={cn('h-3 w-3', color)} />
-                {isDraft ? (
-                  <Badge variant="outline">Draft</Badge>
-                ) : (
-                  <span>#{(spec as IssueDetail).number}</span>
-                )}
-                <Badge variant="secondary">{spec.type}</Badge>
-                {!isDraft && (
-                  <Badge variant={(spec as IssueDetail).status === 'open' ? 'default' : 'secondary'}>
-                    {(spec as IssueDetail).status}
-                  </Badge>
-                )}
-                {spec.persona && <span>· {spec.persona}</span>}
-              </div>
-              <h2 className="text-lg font-semibold">
-                {isDraft ? spec.title : (
-                  <span dangerouslySetInnerHTML={{ __html: (spec as IssueDetail).titleHtml }} />
-                )}
-              </h2>
+      <DetailView
+        header={
+          <>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Icon className={cn('h-3 w-3', color)} />
+              {isDraft ? (
+                <Badge variant="outline">Draft</Badge>
+              ) : (
+                <span>#{(spec as IssueDetail).number}</span>
+              )}
+              <Badge variant="secondary">{spec.type}</Badge>
+              {!isDraft && (
+                <Badge variant={(spec as IssueDetail).status === 'open' ? 'default' : 'secondary'}>
+                  {(spec as IssueDetail).status}
+                </Badge>
+              )}
+              {spec.persona && <span>· {spec.persona}</span>}
             </div>
-
+            <h2 className="text-lg font-semibold">
+              {isDraft ? spec.title : (
+                <span dangerouslySetInnerHTML={{ __html: (spec as IssueDetail).titleHtml }} />
+              )}
+            </h2>
             {/* Labels (issues only) */}
             {!isDraft && (spec as IssueDetail).labels.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 mt-2">
                 {(spec as IssueDetail).labels.map((label) => (
                   <Badge key={label} variant="outline" className="text-xs">
                     {label}
@@ -541,38 +538,40 @@ function SpecPreview({
                 ))}
               </div>
             )}
-
-            {/* Body */}
-            {bodyHtml ? (
-              <div
-                className="prose prose-sm prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: bodyHtml }}
-              />
-            ) : (
-              <div className="text-sm text-muted-foreground italic">
-                No description provided
-              </div>
-            )}
-
-            {/* Meta */}
-            <div className="text-xs text-muted-foreground pt-2 border-t">
-              {isDraft
-                ? `Updated ${formatDate((spec as DraftDetail).updatedAt)}`
-                : `Created ${formatDate((spec as IssueDetail).createdAt)}`}
+          </>
+        }
+        actions={
+          isDraft ? (
+            <DraftActionBar onDelete={() => console.log('TODO: Delete draft', spec.id)} />
+          ) : (
+            <IssueActionBar
+              issueNumber={(spec as IssueDetail).number}
+              onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
+            />
+          )
+        }
+      >
+        <div className="space-y-4">
+          {/* Body */}
+          {bodyHtml ? (
+            <div
+              className="prose prose-sm prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: bodyHtml }}
+            />
+          ) : (
+            <div className="text-sm text-muted-foreground italic">
+              No description provided
             </div>
-          </div>
-        </ScrollArea>
+          )}
 
-        {/* Floating Action Bar */}
-        {isDraft ? (
-          <DraftActionBar onDelete={() => console.log('TODO: Delete draft', spec.id)} />
-        ) : (
-          <IssueActionBar
-            issueNumber={(spec as IssueDetail).number}
-            onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
-          />
-        )}
-      </div>
+          {/* Meta */}
+          <div className="text-xs text-muted-foreground pt-2 border-t">
+            {isDraft
+              ? `Updated ${formatDate((spec as DraftDetail).updatedAt)}`
+              : `Created ${formatDate((spec as IssueDetail).createdAt)}`}
+          </div>
+        </div>
+      </DetailView>
     )
   }
 

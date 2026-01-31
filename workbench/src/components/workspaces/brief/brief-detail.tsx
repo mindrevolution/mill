@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
+import { DetailView } from '@/components/ui/detail-view'
 import {
   Select,
   SelectContent,
@@ -99,27 +99,49 @@ export function BriefDetail({ brief, content, onUpdate, onDrop, onPromote }: Bri
   const hasChanges = editedIntent !== brief.intent || editedContent !== (content || '')
 
   return (
-    <div className="h-full relative">
-      <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">{brief.title}</h2>
-              <span
-                className="text-xs text-muted-foreground"
-                style={{ opacity: decay }}
-              >
-                {daysLeft}
-              </span>
+    <>
+      <DetailView
+        header={
+          <>
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <h2 className="text-lg font-semibold">{brief.title}</h2>
+                <span
+                  className="text-xs text-muted-foreground"
+                  style={{ opacity: decay }}
+                >
+                  {daysLeft}
+                </span>
+              </div>
             </div>
-          </div>
-
-          {/* Stage pills */}
-          <StagePills value={brief.stage} onChange={handleStageChange} />
-
-          <Separator />
-
+            <StagePills value={brief.stage} onChange={handleStageChange} />
+          </>
+        }
+        actions={
+          <FloatingActionBar>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+              title="Refine interactively"
+              onClick={() => console.log('TODO: Refine interactively')}
+            >
+              <Terminal className="h-4 w-4" />
+            </Button>
+            <Separator orientation="vertical" className="h-4 mx-1" />
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              title="Drop Brief"
+              onClick={() => setDropDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </FloatingActionBar>
+        }
+      >
+        <div className="space-y-4">
           {/* Intent */}
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">Intent</label>
@@ -193,34 +215,8 @@ export function BriefDetail({ brief, content, onUpdate, onDrop, onPromote }: Bri
               </div>
             </>
           )}
-
-          {/* Spacer for floating bar */}
-          <div className="h-12" />
         </div>
-      </ScrollArea>
-
-      {/* Floating Action Bar */}
-      <FloatingActionBar>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
-          title="Refine interactively"
-          onClick={() => console.log('TODO: Refine interactively')}
-        >
-          <Terminal className="h-4 w-4" />
-        </Button>
-        <Separator orientation="vertical" className="h-4 mx-1" />
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          title="Drop Brief"
-          onClick={() => setDropDialogOpen(true)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </FloatingActionBar>
+      </DetailView>
 
       {/* Drop Dialog */}
       <Dialog open={dropDialogOpen} onOpenChange={setDropDialogOpen}>
@@ -286,6 +282,6 @@ export function BriefDetail({ brief, content, onUpdate, onDrop, onPromote }: Bri
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

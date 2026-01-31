@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
+import { DetailView } from '@/components/ui/detail-view'
 import type { KnowledgeItem } from '@/types'
 import { FolderOpen, Terminal, Trash2 } from 'lucide-react'
 import { categoryMeta } from './utils'
@@ -43,56 +43,48 @@ export function ItemDetail({ item }: ItemDetailProps) {
   const Icon = meta.icon
 
   return (
-    <div className="h-full relative">
-      <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
-          {/* Header */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="secondary">{meta.label}</Badge>
-            </div>
-            <h2 className="text-lg font-semibold">{item.name}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+    <DetailView
+      header={
+        <>
+          <div className="flex items-center gap-2 mb-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="secondary">{meta.label}</Badge>
           </div>
-
-          <Separator />
-
-          {/* File info */}
-          <div className="space-y-1">
-            <span className="font-mono text-xs text-muted-foreground">{item.file}</span>
-            <p className="text-xs text-muted-foreground/70">
-              Updated {formatRelativeTime(item.updatedAt)}
-            </p>
-          </div>
-
-          {/* Spacer for floating bar */}
-          <div className="h-12" />
-        </div>
-      </ScrollArea>
-
-      {/* Floating Action Bar */}
-      <FloatingActionBar>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
-          title="Refine interactively"
-          onClick={() => console.log('TODO: Refine interactively')}
-        >
-          <Terminal className="h-4 w-4" />
-        </Button>
-        <Separator orientation="vertical" className="h-4 mx-1" />
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          title="Delete"
-          onClick={() => console.log('TODO: Delete')}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </FloatingActionBar>
-    </div>
+          <h2 className="text-lg font-semibold">{item.name}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+        </>
+      }
+      actions={
+        <FloatingActionBar>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+            title="Refine interactively"
+            onClick={() => console.log('TODO: Refine interactively')}
+          >
+            <Terminal className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            title="Delete"
+            onClick={() => console.log('TODO: Delete')}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </FloatingActionBar>
+      }
+    >
+      {/* File info */}
+      <div className="space-y-1">
+        <span className="font-mono text-xs text-muted-foreground">{item.file}</span>
+        <p className="text-xs text-muted-foreground/70">
+          Updated {formatRelativeTime(item.updatedAt)}
+        </p>
+      </div>
+    </DetailView>
   )
 }

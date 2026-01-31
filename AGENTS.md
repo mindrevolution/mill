@@ -304,3 +304,22 @@ Primary accent is `#ffcc00` (yellow). Use sparingly for:
 - Key indicators (e.g., observations count in top bar)
 
 Avoid overusing accent color — it should draw attention to what matters.
+
+### Detail View Pattern
+
+For views with metadata header + scrollable content body, use the `DetailView` component:
+
+```tsx
+import { DetailView } from '@/components/ui/detail-view'
+
+<DetailView
+  header={<>badges, title, labels</>}
+  actions={<FloatingActionBar>...</FloatingActionBar>}
+>
+  {/* scrollable content */}
+</DetailView>
+```
+
+- Header stays fixed at top
+- Body scrolls independently
+- Actions slot for FloatingActionBar (positioned at bottom)
