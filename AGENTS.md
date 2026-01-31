@@ -17,14 +17,10 @@ mill is a specification-first delivery system with two main workflows:
 
 ```
 mill/
-├── cli/                    # .NET CLI source
-│   └── Program.cs
-├── api/                    # ASP.NET Minimal API (backend for UI)
-│   └── Mill.Api/
-├── workbench/              # React UI (Photino hosts this)
+├── workbench/              # React UI (primary interface)
 │   └── src/
-├── bin/                    # Published binary
-│   └── mill
+├── api/                    # ASP.NET Minimal API (backend)
+│   └── Mill.Api/
 ├── spec/                   # Spec creation (prompts + templates)
 │   ├── prompts/
 │   │   ├── context-warmup.md   # Generates .mill/context.md
@@ -41,6 +37,7 @@ mill/
 │       ├── loop-verify.md          # Verify prompt (review, approve/reject)
 │       ├── loop-verify-criterion.md # Parallel: verify one criterion
 │       └── run-autopick.md         # Intelligent issue selection
+├── cli/                    # Deprecated
 └── README.md
 
 .mill/                              # Target repo's mill folder
@@ -107,24 +104,16 @@ Format: `[subject]-[verb].md`
 
 Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
 
-## Quick Start
+## Workspaces
 
-```bash
-# spec creation (interactive) → creates GitHub issue
-mill spec
+The workbench organizes work into four workspaces:
 
-# refine existing spec against current codebase
-mill spec 42
-
-# list available issues
-mill run
-
-# autopick best issue (option 0)
-mill run --auto
-
-# work specific issue
-mill run 42
-```
+| Workspace | Purpose |
+|-----------|---------|
+| **Ground** | Build product knowledge — personas, standards, concepts, design |
+| **Brief** | Capture ideas with intent — 30-day time-box |
+| **Shape** | Refine into verified specs — publish to GitHub Issues |
+| **Ship** | Execute bounded loops — until tests pass |
 
 ## Intent Types
 
@@ -139,15 +128,15 @@ mill run 42
 
 ```mermaid
 flowchart TD
-    A[User Intent] --> B["mill spec<br>(classify, elicit, generate)"]
+    A[User Intent] --> B["Shape workspace<br>(classify, elicit, generate)"]
     B --> C["GitHub Issue #N"]
-    C --> D{"mill run"}
-    D -->|"#N"| E["Work prompt<br>(loop-iterate.md)"]
+    C --> D{"Ship workspace"}
+    D -->|"select"| E["Work prompt<br>(loop-iterate.md)"]
     D -->|"autopick"| F["score & select<br>(health, priority, theme)"]
     F --> E
     E -->|MILL_VERIFY| G["Verify prompt<br>(loop-verify.md)"]
     G -->|MILL_REJECTED| E
-    G -->|MILL_DONE| H["CLI creates PR"]
+    G -->|MILL_DONE| H["Create PR"]
     H --> I{Human reviews}
     I -->|approve| J[Merge → Deploy]
     I -->|request changes| E
@@ -179,8 +168,7 @@ Benefits:
 
 ## Requirements
 
-- `mill` binary in PATH (build with `./publish.sh`)
-- `MILL_CLI` env var (default: `claude`)
+- Claude Code CLI (or OpenCode in future)
 - `gh` CLI (GitHub CLI) — authenticated
 - Git repository
 
@@ -193,33 +181,76 @@ Benefits:
 5. **Hybrid worktree inheritance** — Config and standards are shared from parent; context and memory are per-worktree (rebuilt only if stale)
 6. **Humans drive product direction** — Humans decide what gets built and when it ships; AI improves the code
 
-## Desktop Architecture
+## Architecture
 
-Single .NET binary providing CLI and GUI:
+The workbench is the primary interface. The CLI is deprecated.
 
 ```
-mill.exe (.NET)
-├── CLI commands (mill spec, mill run, mill workbench)
-├── API server (in-process)
-├── Photino webview (React UI)
-├── Pty.Net (cross-platform PTY for interactive sessions)
-└── xterm.js (terminal emulator in React)
+mill/
+├── workbench/     # React UI (primary interface)
+├── api/           # ASP.NET Minimal API (backend)
+├── spec/, run/    # Prompt templates
+└── cli/           # Deprecated
 ```
 
-**Usage modes:**
-- `mill spec` — CLI, runs in terminal
-- `mill run 42` — CLI, runs in terminal
-- `mill workbench` — Opens Photino window with React workbench
+```mermaid
+flowchart LR
+    subgraph Workbench
+        UI[React UI]
+    end
 
-### Key Dependencies
+    subgraph Backend
+        API[ASP.NET API]
+    end
+
+    subgraph LLM Providers
+        Claude[Claude Code CLI]
+        OpenCode[OpenCode CLI]
+    end
+
+    UI -->|non-interactive| API
+    API -->|spawn| Claude
+    API -.->|future| OpenCode
+
+    UI -->|interactive| PTY[Photino + PTY]
+    PTY -->|spawn| Claude
+    PTY -.->|future| OpenCode
+```
+
+### LLM Runtime
+
+mill abstracts LLM execution behind a provider interface to support multiple CLI tools (Claude Code now, OpenCode planned).
+
+| Mode | Path | Use Cases |
+|------|------|-----------|
+| **Non-interactive** | Workbench → API → CLI | Context warmup, verification, observations, autopick |
+| **Interactive** | Workbench → Photino + PTY → CLI | Spec elicitation, work loops with user input |
+
+**Non-interactive:** API spawns the CLI with `--print` flag, awaits completion, returns structured response. All prompts that don't require user input go this path.
+
+**Interactive:** Photino hosts the React UI; Pty.Net spawns the CLI with full TTY support; xterm.js renders the terminal in-browser. Only used when the user needs to interact with the LLM session (e.g., answering clarifying questions during spec drafting).
+
+### Provider Abstraction
+
+The API uses a provider interface to abstract CLI differences:
+
+```csharp
+interface ILlmProvider
+{
+    Task<LlmResponse> Execute(string prompt, LlmOptions options);
+    Process SpawnInteractive(string prompt); // for PTY
+}
+```
+
+Implementations: `ClaudeCodeProvider`, `OpenCodeProvider` (future). The provider is selected via configuration, not hardcoded.
+
+### Desktop Dependencies
 
 | Component | Purpose | Package |
 |-----------|---------|---------|
 | Photino.NET | Native webview wrapper | `Photino.NET` |
-| Pty.Net | Cross-platform PTY | `Pty.Net` (microsoft/vs-pty.net) |
+| Pty.Net | Cross-platform PTY | `Pty.Net` |
 | xterm.js | Terminal UI in browser | `@xterm/xterm` |
-
-### Communication
 
 Photino IPC bridges React ↔ .NET directly (no WebSocket needed):
 
@@ -231,23 +262,6 @@ window.SendWebMessage(ptyOutput);
 window.RegisterWebMessageReceivedHandler((_, msg) => pty.Write(msg));
 ```
 
-## Claude Runtime
-
-mill uses Claude Code CLI for all LLM work. Two runtimes handle different interaction modes:
-
-| Runtime | Mode | Execution |
-|---------|------|-----------|
-| **PtyRuntime** | Interactive (TTY) | Pty.Net spawns claude, xterm.js renders |
-| **ApiRuntime** | Non-interactive | API spawns CLI, returns structured response |
-
-**PtyRuntime** — For tasks requiring user interaction: spec elicitation, work loop with input prompts. Uses Pty.Net to spawn Claude Code with full TTY support, xterm.js renders output in React UI, Photino IPC bridges the two.
-
-**ApiRuntime** — For single prompt → response tasks: add observation to library, context warmup, criterion verification. The API server spawns `claude --print "..." --output-format json`, awaits completion, parses response. Enables development/testing without Photino.
-
-Both implement the same `Runtime` interface. UI code is agnostic to which runtime executes the task.
-
-**Future (hosted):** ApiRuntime can swap CLI spawning for direct Anthropic API calls. Same interface, different backend. Interactive tasks would require alternative UX (no embedded terminal in browser).
-
 ## Development Notes
 
 - **Cross-platform:** Windows, Linux, macOS (x64/arm64) — use `OperatingSystem.IsWindows()` etc. for platform-specific code
@@ -257,35 +271,6 @@ Both implement the same `Runtime` interface. UI code is agnostic to which runtim
 
 - **Diagrams must use Mermaid** — no ASCII art. Use fenced code blocks with `mermaid` language identifier.
 - Keep markdown files concise and scannable
-
-## CLI Output Style
-
-Minimal, uniform, lowercase messages.
-
-**Design:** Progress indicators (`•`) are subtle gray; status symbols use color to convey meaning at a glance.
-
-| Method | Symbol | Color | Use |
-|--------|--------|-------|-----|
-| `Out.Step(msg)` | `•` | Gray | action in progress (subtle) |
-| `Out.Ok(msg)` | `✓` | Green | success, completion |
-| `Out.Warn(msg)` | `▲` | Yellow | warnings, non-fatal issues |
-| `Out.Error(msg)` | `✕` | Red | errors (stderr) |
-| `Out.Detail(msg)` | `↳` | Gray | sub-item, additional info |
-| `Out.Agent(text)` | | Gray | LLM output (indented, dimmed) |
-| `Out.Prompt(msg)` | `❯` | Blink | awaiting user input |
-| `Out.Confirm(msg)` | `❯` | Blink | y/n single-keypress confirmation |
-| `Out.Line()` | `---` | | separator |
-| `Out.Blank()` | | | empty line |
-
-Example output:
-```
-  • verifying git repo...
-  ✓ git repo
-  • verifying gh auth...
-  ✓ gh authenticated
-  ▲ context stale
-    ↳ uncommitted changes read on demand
-```
 
 ## Workbench UI
 
