@@ -2,6 +2,8 @@
 
 **Knowledge-first AI delivery.** mill builds project ground — personas, standards, concepts — then uses that knowledge to craft well-verified specs and execute them in bounded loops until tests pass.
 
+![mill workbench](docs/workbench.png)
+
 ## Workbench
 
 The workbench is a cross-platform desktop app with three workspaces:
