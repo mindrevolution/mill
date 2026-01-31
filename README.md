@@ -4,21 +4,11 @@
 
 ![mill workbench](docs/workbench.png)
 
-## Workbench
-
-The workbench is a cross-platform desktop app with three workspaces:
-
-| Workspace | Purpose | Key Actions |
-|-----------|---------|-------------|
-| **Ground** | Build project knowledge | Curate personas, standards, concepts, design tokens; review AI observations |
-| **Shape** | Draft and refine specs | Chat-to-spec elicitation; manage drafts; publish to GitHub Issues |
-| **Ship** | Execute and verify | Run bounded loops; watch progress; review PRs |
-
-```bash
-mill workbench    # launch the desktop app
-```
-
-The workbench provides real-time visibility into AI work, visual knowledge management, and a streamlined spec-to-PR flow.
+| | |
+|-|-|
+| **Ground** | Build project knowledge — personas, standards, concepts; review AI observations |
+| **Shape** | Draft and refine specs — chat-to-spec elicitation; publish to GitHub Issues |
+| **Ship** | Execute and verify — bounded loops until tests pass; review PRs |
 
 ## How It Works
 
@@ -36,16 +26,6 @@ Every spec includes a Loop Contract:
 ```
 
 The contract decides completion, not the agent.
-
-## CLI
-
-For scripting or terminal workflows:
-
-```bash
-mill spec         # chat → spec → GitHub issue
-mill run 42       # loop until tests pass → PR
-mill run --auto   # autopick best issue
-```
 
 ## Spec Types
 
@@ -73,7 +53,7 @@ Completed specs live in GitHub Issues.
 
 - Git repository
 - `gh` CLI (authenticated)
-- Windows, macOS, or Linux
+- Windows, Linux or macOS
 
 ## License
 
