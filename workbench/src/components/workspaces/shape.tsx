@@ -48,7 +48,7 @@ import {
   Bug,
   Shield,
   Wrench,
-  Sparkles,
+  Orbit,
   Loader2,
   AlertCircle,
   RefreshCw,
@@ -589,7 +589,7 @@ function SpecPreview({
   return (
     <div className="h-full flex items-center justify-center text-muted-foreground">
       <div className="text-center">
-        <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <Orbit className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <p className="text-sm">Spec preview will appear here</p>
         <p className="text-xs mt-1">Start a conversation to build your spec</p>
       </div>
