@@ -59,6 +59,7 @@ import {
   Terminal,
   ExternalLink,
   MoreHorizontal,
+  Trash2,
 } from 'lucide-react'
 
 const typeIcons = {
@@ -75,7 +76,7 @@ const typeColors = {
   task: 'text-muted-foreground',
 }
 
-function IssueActionBar({ issueNumber }: { issueNumber: number }) {
+function IssueActionBar({ issueNumber, onDelete }: { issueNumber: number; onDelete?: () => void }) {
   const issueUrl = `https://github.com/mindrevolution/mill/issues/${issueNumber}`
 
   return (
@@ -85,6 +86,7 @@ function IssueActionBar({ issueNumber }: { issueNumber: number }) {
         variant="ghost"
         className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
         title="Refine interactively"
+        onClick={() => console.log('TODO: Refine interactively')}
       >
         <Terminal className="h-4 w-4" />
       </Button>
@@ -102,10 +104,20 @@ function IssueActionBar({ issueNumber }: { issueNumber: number }) {
         variant="ghost"
         className="h-8 w-8 p-0"
         title="Ship this"
+        onClick={() => console.log('TODO: Ship this')}
       >
         <Play className="h-4 w-4" />
       </Button>
       <Separator orientation="vertical" className="h-4 mx-1" />
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        title="Close issue"
+        onClick={onDelete}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -118,13 +130,6 @@ function IssueActionBar({ issueNumber }: { issueNumber: number }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => console.log('TODO: Ship this')}>
-            Ship this
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => console.log('TODO: Refine interactively')}>
-            Refine interactively
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => window.open(issueUrl, '_blank')}>
             Open in browser
           </DropdownMenuItem>
@@ -135,6 +140,32 @@ function IssueActionBar({ issueNumber }: { issueNumber: number }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </FloatingActionBar>
+  )
+}
+
+function DraftActionBar({ onDelete }: { onDelete?: () => void }) {
+  return (
+    <FloatingActionBar>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+        title="Refine interactively"
+        onClick={() => console.log('TODO: Refine interactively')}
+      >
+        <Terminal className="h-4 w-4" />
+      </Button>
+      <Separator orientation="vertical" className="h-4 mx-1" />
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        title="Delete draft"
+        onClick={onDelete}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
     </FloatingActionBar>
   )
 }
@@ -525,7 +556,10 @@ function SpecPreview({
         </ScrollArea>
 
         {/* Floating Action Bar */}
-        <IssueActionBar issueNumber={issueDetail.number} />
+        <IssueActionBar
+          issueNumber={issueDetail.number}
+          onDelete={() => console.log('TODO: Close issue', issueDetail.number)}
+        />
       </div>
     )
   }
@@ -533,72 +567,77 @@ function SpecPreview({
   // Show draft preview
   if (draft) {
     return (
-      <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
-          {/* Header */}
-          <div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Badge variant="secondary">{draft.type}</Badge>
-              {draft.persona && <span>· {draft.persona}</span>}
+      <div className="h-full relative">
+        <ScrollArea className="h-full">
+          <div className="p-4 pb-16 space-y-4">
+            {/* Header */}
+            <div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Badge variant="secondary">{draft.type}</Badge>
+                {draft.persona && <span>· {draft.persona}</span>}
+              </div>
+              <h2 className="text-lg font-semibold">{draft.title}</h2>
             </div>
-            <h2 className="text-lg font-semibold">{draft.title}</h2>
+
+            {/* Sections */}
+            <div className="space-y-3">
+              <Card className="hover:border-primary/50 transition-colors">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-medium">Summary</h3>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Add the ability to sync data while offline and reconcile when connection is restored.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/50 transition-colors">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-medium">Acceptance Criteria</h3>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Changes made offline are queued locally</li>
+                    <li>• Queue syncs automatically when online</li>
+                    <li>• Conflicts are surfaced to user</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/50 transition-colors">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-medium">Verification</h3>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Integration tests for offline queue, unit tests for conflict resolution.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Actions - auto-save, so only "Create Issue" and "Revert" */}
+            <div className="flex gap-2 pt-2">
+              <Button className="flex-1">Create Issue</Button>
+              <Button variant="outline" size="icon" title="Revert changes">
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Auto-save indicator */}
+            <div className="text-xs text-muted-foreground text-center">
+              Auto-saved · Updated {formatDate(draft.updatedAt)}
+            </div>
           </div>
+        </ScrollArea>
 
-          {/* Sections */}
-          <div className="space-y-3">
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-medium">Summary</h3>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Add the ability to sync data while offline and reconcile when connection is restored.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-medium">Acceptance Criteria</h3>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Changes made offline are queued locally</li>
-                  <li>• Queue syncs automatically when online</li>
-                  <li>• Conflicts are surfaced to user</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-medium">Verification</h3>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Integration tests for offline queue, unit tests for conflict resolution.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Actions - auto-save, so only "Create Issue" and "Revert" */}
-          <div className="flex gap-2 pt-2">
-            <Button className="flex-1">Create Issue</Button>
-            <Button variant="outline" size="icon" title="Revert changes">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Auto-save indicator */}
-          <div className="text-xs text-muted-foreground text-center">
-            Auto-saved · Last change {formatDate(draft.updatedAt)}
-          </div>
-        </div>
-      </ScrollArea>
+        {/* Floating Action Bar */}
+        <DraftActionBar onDelete={() => console.log('TODO: Delete draft', draft.id)} />
+      </div>
     )
   }
 
