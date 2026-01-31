@@ -43,17 +43,52 @@ mill/
 │       └── run-autopick.md         # Intelligent issue selection
 └── README.md
 
-.mill/                      # Target repo's mill folder
-├── project.json            # Project configuration (scoring, excludes, context)
-├── context.md              # Auto-generated project context
-├── memory/                 # Machine-generated learnings
-│   └── project.md
-├── drafts/                 # In-progress specs (local, resumable)
-│   └── {slug}.md
-├── standards/              # Human-authored rules
-└── work/                   # Worktrees (gitignored, ephemeral)
+.mill/                              # Target repo's mill folder
+├── project.json                    # Global config
+├── context.md                      # Auto-generated project context
+
+├── ground/                         # Shared product knowledge
+│   ├── personas/                   # Who you build for
+│   ├── standards/                  # How you build
+│   ├── concepts/                   # Domain vocabulary
+│   ├── design/                     # Visual language
+│   └── observations.json           # AI-generated learnings, pending review
+
+├── brief/
+│   ├── active/                     # Live briefs (30-day time-box) [gitignored]
+│   └── dropped.json                # Condensed essences of dropped ideas
+
+├── shape/
+│   └── drafts/                     # Specs before publishing [gitignored]
+
+└── ship/
+    ├── work/                       # Worktrees [gitignored]
+    └── history.json                # Completed runs (includes git user)
 
 # Completed specs live in GitHub Issues (single source of truth)
+```
+
+### What's in Git
+
+The `.mill/` folder uses git as the collaboration layer. Shared knowledge is committed; personal WIP is gitignored.
+
+**Committed (shared):**
+- `project.json` — config
+- `context.md` — kickstarts new clones
+- `ground/` — all product knowledge (personas, standards, concepts, design, observations)
+- `brief/dropped.json` — team knowledge of explored-but-dropped ideas
+- `ship/history.json` — execution history with git usernames
+
+**Gitignored (local WIP):**
+- `brief/active/` — personal briefs in progress
+- `shape/drafts/` — personal spec drafts before publishing
+- `ship/work/` — ephemeral worktrees
+
+```gitignore
+# .mill gitignore
+.mill/brief/active/
+.mill/shape/drafts/
+.mill/ship/work/
 ```
 
 ## Prompt File Naming
