@@ -1,17 +1,28 @@
-# MILL
+# mill
 
-**Spec-first AI delivery.** MILL turns conversations into verified specs, then executes them in bounded loops until tests pass — not until the AI thinks it's done.
+**Knowledge-first AI delivery.** mill builds project ground — personas, standards, concepts — then uses that knowledge to craft well-verified specs and execute them in bounded loops until tests pass.
+
+## Workbench
+
+The workbench is a cross-platform desktop app with three workspaces:
+
+| Workspace | Purpose | Key Actions |
+|-----------|---------|-------------|
+| **Ground** | Build project knowledge | Curate personas, standards, concepts, design tokens; review AI observations |
+| **Shape** | Draft and refine specs | Chat-to-spec elicitation; manage drafts; publish to GitHub Issues |
+| **Ship** | Execute and verify | Run bounded loops; watch progress; review PRs |
 
 ```bash
-mill spec          # chat → spec → GitHub issue
-mill run 42       # loop until tests pass → PR
+mill workbench    # launch the desktop app
 ```
+
+The workbench provides real-time visibility into AI work, visual knowledge management, and a streamlined spec-to-PR flow.
 
 ## How It Works
 
-1. **Spec** — Interactive elicitation turns intent into a verifiable contract
-2. **Loop** — AI iterates until success criteria pass (max 20 iterations)
-3. **PR** — Only created after tests pass
+1. **Ground** — Curate the knowledge that guides AI decisions
+2. **Shape** — Interactive elicitation turns intent into verifiable specs
+3. **Ship** — AI iterates until success criteria pass (bounded loops)
 
 Every spec includes a Loop Contract:
 
@@ -24,36 +35,15 @@ Every spec includes a Loop Contract:
 
 The contract decides completion, not the agent.
 
-## Quick Start
+## CLI
+
+For scripting or terminal workflows:
 
 ```bash
-mill init              # setup repo (once)
-mill spec              # create spec → GitHub issue #N
-mill run               # list issues
-mill run --auto        # autopick best issue
-mill run 42           # execute loop
+mill spec         # chat → spec → GitHub issue
+mill run 42       # loop until tests pass → PR
+mill run --auto   # autopick best issue
 ```
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `mill init` | Initialize repo (labels, config, context) |
-| `mill spec` | Interactive spec → GitHub issue |
-| `mill personas` | Create or update user personas |
-| `mill run` | List issues (sorted by impact) |
-| `mill run --auto` | Autopick and execute best issue |
-| `mill run N` | Execute loop on specific issue |
-
-## Personas
-
-Optional user personas (`.mill/personas.md`) improve spec elicitation by grounding questions and user stories in real user segments.
-
-```bash
-mill personas     # create, update, or manage personas
-```
-
-Personas are loaded during `mill spec` but **not** during `mill run`. They "compile down" into concrete user stories — the spec stands alone with no persona references. The run loop only sees the self-contained spec.
 
 ## Spec Types
 
@@ -64,37 +54,24 @@ Personas are loaded during `mill spec` but **not** during `mill run`. They "comp
 | **Security** | Vulnerability | Threat mitigated |
 | **Task** | Technical work | Criteria pass |
 
-Types are tracked via labels (not GitHub issue types) for portability across git platforms.
-
-## Trajectory
-
-Autonomy increases incrementally — each step validates before the next.
-
-```
-Today:     Human creates spec → Human triggers loop
-Tomorrow:  MILL drafts specs → Human approves → MILL executes
-Future:    Multiple sources → MILL prioritizes → Human reviews PRs
-```
-
-Regardless of autonomy level, humans drive product direction — deciding *what* gets built and *when* it ships.
-
 ## Structure
 
 ```
 .mill/
-├── project.json     # scoring, excludes, context
-├── context.md       # auto-generated
-├── personas.md      # user personas (optional)
-├── memory/          # learnings
+├── project.json     # config
+├── context.md       # auto-generated project context
+├── memory/          # machine learnings
 ├── drafts/          # in-progress specs
-└── standards/       # human rules
+└── standards/       # human-authored rules
 ```
 
 Completed specs live in GitHub Issues.
 
 ## Requirements
 
-Git repo + `gh` CLI (authenticated)
+- Git repository
+- `gh` CLI (authenticated)
+- Windows, macOS, or Linux
 
 ## License
 
