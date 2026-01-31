@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
-import { PenTool, Map, Rocket, Settings } from 'lucide-react'
+import { Layers, PenTool, Rocket, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface WorkspaceNavProps {
@@ -12,8 +12,8 @@ interface WorkspaceNavProps {
 }
 
 const workspaces: { id: Workspace; label: string; icon: typeof PenTool; key: string }[] = [
-  { id: 'shape', label: 'Shape', icon: PenTool, key: '1' },
-  { id: 'map', label: 'Map', icon: Map, key: '2' },
+  { id: 'ground', label: 'Ground', icon: Layers, key: '1' },
+  { id: 'shape', label: 'Shape', icon: PenTool, key: '2' },
   { id: 'ship', label: 'Ship', icon: Rocket, key: '3' },
 ]
 

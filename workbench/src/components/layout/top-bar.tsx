@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
-import { PenTool, Map, Rocket, Settings, Lightbulb } from 'lucide-react'
+import { Layers, PenTool, Rocket, Settings, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TopBarProps {
@@ -12,8 +12,8 @@ interface TopBarProps {
 }
 
 const workspaces: { id: Workspace; label: string; icon: typeof PenTool; key: string }[] = [
-  { id: 'shape', label: 'Shape', icon: PenTool, key: '1' },
-  { id: 'map', label: 'Map', icon: Map, key: '2' },
+  { id: 'ground', label: 'Ground', icon: Layers, key: '1' },
+  { id: 'shape', label: 'Shape', icon: PenTool, key: '2' },
   { id: 'ship', label: 'Ship', icon: Rocket, key: '3' },
 ]
 
@@ -62,11 +62,11 @@ export function TopBar({
         {/* Observations indicator */}
         {openObservations > 0 && (
           <Button
-            onClick={() => onSwitch('map')}
+            onClick={() => onSwitch('ground')}
             variant="ghost"
             size="sm"
             className="h-8 px-2 bg-primary/10 hover:bg-primary/20 text-primary"
-            title="Open observations - click to view in Map"
+            title="Open observations - click to view in Ground"
           >
             <Lightbulb className="h-3.5 w-3.5 text-primary" />
             <span>{openObservations}</span>

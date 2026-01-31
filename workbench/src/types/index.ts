@@ -1,5 +1,5 @@
 // Workspace types
-export type Workspace = 'shape' | 'map' | 'ship'
+export type Workspace = 'ground' | 'shape' | 'ship'
 
 // Shape workspace
 export interface Draft {

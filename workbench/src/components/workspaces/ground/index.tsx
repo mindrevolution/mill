@@ -6,7 +6,7 @@ import { ItemDetail } from './item-detail'
 import { ObservationsTray } from './observations-tray'
 import { mockLibrary, mockObservations } from './utils'
 
-export function MapWorkspace() {
+export function GroundWorkspace() {
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | undefined>()
 
   return (

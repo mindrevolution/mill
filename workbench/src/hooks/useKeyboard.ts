@@ -33,7 +33,7 @@ export function useKeyboard(bindings: KeyBindings, deps: unknown[] = []) {
 
 // Workspace keyboard shortcuts
 export const WORKSPACE_KEYS = {
-  shape: '1',
-  map: '2',
+  ground: '1',
+  shape: '2',
   ship: '3',
 }
