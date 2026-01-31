@@ -28,6 +28,18 @@ export interface Draft {
   persona?: string
 }
 
+export interface DraftDetail {
+  id: string
+  slug: string
+  title: string
+  body: string
+  bodyHtml: string
+  type: 'feature' | 'bug' | 'security' | 'task'
+  status: 'draft' | 'ready'
+  updatedAt: string
+  persona?: string
+}
+
 export interface Issue {
   number: number
   title: string
@@ -134,6 +146,7 @@ export const api = {
   // Specs
   spec: {
     drafts: () => request<Draft[]>('/api/spec/drafts'),
+    draft: (id: string) => request<DraftDetail>(`/api/spec/drafts/${id}`),
     issues: (refresh = false) => request<Issue[]>(`/api/spec/issues${refresh ? '?refresh=true' : ''}`),
     issue: (number: number, refresh = false) => request<IssueDetail>(`/api/spec/issues/${number}${refresh ? '?refresh=true' : ''}`),
     start: (draftId?: string, type?: string) => request<SpecSession>('/api/spec/start', {

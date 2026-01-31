@@ -13,16 +13,19 @@ public class MillService
 {
     private readonly ILogger<MillService> _logger;
     private readonly IssueProviderFactory _providerFactory;
+    private readonly MarkdownService _markdown;
     private readonly string _millPath;
     private string? _projectPath;
 
     public MillService(
         ILogger<MillService> logger,
         IConfiguration config,
-        IssueProviderFactory providerFactory)
+        IssueProviderFactory providerFactory,
+        MarkdownService markdown)
     {
         _logger = logger;
         _providerFactory = providerFactory;
+        _markdown = markdown;
         _millPath = config["Mill:CliPath"] ?? "mill";
         _projectPath = config["Mill:ProjectPath"];
     }
@@ -77,7 +80,7 @@ public class MillService
 
     public async Task<List<Draft>> GetDrafts()
     {
-        var draftsPath = Path.Combine(_projectPath ?? ".", ".mill", "drafts");
+        var draftsPath = Path.Combine(_projectPath ?? ".", ".mill", "shape", "drafts");
         if (!Directory.Exists(draftsPath))
             return [];
 
@@ -101,6 +104,47 @@ public class MillService
         }
 
         return drafts.OrderByDescending(d => d.UpdatedAt).ToList();
+    }
+
+    public async Task<DraftDetail?> GetDraftDetail(string id)
+    {
+        var draftsPath = Path.Combine(_projectPath ?? ".", ".mill", "shape", "drafts");
+        var filePath = Path.Combine(draftsPath, $"{id}.md");
+
+        if (!File.Exists(filePath))
+            return null;
+
+        var info = new FileInfo(filePath);
+        var content = await File.ReadAllTextAsync(filePath);
+        var (title, type, persona, status) = ParseDraftFrontmatter(content);
+
+        // Extract body (content after frontmatter)
+        var body = ExtractBody(content);
+
+        return new DraftDetail(
+            Id: id,
+            Slug: id,
+            Title: title ?? FormatName(id),
+            Body: body,
+            BodyHtml: _markdown.ToHtml(body),
+            Type: type ?? "feature",
+            Status: status ?? "draft",
+            UpdatedAt: info.LastWriteTime,
+            Persona: persona
+        );
+    }
+
+    private static string ExtractBody(string content)
+    {
+        // Remove frontmatter (between --- markers) and return the rest
+        if (!content.StartsWith("---"))
+            return content.Trim();
+
+        var endMarker = content.IndexOf("---", 3);
+        if (endMarker < 0)
+            return content.Trim();
+
+        return content[(endMarker + 3)..].Trim();
     }
 
     // ─────────────────────────────────────────────────────────────────

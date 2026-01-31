@@ -16,6 +16,18 @@ public record Draft(
     string? Persona
 );
 
+public record DraftDetail(
+    string Id,
+    string Slug,
+    string Title,
+    string Body,
+    string BodyHtml,
+    string Type,
+    string Status,
+    DateTime UpdatedAt,
+    string? Persona
+);
+
 public record Issue(
     int Number,
     string Title,
@@ -148,6 +160,7 @@ public record AbortedResponse(string Aborted);
 [JsonSerializable(typeof(Issue))]
 [JsonSerializable(typeof(List<Issue>))]
 [JsonSerializable(typeof(IssueDetail))]
+[JsonSerializable(typeof(DraftDetail))]
 [JsonSerializable(typeof(KnowledgeItem))]
 [JsonSerializable(typeof(List<KnowledgeItem>))]
 [JsonSerializable(typeof(Observation))]

@@ -5,14 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Card, CardContent } from '@/components/ui/card'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { Separator } from '@/components/ui/separator'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -40,7 +38,7 @@ import {
 } from '@/components/ui/dialog'
 import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
-import type { Draft, Issue, IssueDetail } from '@/lib/api'
+import type { Draft, DraftDetail, Issue, IssueDetail } from '@/lib/api'
 import type { ChatMessage } from '@/types'
 import {
   Plus,
@@ -49,11 +47,9 @@ import {
   Bug,
   Shield,
   Wrench,
-  ChevronRight,
   Sparkles,
   Loader2,
   AlertCircle,
-  RotateCcw,
   RefreshCw,
   Play,
   Terminal,
@@ -482,16 +478,16 @@ function SpecChat({ draft, sessionId }: { draft?: Draft; sessionId?: string }) {
 }
 
 function SpecPreview({
-  draft,
+  draftDetail,
   issueDetail,
-  loadingIssue,
+  loading,
 }: {
-  draft?: Draft
+  draftDetail?: DraftDetail
   issueDetail?: IssueDetail
-  loadingIssue?: boolean
+  loading?: boolean
 }) {
-  // Show loading state for issue
-  if (loadingIssue) {
+  // Show loading state
+  if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
@@ -499,10 +495,13 @@ function SpecPreview({
     )
   }
 
-  // Show issue detail
-  if (issueDetail) {
-    const Icon = typeIcons[issueDetail.type] || FileText
-    const color = typeColors[issueDetail.type] || 'text-muted-foreground'
+  // Unified view for both draft and issue
+  const spec = issueDetail || draftDetail
+  if (spec) {
+    const isDraft = !issueDetail
+    const Icon = typeIcons[spec.type] || FileText
+    const color = typeColors[spec.type] || 'text-muted-foreground'
+    const bodyHtml = 'bodyHtml' in spec ? spec.bodyHtml : undefined
 
     return (
       <div className="h-full relative">
@@ -512,23 +511,30 @@ function SpecPreview({
             <div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <Icon className={cn('h-3 w-3', color)} />
-                <span>#{issueDetail.number}</span>
-                <Badge variant="secondary">{issueDetail.type}</Badge>
-                <Badge variant={issueDetail.status === 'open' ? 'default' : 'secondary'}>
-                  {issueDetail.status}
-                </Badge>
-                {issueDetail.persona && <span>· {issueDetail.persona}</span>}
+                {isDraft ? (
+                  <Badge variant="outline">Draft</Badge>
+                ) : (
+                  <span>#{(spec as IssueDetail).number}</span>
+                )}
+                <Badge variant="secondary">{spec.type}</Badge>
+                {!isDraft && (
+                  <Badge variant={(spec as IssueDetail).status === 'open' ? 'default' : 'secondary'}>
+                    {(spec as IssueDetail).status}
+                  </Badge>
+                )}
+                {spec.persona && <span>· {spec.persona}</span>}
               </div>
-              <h2
-                className="text-lg font-semibold"
-                dangerouslySetInnerHTML={{ __html: issueDetail.titleHtml }}
-              />
+              <h2 className="text-lg font-semibold">
+                {isDraft ? spec.title : (
+                  <span dangerouslySetInnerHTML={{ __html: (spec as IssueDetail).titleHtml }} />
+                )}
+              </h2>
             </div>
 
-            {/* Labels */}
-            {issueDetail.labels.length > 0 && (
+            {/* Labels (issues only) */}
+            {!isDraft && (spec as IssueDetail).labels.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {issueDetail.labels.map((label) => (
+                {(spec as IssueDetail).labels.map((label) => (
                   <Badge key={label} variant="outline" className="text-xs">
                     {label}
                   </Badge>
@@ -537,10 +543,10 @@ function SpecPreview({
             )}
 
             {/* Body */}
-            {issueDetail.bodyHtml ? (
+            {bodyHtml ? (
               <div
                 className="prose prose-sm prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: issueDetail.bodyHtml }}
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
               />
             ) : (
               <div className="text-sm text-muted-foreground italic">
@@ -550,93 +556,22 @@ function SpecPreview({
 
             {/* Meta */}
             <div className="text-xs text-muted-foreground pt-2 border-t">
-              Created {formatDate(issueDetail.createdAt)}
+              {isDraft
+                ? `Updated ${formatDate((spec as DraftDetail).updatedAt)}`
+                : `Created ${formatDate((spec as IssueDetail).createdAt)}`}
             </div>
           </div>
         </ScrollArea>
 
         {/* Floating Action Bar */}
-        <IssueActionBar
-          issueNumber={issueDetail.number}
-          onDelete={() => console.log('TODO: Close issue', issueDetail.number)}
-        />
-      </div>
-    )
-  }
-
-  // Show draft preview
-  if (draft) {
-    return (
-      <div className="h-full relative">
-        <ScrollArea className="h-full">
-          <div className="p-4 pb-16 space-y-4">
-            {/* Header */}
-            <div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Badge variant="secondary">{draft.type}</Badge>
-                {draft.persona && <span>· {draft.persona}</span>}
-              </div>
-              <h2 className="text-lg font-semibold">{draft.title}</h2>
-            </div>
-
-            {/* Sections */}
-            <div className="space-y-3">
-              <Card className="hover:border-primary/50 transition-colors">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium">Summary</h3>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Add the ability to sync data while offline and reconcile when connection is restored.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/50 transition-colors">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium">Acceptance Criteria</h3>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Changes made offline are queued locally</li>
-                    <li>• Queue syncs automatically when online</li>
-                    <li>• Conflicts are surfaced to user</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/50 transition-colors">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium">Verification</h3>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Integration tests for offline queue, unit tests for conflict resolution.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Actions - auto-save, so only "Create Issue" and "Revert" */}
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1">Create Issue</Button>
-              <Button variant="outline" size="icon" title="Revert changes">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Auto-save indicator */}
-            <div className="text-xs text-muted-foreground text-center">
-              Auto-saved · Updated {formatDate(draft.updatedAt)}
-            </div>
-          </div>
-        </ScrollArea>
-
-        {/* Floating Action Bar */}
-        <DraftActionBar onDelete={() => console.log('TODO: Delete draft', draft.id)} />
+        {isDraft ? (
+          <DraftActionBar onDelete={() => console.log('TODO: Delete draft', spec.id)} />
+        ) : (
+          <IssueActionBar
+            issueNumber={(spec as IssueDetail).number}
+            onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
+          />
+        )}
       </div>
     )
   }
@@ -658,20 +593,33 @@ export function ShapeWorkspace() {
   const [selectedDraft, setSelectedDraft] = useState<Draft | undefined>()
   const [selectedId, setSelectedId] = useState<string | undefined>()
   const [sessionId, setSessionId] = useState<string | undefined>()
+  const [draftDetail, setDraftDetail] = useState<DraftDetail | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
-  const [loadingIssue, setLoadingIssue] = useState(false)
+  const [loadingSpec, setLoadingSpec] = useState(false)
 
-  const handleSelectDraft = (draft: Draft) => {
+  const handleSelectDraft = async (draft: Draft) => {
     setSelectedDraft(draft)
+    setDraftDetail(undefined)
     setIssueDetail(undefined)
     setSelectedId(draft.id)
+    setLoadingSpec(true)
+
+    try {
+      const detail = await api.spec.draft(draft.id)
+      setDraftDetail(detail)
+    } catch (e) {
+      console.error('Failed to fetch draft details:', e)
+    } finally {
+      setLoadingSpec(false)
+    }
   }
 
   const handleSelectIssue = async (issue: Issue) => {
     setSelectedDraft(undefined)
+    setDraftDetail(undefined)
     setIssueDetail(undefined)
     setSelectedId(`issue-${issue.number}`)
-    setLoadingIssue(true)
+    setLoadingSpec(true)
 
     try {
       const detail = await api.spec.issue(issue.number)
@@ -679,7 +627,7 @@ export function ShapeWorkspace() {
     } catch (e) {
       console.error('Failed to fetch issue details:', e)
     } finally {
-      setLoadingIssue(false)
+      setLoadingSpec(false)
     }
   }
 
@@ -716,9 +664,9 @@ export function ShapeWorkspace() {
         </Tile>
         <Tile>
           <SpecPreview
-            draft={selectedDraft}
+            draftDetail={draftDetail}
             issueDetail={issueDetail}
-            loadingIssue={loadingIssue}
+            loading={loadingSpec}
           />
         </Tile>
       </TileSplit>

@@ -18,6 +18,16 @@ public static class SpecEndpoints
         .WithName("GetDrafts")
         .WithSummary("List all spec drafts");
 
+        group.MapGet("/drafts/{id}", async (string id, MillService mill) =>
+        {
+            var draft = await mill.GetDraftDetail(id);
+            return draft != null
+                ? Results.Json(draft, ApiJsonContext.Default.DraftDetail)
+                : Results.NotFound();
+        })
+        .WithName("GetDraftDetail")
+        .WithSummary("Get single draft with full content");
+
         group.MapGet("/issues", async (MillService mill, bool refresh = false) =>
         {
             var issues = await mill.GetIssues(forceRefresh: refresh);
