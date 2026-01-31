@@ -17,7 +17,7 @@ public static class KnowledgeEndpoints
                 return Results.BadRequest($"Invalid category. Must be one of: {string.Join(", ", validCategories)}");
 
             var items = await mill.GetKnowledgeItems(category.ToLowerInvariant());
-            return Results.Json(items, ApiJsonContext.Default.ListKnowledgeItem);
+            return Results.Ok(items);
         })
         .WithName("GetKnowledgeItems")
         .WithSummary("Get all items in a library category");
@@ -28,7 +28,7 @@ public static class KnowledgeEndpoints
             if (content == null)
                 return Results.NotFound();
 
-            return Results.Json(new KnowledgeItemContent(id, category, content), ApiJsonContext.Default.KnowledgeItemContent);
+            return Results.Ok(new KnowledgeItemContent(id, category, content));
         })
         .WithName("GetKnowledgeItem")
         .WithSummary("Get a specific library item's content");

@@ -177,6 +177,19 @@ static partial class Mill
         }
     }
 
+    public static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
+    static readonly JsonSerializerOptions JsonOptionsIndented = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
+    };
+
     // Parent git root - cached at startup, never changes (used for config, standards, drafts)
     static string? _parentGitRoot;
     static string ParentGitRoot => _parentGitRoot ??= ResolveGitRoot();
@@ -426,7 +439,7 @@ static partial class Mill
         var (exit, output) = Gh("issue", "list", "--state", "open", "--label", "sweep", "--json", "body", "--limit", "100");
         if (exit != 0) return [];
 
-        var issues = JsonSerializer.Deserialize(output, GhJsonContext.Default.ListGhIssueDetail) ?? [];
+        var issues = JsonSerializer.Deserialize<List<GhIssueDetail>>(output, JsonOptions) ?? [];
         var existingIds = new HashSet<string>();
 
         foreach (var issue in issues)
@@ -581,7 +594,7 @@ static partial class Mill
             return 1;
         }
 
-        var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetailFull);
+        var issueDetail = JsonSerializer.Deserialize<GhIssueDetailFull>(output, JsonOptions);
         if (issueDetail == null)
         {
             Out.Error("failed to parse issue");
@@ -1168,7 +1181,7 @@ static partial class Mill
         SweepAnalysis? analysis;
         try
         {
-            analysis = JsonSerializer.Deserialize(analysisMatch.Groups[1].Value, GhJsonContext.Default.SweepAnalysis);
+            analysis = JsonSerializer.Deserialize<SweepAnalysis>(analysisMatch.Groups[1].Value, JsonOptions);
         }
         catch (JsonException ex)
         {
@@ -1439,7 +1452,7 @@ static partial class Mill
                 return new SpecLoadResult(null, 1);
             }
 
-            var issueDetail = JsonSerializer.Deserialize(output, GhJsonContext.Default.GhIssueDetail);
+            var issueDetail = JsonSerializer.Deserialize<GhIssueDetail>(output, JsonOptions);
             if (issueDetail == null)
             {
                 Out.Error("failed to parse issue");
@@ -1896,7 +1909,7 @@ static partial class Mill
             return 1;
         }
 
-        var issues = JsonSerializer.Deserialize(output, GhJsonContext.Default.ListGhIssue) ?? [];
+        var issues = JsonSerializer.Deserialize<List<GhIssue>>(output, JsonOptions) ?? [];
 
         // Filter out workflow labels and deferred issues
         var excludeLabels = new[] { "in-progress", "blocked", "ready-for-review", "backlog", "deferred", "on-hold" };
@@ -1962,7 +1975,7 @@ static partial class Mill
 
         // Load config
         var config = LoadConfig();
-        var configJson = JsonSerializer.Serialize(config, MillConfigContext.Default.MillConfig);
+        var configJson = JsonSerializer.Serialize(config, JsonOptions);
 
         // Fetch open issues
         var (issuesExit, issuesJson) = Gh("issue", "list", "--state", "open", "--json", "number,title,body,labels,createdAt", "--limit", "100");
@@ -2039,7 +2052,7 @@ static partial class Mill
     static void WriteDefaultConfig()
     {
         var config = new MillConfig();
-        var json = JsonSerializer.Serialize(config, MillConfigContext.Default.MillConfig);
+        var json = JsonSerializer.Serialize(config, JsonOptionsIndented);
         File.WriteAllText(ConfigFile, json);
     }
 
@@ -2051,7 +2064,7 @@ static partial class Mill
         try
         {
             var json = File.ReadAllText(ConfigFile);
-            return JsonSerializer.Deserialize(json, MillConfigContext.Default.MillConfig) ?? new MillConfig();
+            return JsonSerializer.Deserialize<MillConfig>(json, JsonOptions) ?? new MillConfig();
         }
         catch
         {
@@ -2506,7 +2519,7 @@ static partial class Mill
             if (jsonStart < 0 || jsonEnd < 0) return null;
 
             var json = afterToken[jsonStart..(jsonEnd + 1)];
-            return JsonSerializer.Deserialize(json, VerifyJsonContext.Default.VerifyMetadata);
+            return JsonSerializer.Deserialize<VerifyMetadata>(json, JsonOptions);
         }
         catch
         {
@@ -2746,7 +2759,7 @@ static partial class Mill
                 if (jsonStart >= 0 && jsonEnd > jsonStart)
                 {
                     var json = afterToken[jsonStart..(jsonEnd + 1)];
-                    var fail = JsonSerializer.Deserialize(json, CriterionJsonContext.Default.CriterionFail);
+                    var fail = JsonSerializer.Deserialize<CriterionFail>(json, JsonOptions);
                     if (fail != null)
                         return new CriterionResult(criterion.Index, criterion.Title, false, fail.Reason, fail.Suggestion);
                 }

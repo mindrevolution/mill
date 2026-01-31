@@ -157,35 +157,3 @@ record SweepCategory(
 record SweepAnalysis(
     [property: JsonPropertyName("categories")] List<SweepCategory> Categories);
 
-// =============================================================================
-// JSON serialization contexts (AOT-compatible)
-// =============================================================================
-
-[JsonSerializable(typeof(List<GhIssue>))]
-[JsonSerializable(typeof(GhIssueDetail))]
-[JsonSerializable(typeof(List<GhIssueDetail>))]
-[JsonSerializable(typeof(GhIssueDetailFull))]
-[JsonSerializable(typeof(GhRelease))]
-[JsonSerializable(typeof(SweepAnalysis))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-internal partial class GhJsonContext : JsonSerializerContext { }
-
-[JsonSerializable(typeof(MillConfig))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
-internal partial class MillConfigContext : JsonSerializerContext { }
-
-[JsonSerializable(typeof(VerifyMetadata))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-internal partial class VerifyJsonContext : JsonSerializerContext { }
-
-[JsonSerializable(typeof(CriterionPass))]
-[JsonSerializable(typeof(CriterionFail))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-internal partial class CriterionJsonContext : JsonSerializerContext { }
-
-[JsonSerializable(typeof(SweepFinding))]
-[JsonSerializable(typeof(SweepCategory))]
-[JsonSerializable(typeof(SweepAnalysis))]
-[JsonSerializable(typeof(List<SweepCategory>))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-internal partial class SweepJsonContext : JsonSerializerContext { }

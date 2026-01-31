@@ -327,7 +327,7 @@ static class Installer
         try
         {
             var json = await Http.GetStringAsync(url);
-            return JsonSerializer.Deserialize(json, GhJsonContext.Default.GhRelease);
+            return JsonSerializer.Deserialize<GhRelease>(json, Mill.JsonOptions);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {

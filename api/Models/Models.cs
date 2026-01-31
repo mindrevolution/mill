@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace MillApi.Models;
 
 // Project
@@ -146,39 +144,9 @@ public record StartSpecRequest(string? DraftId, string? Type);
 
 public record StartRunRequest(int Issue);
 
-// API Response types (for AOT compatibility)
+// API Response types
 public record ProjectResponse(bool Configured, string? Path = null, string? Name = null, string? IssueProvider = null);
 public record ProjectSetResponse(string Path, string Name);
 public record KnowledgeItemContent(string Id, string Category, string Content);
 public record IssueNotFoundError(string Error);
 public record AbortedResponse(string Aborted);
-
-// JSON serialization context (AOT-compatible)
-[JsonSerializable(typeof(Project))]
-[JsonSerializable(typeof(Draft))]
-[JsonSerializable(typeof(List<Draft>))]
-[JsonSerializable(typeof(Issue))]
-[JsonSerializable(typeof(List<Issue>))]
-[JsonSerializable(typeof(IssueDetail))]
-[JsonSerializable(typeof(DraftDetail))]
-[JsonSerializable(typeof(KnowledgeItem))]
-[JsonSerializable(typeof(List<KnowledgeItem>))]
-[JsonSerializable(typeof(Observation))]
-[JsonSerializable(typeof(Run))]
-[JsonSerializable(typeof(List<Run>))]
-[JsonSerializable(typeof(RunLog))]
-[JsonSerializable(typeof(HistoryEntry))]
-[JsonSerializable(typeof(List<HistoryEntry>))]
-[JsonSerializable(typeof(SpecSession))]
-[JsonSerializable(typeof(ChatMessage))]
-[JsonSerializable(typeof(SendMessageRequest))]
-[JsonSerializable(typeof(SendMessageResponse))]
-[JsonSerializable(typeof(StartSpecRequest))]
-[JsonSerializable(typeof(StartRunRequest))]
-[JsonSerializable(typeof(ProjectResponse))]
-[JsonSerializable(typeof(ProjectSetResponse))]
-[JsonSerializable(typeof(KnowledgeItemContent))]
-[JsonSerializable(typeof(IssueNotFoundError))]
-[JsonSerializable(typeof(AbortedResponse))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-public partial class ApiJsonContext : JsonSerializerContext { }

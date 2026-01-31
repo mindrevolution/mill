@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Photino.NET;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -108,7 +107,7 @@ static class Workbench
         }
 
         app.MapGet("/api/health", () =>
-            Results.Json(new HealthResponse("ok", Mill.Version), WorkbenchJsonContext.Default.HealthResponse));
+            Results.Json(new HealthResponse("ok", Mill.Version)));
 
         app.MapMillApi();
 
@@ -159,7 +158,7 @@ static class Workbench
 
             // Health endpoint
             app.MapGet("/api/health", () =>
-                Results.Json(new HealthResponse("ok", Mill.Version), WorkbenchJsonContext.Default.HealthResponse));
+                Results.Json(new HealthResponse("ok", Mill.Version)));
 
             app.MapMillApi();
 
@@ -361,7 +360,7 @@ static class Workbench
             var path = GetWindowStatePath();
             if (!File.Exists(path)) return null;
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize(json, WorkbenchJsonContext.Default.WindowState);
+            return JsonSerializer.Deserialize<WindowState>(json);
         }
         catch
         {
@@ -374,7 +373,7 @@ static class Workbench
         try
         {
             var path = GetWindowStatePath();
-            var json = JsonSerializer.Serialize(state, WorkbenchJsonContext.Default.WindowState);
+            var json = JsonSerializer.Serialize(state);
             File.WriteAllText(path, json);
         }
         catch
@@ -438,18 +437,6 @@ static class Workbench
     }
 }
 
-// AOT-compatible types for workbench API
-record HealthResponse(
-    [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("version")] string Version);
+record HealthResponse(string Status, string Version);
 
-record WindowState(
-    [property: JsonPropertyName("left")] int Left,
-    [property: JsonPropertyName("top")] int Top,
-    [property: JsonPropertyName("width")] int Width,
-    [property: JsonPropertyName("height")] int Height);
-
-[JsonSerializable(typeof(HealthResponse))]
-[JsonSerializable(typeof(WindowState))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-partial class WorkbenchJsonContext : JsonSerializerContext { }
+record WindowState(int Left, int Top, int Width, int Height);
