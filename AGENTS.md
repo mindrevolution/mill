@@ -21,7 +21,15 @@ mill/
 │   └── src/
 ├── api/                    # ASP.NET Minimal API (backend)
 │   └── Mill.Api/
-├── spec/                   # Spec creation (prompts + templates)
+├── ground/                 # Ground workspace assets (bundled with app)
+│   ├── prompts/
+│   │   └── kickstart.md        # Generate initial ground files
+│   └── templates/
+│       ├── archetypes/         # Product archetypes (saas, marketplace, etc.)
+│       └── stacks/             # Tech stack profiles (web-react-node, etc.)
+├── brief/                  # Brief workspace assets (future)
+│   └── prompts/
+├── shape/                  # Shape workspace assets
 │   ├── prompts/
 │   │   ├── context-warmup.md   # Generates .mill/context.md
 │   │   ├── spec-draft.md       # Interactive spec elicitation
@@ -31,7 +39,7 @@ mill/
 │       ├── bug.md
 │       ├── security.md
 │       └── task.md
-├── run/                    # Iterative execution
+├── ship/                   # Ship workspace assets
 │   └── prompts/
 │       ├── loop-iterate.md         # Work prompt (implement, signal MILL_VERIFY)
 │       ├── loop-verify.md          # Verify prompt (review, approve/reject)
@@ -88,21 +96,37 @@ The `.mill/` folder uses git as the collaboration layer. Shared knowledge is com
 .mill/ship/work/
 ```
 
-## Prompt File Naming
+## Prompt and Template Organization
+
+Prompts and templates are organized by workspace:
+
+```
+{workspace}/
+├── prompts/       # LLM prompts for this workspace
+└── templates/     # Output templates (if applicable)
+```
+
+### Prompt Naming
 
 Format: `[subject]-[verb].md`
 
-| File | Subject | Verb | Purpose |
-|------|---------|------|---------|
-| `context-warmup.md` | context | warmup | Build project context |
-| `spec-draft.md` | spec | draft | Interactive spec elicitation with persistence |
-| `spec-refine.md` | spec | refine | Update spec against current codebase |
-| `loop-iterate.md` | loop | iterate | Work prompt — implement slice, signal MILL_VERIFY |
-| `loop-verify.md` | loop | verify | Verify prompt — review work, approve or reject |
-| `loop-verify-criterion.md` | loop | verify-criterion | Parallel verification — check one criterion |
-| `run-autopick.md` | run | autopick | Intelligent issue selection |
+| Workspace | File | Purpose |
+|-----------|------|---------|
+| shape | `context-warmup.md` | Build project context |
+| shape | `spec-draft.md` | Interactive spec elicitation |
+| shape | `spec-refine.md` | Update spec against current codebase |
+| ship | `loop-iterate.md` | Work prompt — implement, signal MILL_VERIFY |
+| ship | `loop-verify.md` | Verify prompt — review, approve/reject |
+| ship | `loop-verify-criterion.md` | Parallel verification — check one criterion |
+| ship | `run-autopick.md` | Intelligent issue selection |
+| ground | `kickstart.md` | Generate initial ground files |
 
-Templates use noun form: `feature.md`, `bug.md`, `security.md`, `task.md`
+### Templates
+
+Templates use noun form and live under `{workspace}/templates/`:
+- `shape/templates/` — spec output templates: `feature.md`, `bug.md`, `security.md`, `task.md`
+- `ground/templates/archetypes/` — product archetypes: `saas.md`, `marketplace.md`, etc.
+- `ground/templates/stacks/` — tech stack profiles: `web-react-node.md`, etc.
 
 ## Workspaces
 
@@ -187,10 +211,10 @@ The workbench is the primary interface. The CLI is deprecated.
 
 ```
 mill/
-├── workbench/     # React UI (primary interface)
-├── api/           # ASP.NET Minimal API (backend)
-├── spec/, run/    # Prompt templates
-└── cli/           # Deprecated
+├── workbench/                    # React UI (primary interface)
+├── api/                          # ASP.NET Minimal API (backend)
+├── ground/, brief/, shape/, ship/   # Workspace assets (prompts, templates)
+└── cli/                          # Deprecated
 ```
 
 ```mermaid
