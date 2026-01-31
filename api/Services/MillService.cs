@@ -14,6 +14,7 @@ public class MillService
     private readonly ILogger<MillService> _logger;
     private readonly IssueProviderFactory _providerFactory;
     private readonly MarkdownService _markdown;
+    private readonly MillPaths _paths;
     private readonly string _millPath;
     private string? _projectPath;
 
@@ -21,11 +22,13 @@ public class MillService
         ILogger<MillService> logger,
         IConfiguration config,
         IssueProviderFactory providerFactory,
-        MarkdownService markdown)
+        MarkdownService markdown,
+        MillPaths paths)
     {
         _logger = logger;
         _providerFactory = providerFactory;
         _markdown = markdown;
+        _paths = paths;
         _millPath = config["Mill:CliPath"] ?? "mill";
         _projectPath = config["Mill:ProjectPath"];
     }
@@ -34,17 +37,17 @@ public class MillService
     public string? GetProjectPath() => _projectPath;
 
     // ─────────────────────────────────────────────────────────────────
-    // Knowledge
+    // Ground (Knowledge Items)
     // ─────────────────────────────────────────────────────────────────
 
-    public async Task<List<KnowledgeItem>> GetKnowledgeItems(string category)
+    public async Task<List<KnowledgeItem>> GetGroundItems(string category)
     {
-        var libraryPath = Path.Combine(_projectPath ?? ".", ".mill", "library", category);
-        if (!Directory.Exists(libraryPath))
+        var groundPath = Path.Combine(_projectPath ?? ".", ".mill", "ground", category);
+        if (!Directory.Exists(groundPath))
             return [];
 
         var items = new List<KnowledgeItem>();
-        foreach (var file in Directory.GetFiles(libraryPath, "*.md"))
+        foreach (var file in Directory.GetFiles(groundPath, "*.md"))
         {
             var info = new FileInfo(file);
             var name = Path.GetFileNameWithoutExtension(file);
@@ -65,14 +68,399 @@ public class MillService
         return items;
     }
 
-    public async Task<string?> GetKnowledgeItemContent(string category, string id)
+    public async Task<string?> GetGroundItemContent(string category, string id)
     {
-        var filePath = Path.Combine(_projectPath ?? ".", ".mill", "library", category, $"{id}.md");
+        var filePath = Path.Combine(_projectPath ?? ".", ".mill", "ground", category, $"{id}.md");
         if (!File.Exists(filePath))
             return null;
 
         return await File.ReadAllTextAsync(filePath);
     }
+
+    public GroundStatus GetGroundStatus()
+    {
+        var groundPath = Path.Combine(_projectPath ?? ".", ".mill", "ground");
+        var kickstartPath = Path.Combine(groundPath, "kickstart.json");
+
+        // Check if ground folder is empty (no .md files in any category)
+        var isEmpty = true;
+        var categories = new[] { "personas", "standards", "concepts", "design" };
+        foreach (var category in categories)
+        {
+            var categoryPath = Path.Combine(groundPath, category);
+            if (Directory.Exists(categoryPath) && Directory.GetFiles(categoryPath, "*.md").Length > 0)
+            {
+                isEmpty = false;
+                break;
+            }
+        }
+
+        var hasKickstart = File.Exists(kickstartPath);
+        return new GroundStatus(isEmpty, hasKickstart);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Ground Templates
+    // ─────────────────────────────────────────────────────────────────
+
+    public List<TemplateSummary> GetArchetypes()
+    {
+        return GetTemplates("archetypes");
+    }
+
+    public List<TemplateSummary> GetStacks()
+    {
+        return GetTemplates("stacks");
+    }
+
+    private List<TemplateSummary> GetTemplates(string type)
+    {
+        var templatesPath = Path.Combine(_paths.Templates, type);
+        if (!Directory.Exists(templatesPath))
+            return [];
+
+        var templates = new List<TemplateSummary>();
+        foreach (var file in Directory.GetFiles(templatesPath, "*.md"))
+        {
+            var content = File.ReadAllText(file);
+            var frontmatter = ParseTemplateFrontmatter(content);
+
+            if (frontmatter.id != null)
+            {
+                templates.Add(new TemplateSummary(
+                    frontmatter.id,
+                    frontmatter.label ?? FormatName(frontmatter.id),
+                    frontmatter.summary ?? "",
+                    frontmatter.tags ?? []
+                ));
+            }
+        }
+
+        return templates.OrderBy(t => t.Label).ToList();
+    }
+
+    public TemplateContent? GetTemplate(string type, string id)
+    {
+        var filePath = Path.Combine(_paths.Templates, type, $"{id}.md");
+        if (!File.Exists(filePath))
+            return null;
+
+        var content = File.ReadAllText(filePath);
+        return new TemplateContent(id, type, content);
+    }
+
+    private static (string? id, string? label, string? summary, List<string>? tags) ParseTemplateFrontmatter(string content)
+    {
+        string? id = null, label = null, summary = null;
+        List<string>? tags = null;
+
+        var lines = content.Split('\n');
+        var inFrontmatter = false;
+        var inTags = false;
+
+        foreach (var line in lines)
+        {
+            if (line.Trim() == "---")
+            {
+                if (inFrontmatter)
+                    break;
+                inFrontmatter = true;
+                continue;
+            }
+            if (!inFrontmatter)
+                continue;
+
+            // Handle tags array (inline or multiline)
+            if (inTags)
+            {
+                if (line.TrimStart().StartsWith("- "))
+                {
+                    tags ??= [];
+                    tags.Add(line.TrimStart()[2..].Trim());
+                    continue;
+                }
+                inTags = false;
+            }
+
+            var parts = line.Split(':', 2);
+            if (parts.Length != 2)
+                continue;
+
+            var key = parts[0].Trim().ToLowerInvariant();
+            var value = parts[1].Trim();
+
+            switch (key)
+            {
+                case "id": id = value; break;
+                case "label": label = value; break;
+                case "summary": summary = value; break;
+                case "tags":
+                    // Handle inline tags like: tags: [subscription, web]
+                    if (value.StartsWith('[') && value.EndsWith(']'))
+                    {
+                        var tagContent = value[1..^1];
+                        tags = tagContent.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)).ToList();
+                    }
+                    else if (string.IsNullOrEmpty(value))
+                    {
+                        inTags = true;
+                    }
+                    break;
+            }
+        }
+
+        return (id, label, summary, tags);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Kickstart
+    // ─────────────────────────────────────────────────────────────────
+
+    public async Task<KickstartResponse> RunKickstart(KickstartRequest request, ILlmProvider llmProvider)
+    {
+        // Load templates
+        var archetype = GetTemplate("archetypes", request.ArchetypeId);
+        var stack = GetTemplate("stacks", request.StackId);
+
+        if (archetype == null)
+            throw new ArgumentException($"Archetype '{request.ArchetypeId}' not found");
+        if (stack == null)
+            throw new ArgumentException($"Stack '{request.StackId}' not found");
+
+        // Load kickstart prompt
+        var promptPath = Path.Combine(_paths.GroundPrompts, "kickstart.md");
+        if (!File.Exists(promptPath))
+            throw new InvalidOperationException("Kickstart prompt not found");
+
+        var promptTemplate = await File.ReadAllTextAsync(promptPath);
+
+        // Build the full prompt
+        var prompt = BuildKickstartPrompt(
+            request.Name,
+            request.Description,
+            archetype.Content,
+            stack.Content,
+            request.ArchetypeOverride,
+            request.StackOverride,
+            promptTemplate
+        );
+
+        // Execute LLM
+        var llmOptions = new LlmOptions(_projectPath, TimeoutMs: 180000);
+        var response = await llmProvider.Execute(prompt, llmOptions);
+
+        if (!response.Success)
+        {
+            throw new InvalidOperationException($"LLM execution failed: {response.Error}");
+        }
+
+        // Parse output and write files
+        var sections = ParseKickstartOutput(response.Output);
+        var created = await WriteGroundFiles(sections, request.Name, request.ArchetypeId, request.StackId);
+
+        return new KickstartResponse(created);
+    }
+
+    private static string BuildKickstartPrompt(
+        string name,
+        string? description,
+        string archetypeContent,
+        string stackContent,
+        ArchetypeOverride? archetypeOverride,
+        StackOverride? stackOverride,
+        string promptTemplate)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        sb.AppendLine(promptTemplate);
+        sb.AppendLine();
+        sb.AppendLine("## Context");
+        sb.AppendLine();
+        sb.AppendLine($"Product name: {name}");
+        if (!string.IsNullOrEmpty(description))
+            sb.AppendLine($"Description: {description}");
+        sb.AppendLine();
+
+        sb.AppendLine("### Archetype");
+        sb.AppendLine("```");
+        sb.AppendLine(archetypeContent);
+        sb.AppendLine("```");
+        sb.AppendLine();
+
+        sb.AppendLine("### Stack");
+        sb.AppendLine("```");
+        sb.AppendLine(stackContent);
+        sb.AppendLine("```");
+
+        // Add overrides if present
+        if (archetypeOverride != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Archetype Overrides");
+            if (!string.IsNullOrEmpty(archetypeOverride.Type))
+                sb.AppendLine($"- type: {archetypeOverride.Type}");
+            if (!string.IsNullOrEmpty(archetypeOverride.PrimaryUser))
+                sb.AppendLine($"- primary user: {archetypeOverride.PrimaryUser}");
+            if (!string.IsNullOrEmpty(archetypeOverride.CoreLoop))
+                sb.AppendLine($"- core loop: {archetypeOverride.CoreLoop}");
+            if (!string.IsNullOrEmpty(archetypeOverride.SuccessMetric))
+                sb.AppendLine($"- success metric: {archetypeOverride.SuccessMetric}");
+            if (!string.IsNullOrEmpty(archetypeOverride.Monetization))
+                sb.AppendLine($"- monetization: {archetypeOverride.Monetization}");
+        }
+
+        if (stackOverride != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Stack Overrides");
+            if (!string.IsNullOrEmpty(stackOverride.Frontend))
+                sb.AppendLine($"- frontend: {stackOverride.Frontend}");
+            if (!string.IsNullOrEmpty(stackOverride.Backend))
+                sb.AppendLine($"- backend: {stackOverride.Backend}");
+            if (!string.IsNullOrEmpty(stackOverride.DataStorage))
+                sb.AppendLine($"- data/storage: {stackOverride.DataStorage}");
+            if (!string.IsNullOrEmpty(stackOverride.InfraDeploy))
+                sb.AppendLine($"- infra/deploy: {stackOverride.InfraDeploy}");
+            if (!string.IsNullOrEmpty(stackOverride.Testing))
+                sb.AppendLine($"- testing: {stackOverride.Testing}");
+            if (!string.IsNullOrEmpty(stackOverride.Observability))
+                sb.AppendLine($"- observability: {stackOverride.Observability}");
+            if (!string.IsNullOrEmpty(stackOverride.Avoid))
+                sb.AppendLine($"- avoid: {stackOverride.Avoid}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static Dictionary<string, string> ParseKickstartOutput(string output)
+    {
+        var sections = new Dictionary<string, string>();
+        string? currentSection = null;
+        var currentContent = new System.Text.StringBuilder();
+        var inCodeBlock = false;
+
+        foreach (var line in output.Split('\n'))
+        {
+            // Track code block state
+            if (line.Trim().StartsWith("```"))
+            {
+                inCodeBlock = !inCodeBlock;
+                if (currentSection != null)
+                    currentContent.AppendLine(line);
+                continue;
+            }
+
+            // Detect section headers (### product, ### primary user, etc.)
+            if (!inCodeBlock && line.StartsWith("### "))
+            {
+                // Save previous section
+                if (currentSection != null)
+                {
+                    sections[currentSection] = ExtractCodeBlockContent(currentContent.ToString());
+                }
+
+                currentSection = line[4..].Trim().ToLowerInvariant().Replace(" ", "-");
+                currentContent.Clear();
+            }
+            else if (currentSection != null)
+            {
+                currentContent.AppendLine(line);
+            }
+        }
+
+        // Save last section
+        if (currentSection != null)
+        {
+            sections[currentSection] = ExtractCodeBlockContent(currentContent.ToString());
+        }
+
+        return sections;
+    }
+
+    private static string ExtractCodeBlockContent(string content)
+    {
+        // Extract content between ``` markers
+        var lines = content.Split('\n');
+        var result = new System.Text.StringBuilder();
+        var inBlock = false;
+
+        foreach (var line in lines)
+        {
+            if (line.Trim().StartsWith("```"))
+            {
+                inBlock = !inBlock;
+                continue;
+            }
+            if (inBlock)
+            {
+                result.AppendLine(line);
+            }
+        }
+
+        return result.ToString().Trim();
+    }
+
+    private async Task<List<CreatedFile>> WriteGroundFiles(
+        Dictionary<string, string> sections,
+        string productName,
+        string archetypeId,
+        string stackId)
+    {
+        var groundPath = Path.Combine(_projectPath ?? ".", ".mill", "ground");
+        var created = new List<CreatedFile>();
+
+        // Map sections to ground categories/files
+        var fileMap = new Dictionary<string, (string category, string filename)>
+        {
+            ["product"] = ("", "product.md"),
+            ["primary-user"] = ("personas", "primary-user.md"),
+            ["tech-stack"] = ("standards", "tech-stack.md"),
+            ["quality-bars"] = ("standards", "quality-bars.md")
+        };
+
+        foreach (var (section, content) in sections)
+        {
+            if (!fileMap.TryGetValue(section, out var target))
+                continue;
+
+            var (category, filename) = target;
+            var filePath = string.IsNullOrEmpty(category)
+                ? Path.Combine(groundPath, filename)
+                : Path.Combine(groundPath, category, filename);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            await File.WriteAllTextAsync(filePath, content);
+
+            created.Add(new CreatedFile(
+                category.Length > 0 ? category : "root",
+                Path.GetFileNameWithoutExtension(filename),
+                filePath
+            ));
+
+            _logger.LogInformation("Created ground file: {Path}", filePath);
+        }
+
+        // Write kickstart.json metadata
+        var kickstartMeta = new
+        {
+            createdAt = DateTime.UtcNow,
+            productName,
+            archetypeId,
+            stackId
+        };
+        var kickstartPath = Path.Combine(groundPath, "kickstart.json");
+        await File.WriteAllTextAsync(
+            kickstartPath,
+            JsonSerializer.Serialize(kickstartMeta, JsonOptions)
+        );
+
+        return created;
+    }
+
+    // Keep old method name for backward compatibility
+    public Task<List<KnowledgeItem>> GetKnowledgeItems(string category) => GetGroundItems(category);
+
+    public Task<string?> GetKnowledgeItemContent(string category, string id) => GetGroundItemContent(category, id);
 
     // ─────────────────────────────────────────────────────────────────
     // Drafts

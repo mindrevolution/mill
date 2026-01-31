@@ -25,9 +25,10 @@ interface LibraryTreeProps {
   items: KnowledgeItem[]
   selectedId?: string
   onSelect: (item: KnowledgeItem) => void
+  headerActions?: React.ReactNode
 }
 
-export function LibraryTree({ items, selectedId, onSelect }: LibraryTreeProps) {
+export function LibraryTree({ items, selectedId, onSelect, headerActions }: LibraryTreeProps) {
   const itemsByCategory = items.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = []
     acc[item.category].push(item)
@@ -39,11 +40,14 @@ export function LibraryTree({ items, selectedId, onSelect }: LibraryTreeProps) {
       <div className="flex-1 min-h-0">
         <Command className="h-full">
           <div className="p-3 border-b flex items-center justify-between">
-            <span className="text-sm font-medium">Knowledge</span>
-            <Button size="sm" variant="ghost" className="h-7 px-2">
-              <Plus className="h-3 w-3 mr-1" />
-              Add
-            </Button>
+            <span className="text-sm font-medium">Ground</span>
+            <div className="flex items-center gap-1">
+              {headerActions}
+              <Button size="sm" variant="ghost" className="h-7 px-2">
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            </div>
           </div>
           <div className="px-2 pt-2">
             <CommandInput placeholder="Search..." />

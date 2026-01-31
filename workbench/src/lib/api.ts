@@ -73,9 +73,11 @@ export interface ChatResponse {
   updatedDraft?: Draft
 }
 
+export type KnowledgeCategory = 'personas' | 'standards' | 'concepts' | 'design'
+
 export interface KnowledgeItem {
   id: string
-  category: string
+  category: KnowledgeCategory
   name: string
   description: string
   file: string
@@ -129,6 +131,62 @@ export interface DroppedBrief {
   originalTitle: string
 }
 
+// Ground/Kickstart
+export interface GroundStatus {
+  isEmpty: boolean
+  hasKickstart: boolean
+}
+
+export interface TemplateSummary {
+  id: string
+  label: string
+  summary: string
+  tags: string[]
+}
+
+export interface TemplateContent {
+  id: string
+  type: string
+  content: string
+}
+
+export interface ArchetypeOverride {
+  type?: string
+  primaryUser?: string
+  coreLoop?: string
+  successMetric?: string
+  monetization?: string
+}
+
+export interface StackOverride {
+  frontend?: string
+  backend?: string
+  dataStorage?: string
+  infraDeploy?: string
+  testing?: string
+  observability?: string
+  avoid?: string
+}
+
+export interface KickstartRequest {
+  name: string
+  description?: string
+  archetypeId: string
+  stackId: string
+  archetypeOverride?: ArchetypeOverride
+  stackOverride?: StackOverride
+}
+
+export interface CreatedFile {
+  category: string
+  id: string
+  path: string
+}
+
+export interface KickstartResponse {
+  created: CreatedFile[]
+}
+
 // API client
 export const api = {
   // Health
@@ -159,12 +217,28 @@ export const api = {
     }),
   },
 
-  // Knowledge
+  // Knowledge (legacy alias for ground)
   knowledge: {
     list: (category: string) => request<KnowledgeItem[]>(`/api/knowledge/${category}`),
     get: (category: string, id: string) => request<{ id: string; category: string; content: string }>(
       `/api/knowledge/${category}/${id}`
     ),
+  },
+
+  // Ground
+  ground: {
+    status: () => request<GroundStatus>('/api/ground/status'),
+    archetypes: () => request<TemplateSummary[]>('/api/ground/archetypes'),
+    stacks: () => request<TemplateSummary[]>('/api/ground/stacks'),
+    template: (type: string, id: string) => request<TemplateContent>(`/api/ground/templates/${type}/${id}`),
+    items: (category: string) => request<KnowledgeItem[]>(`/api/ground/${category}`),
+    item: (category: string, id: string) => request<{ id: string; category: string; content: string }>(
+      `/api/ground/${category}/${id}`
+    ),
+    kickstart: (data: KickstartRequest) => request<KickstartResponse>('/api/ground/kickstart', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   },
 
   // Runs

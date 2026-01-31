@@ -14,10 +14,12 @@ public static class ApiExtensions
     /// </summary>
     public static IServiceCollection AddMillApi(this IServiceCollection services)
     {
+        services.AddSingleton<MillPaths>();
         services.AddSingleton<MarkdownService>();
         services.AddSingleton<IIssueProvider, GithubProvider>();
         services.AddSingleton<IIssueProvider, GitlabProvider>();
         services.AddSingleton<IssueProviderFactory>();
+        services.AddSingleton<ILlmProvider, ClaudeCodeProvider>();
         services.AddSingleton<MillService>();
 
         return services;
@@ -29,6 +31,7 @@ public static class ApiExtensions
     public static WebApplication MapMillApi(this WebApplication app)
     {
         app.MapProjectEndpoints();
+        app.MapGroundEndpoints();
         app.MapKnowledgeEndpoints();
         app.MapBriefEndpoints();
         app.MapSpecEndpoints();

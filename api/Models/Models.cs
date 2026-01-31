@@ -144,6 +144,49 @@ public record StartSpecRequest(string? DraftId, string? Type);
 
 public record StartRunRequest(int Issue);
 
+// Ground/Kickstart
+public record GroundStatus(bool IsEmpty, bool HasKickstart);
+
+public record TemplateSummary(string Id, string Label, string Summary, List<string> Tags);
+
+public record TemplateContent(string Id, string Type, string Content);
+
+public record KickstartRequest(
+    string Name,
+    string? Description,
+    string ArchetypeId,
+    string StackId,
+    ArchetypeOverride? ArchetypeOverride,
+    StackOverride? StackOverride
+);
+
+public record ArchetypeOverride(
+    string? Type,
+    string? PrimaryUser,
+    string? CoreLoop,
+    string? SuccessMetric,
+    string? Monetization
+);
+
+public record StackOverride(
+    string? Frontend,
+    string? Backend,
+    string? DataStorage,
+    string? InfraDeploy,
+    string? Testing,
+    string? Observability,
+    string? Avoid
+);
+
+public record KickstartResponse(List<CreatedFile> Created);
+
+public record CreatedFile(string Category, string Id, string Path);
+
+// LLM Provider
+public record LlmResponse(bool Success, string Output, string? Error);
+
+public record LlmOptions(string? WorkingDir = null, int TimeoutMs = 120000, string? SystemPrompt = null);
+
 // API Response types
 public record ProjectResponse(bool Configured, string? Path = null, string? Name = null, string? IssueProvider = null);
 public record ProjectSetResponse(string Path, string Name);
