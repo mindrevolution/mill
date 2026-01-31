@@ -14,7 +14,7 @@ public abstract class CliProviderBase
         Logger = logger;
     }
 
-    protected async Task<string?> RunCommand(string command, string args, string? workingDir = null)
+    protected async Task<string?> RunCommand(string command, string args, string? workingDir = null, int timeoutMs = 10000)
     {
         try
         {
@@ -25,6 +25,7 @@ public abstract class CliProviderBase
                 WorkingDirectory = workingDir ?? Directory.GetCurrentDirectory(),
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true, // Prevent stdin prompts from blocking
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -33,10 +34,24 @@ public abstract class CliProviderBase
             if (process == null)
                 return null;
 
-            var output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            // Close stdin immediately to prevent prompts
+            process.StandardInput.Close();
 
-            return process.ExitCode == 0 ? output : null;
+            // Use Task.WhenAny for timeout (more reliable on Windows)
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var exitTask = process.WaitForExitAsync();
+            var timeoutTask = Task.Delay(timeoutMs);
+
+            var completedTask = await Task.WhenAny(Task.WhenAll(outputTask, exitTask), timeoutTask);
+
+            if (completedTask == timeoutTask)
+            {
+                Logger.LogWarning("Command timed out after {Timeout}ms: {Command} {Args}", timeoutMs, command, args);
+                try { process.Kill(entireProcessTree: true); } catch { }
+                return null;
+            }
+
+            return process.ExitCode == 0 ? await outputTask : null;
         }
         catch (Exception ex)
         {
@@ -49,7 +64,8 @@ public abstract class CliProviderBase
     {
         try
         {
-            var result = await RunCommand(command, "--version");
+            // Quick check with short timeout
+            var result = await RunCommand(command, "--version", timeoutMs: 3000);
             return result != null;
         }
         catch

@@ -25,9 +25,13 @@ public class IssueProviderFactory
         {
             try
             {
-                if (await provider.CanHandle(workingDir))
+                _logger.LogInformation("Checking if {Provider} can handle {WorkingDir}...", provider.Name, workingDir);
+                var canHandle = await provider.CanHandle(workingDir);
+                _logger.LogInformation("{Provider} canHandle = {CanHandle}", provider.Name, canHandle);
+
+                if (canHandle)
                 {
-                    _logger.LogDebug("Using {Provider} provider for {WorkingDir}", provider.Name, workingDir);
+                    _logger.LogInformation("Using {Provider} provider", provider.Name);
                     return provider;
                 }
             }

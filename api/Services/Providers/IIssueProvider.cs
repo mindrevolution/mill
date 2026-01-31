@@ -13,17 +13,24 @@ public interface IIssueProvider
     string Name { get; }
 
     /// <summary>
-    /// List open issues from the provider
+    /// List open issues from the provider.
+    /// Implementations may cache results; use forceRefresh to bypass cache.
     /// </summary>
-    Task<List<Issue>> GetIssues(string workingDir);
+    Task<List<Issue>> GetIssues(string workingDir, bool forceRefresh = false);
 
     /// <summary>
-    /// Get full details for a single issue
+    /// Get full details for a single issue.
+    /// Implementations may cache results; use forceRefresh to bypass cache.
     /// </summary>
-    Task<IssueDetail?> GetIssueDetail(int number, string workingDir);
+    Task<IssueDetail?> GetIssueDetail(int number, string workingDir, bool forceRefresh = false);
 
     /// <summary>
     /// Check if this provider can handle the given repository
     /// </summary>
     Task<bool> CanHandle(string workingDir);
+
+    /// <summary>
+    /// Clear any cached data. Default implementation does nothing.
+    /// </summary>
+    void ClearCache() { }
 }

@@ -38,8 +38,9 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
                result.Contains("gitlab", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<List<Issue>> GetIssues(string workingDir)
+    public async Task<List<Issue>> GetIssues(string workingDir, bool forceRefresh = false)
     {
+        // TODO: Add caching similar to GithubProvider
         // glab issue list --output json
         var result = await RunCommand("glab", "issue list --output json", workingDir);
         if (string.IsNullOrEmpty(result))
@@ -67,8 +68,9 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
         }
     }
 
-    public async Task<IssueDetail?> GetIssueDetail(int number, string workingDir)
+    public async Task<IssueDetail?> GetIssueDetail(int number, string workingDir, bool forceRefresh = false)
     {
+        // TODO: Add caching similar to GithubProvider
         // glab issue view {number} --output json
         var result = await RunCommand("glab", $"issue view {number} --output json", workingDir);
         if (string.IsNullOrEmpty(result))

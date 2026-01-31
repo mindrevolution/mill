@@ -15,7 +15,6 @@ public static class ApiExtensions
     public static IServiceCollection AddMillApi(this IServiceCollection services)
     {
         services.AddSingleton<MarkdownService>();
-        services.AddSingleton<IssueCacheService>();
         services.AddSingleton<IIssueProvider, GithubProvider>();
         services.AddSingleton<IIssueProvider, GitlabProvider>();
         services.AddSingleton<IssueProviderFactory>();
