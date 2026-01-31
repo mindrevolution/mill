@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http.Json;
 using MillApi.Endpoints;
 using MillApi.Services;
 using MillApi.Services.Providers;
@@ -14,6 +17,12 @@ public static class ApiExtensions
     /// </summary>
     public static IServiceCollection AddMillApi(this IServiceCollection services)
     {
+        // Configure JSON to use string enums
+        services.Configure<JsonOptions>(options =>
+        {
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        });
         // Core
         services.AddSingleton<MillPaths>();
         services.AddSingleton<ProjectContext>();
