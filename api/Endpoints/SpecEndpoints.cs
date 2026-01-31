@@ -10,17 +10,17 @@ public static class SpecEndpoints
         var group = app.MapGroup("/api/spec")
             .WithTags("Spec");
 
-        group.MapGet("/drafts", async (MillService mill) =>
+        group.MapGet("/drafts", async (DraftService drafts) =>
         {
-            var drafts = await mill.GetDrafts();
-            return Results.Ok(drafts);
+            var list = await drafts.GetAll();
+            return Results.Ok(list);
         })
         .WithName("GetDrafts")
         .WithSummary("List all spec drafts");
 
-        group.MapGet("/drafts/{id}", async (string id, MillService mill) =>
+        group.MapGet("/drafts/{id}", async (string id, DraftService drafts) =>
         {
-            var draft = await mill.GetDraftDetail(id);
+            var draft = await drafts.Get(id);
             return draft != null
                 ? Results.Ok(draft)
                 : Results.NotFound();
@@ -28,17 +28,17 @@ public static class SpecEndpoints
         .WithName("GetDraftDetail")
         .WithSummary("Get single draft with full content");
 
-        group.MapGet("/issues", async (MillService mill, bool refresh = false) =>
+        group.MapGet("/issues", async (IssueService issues, bool refresh = false) =>
         {
-            var issues = await mill.GetIssues(forceRefresh: refresh);
-            return Results.Ok(issues);
+            var list = await issues.GetAll(forceRefresh: refresh);
+            return Results.Ok(list);
         })
         .WithName("GetIssues")
         .WithSummary("List GitHub issues (specs). Use ?refresh=true to bypass cache.");
 
-        group.MapGet("/issues/{number:int}", async (int number, MillService mill, bool refresh = false) =>
+        group.MapGet("/issues/{number:int}", async (int number, IssueService issues, bool refresh = false) =>
         {
-            var issue = await mill.GetIssueDetail(number, forceRefresh: refresh);
+            var issue = await issues.Get(number, forceRefresh: refresh);
             return issue != null
                 ? Results.Ok(issue)
                 : Results.Json(new IssueNotFoundError($"Issue #{number} not found"), statusCode: 404);
@@ -46,7 +46,7 @@ public static class SpecEndpoints
         .WithName("GetIssueDetail")
         .WithSummary("Get single GitHub issue with full details. Use ?refresh=true to bypass cache.");
 
-        group.MapPost("/start", (StartSpecRequest request, MillService mill) =>
+        group.MapPost("/start", (StartSpecRequest request) =>
         {
             // TODO: Start interactive spec session
             // This would spawn `mill spec --interactive` and manage stdin/stdout
@@ -61,7 +61,7 @@ public static class SpecEndpoints
         .WithName("StartSpec")
         .WithSummary("Start a new spec creation session");
 
-        group.MapPost("/message", (SendMessageRequest request, MillService mill) =>
+        group.MapPost("/message", (SendMessageRequest request) =>
         {
             // TODO: Send message to active spec session
             // For now, return a placeholder response

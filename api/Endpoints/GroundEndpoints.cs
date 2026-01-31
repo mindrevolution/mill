@@ -11,39 +11,37 @@ public static class GroundEndpoints
         var group = app.MapGroup("/api/ground")
             .WithTags("Ground");
 
-        // Status
-        group.MapGet("/status", (MillService mill) =>
+        group.MapGet("/status", (GroundService ground) =>
         {
-            var status = mill.GetGroundStatus();
+            var status = ground.GetStatus();
             return Results.Ok(status);
         })
         .WithName("GetGroundStatus")
         .WithSummary("Get ground workspace status (isEmpty, hasKickstart)");
 
-        // Templates
-        group.MapGet("/archetypes", (MillService mill) =>
+        group.MapGet("/archetypes", (GroundService ground) =>
         {
-            var archetypes = mill.GetArchetypes();
+            var archetypes = ground.GetArchetypes();
             return Results.Ok(archetypes);
         })
         .WithName("GetArchetypes")
         .WithSummary("Get available product archetypes");
 
-        group.MapGet("/stacks", (MillService mill) =>
+        group.MapGet("/stacks", (GroundService ground) =>
         {
-            var stacks = mill.GetStacks();
+            var stacks = ground.GetStacks();
             return Results.Ok(stacks);
         })
         .WithName("GetStacks")
         .WithSummary("Get available tech stacks");
 
-        group.MapGet("/templates/{type}/{id}", (string type, string id, MillService mill) =>
+        group.MapGet("/templates/{type}/{id}", (string type, string id, GroundService ground) =>
         {
             var validTypes = new[] { "archetypes", "stacks" };
             if (!validTypes.Contains(type.ToLowerInvariant()))
                 return Results.BadRequest($"Invalid template type. Must be one of: {string.Join(", ", validTypes)}");
 
-            var template = mill.GetTemplate(type.ToLowerInvariant(), id);
+            var template = ground.GetTemplate(type.ToLowerInvariant(), id);
             if (template == null)
                 return Results.NotFound();
 
@@ -52,22 +50,21 @@ public static class GroundEndpoints
         .WithName("GetTemplate")
         .WithSummary("Get a specific template's content");
 
-        // Ground items (by category)
-        group.MapGet("/{category}", async (string category, MillService mill) =>
+        group.MapGet("/{category}", async (string category, GroundService ground) =>
         {
             var validCategories = new[] { "personas", "standards", "concepts", "design" };
             if (!validCategories.Contains(category.ToLowerInvariant()))
                 return Results.BadRequest($"Invalid category. Must be one of: {string.Join(", ", validCategories)}");
 
-            var items = await mill.GetGroundItems(category.ToLowerInvariant());
+            var items = await ground.GetItems(category.ToLowerInvariant());
             return Results.Ok(items);
         })
         .WithName("GetGroundItems")
         .WithSummary("Get all items in a ground category");
 
-        group.MapGet("/{category}/{id}", async (string category, string id, MillService mill) =>
+        group.MapGet("/{category}/{id}", async (string category, string id, GroundService ground) =>
         {
-            var content = await mill.GetGroundItemContent(category.ToLowerInvariant(), id);
+            var content = await ground.GetItemContent(category.ToLowerInvariant(), id);
             if (content == null)
                 return Results.NotFound();
 
@@ -76,12 +73,11 @@ public static class GroundEndpoints
         .WithName("GetGroundItem")
         .WithSummary("Get a specific ground item's content");
 
-        // Kickstart
-        group.MapPost("/kickstart", async (KickstartRequest request, MillService mill, ILlmProvider llmProvider) =>
+        group.MapPost("/kickstart", async (KickstartRequest request, GroundService ground, ILlmProvider llmProvider) =>
         {
             try
             {
-                var response = await mill.RunKickstart(request, llmProvider);
+                var response = await ground.RunKickstart(request, llmProvider);
                 return Results.Ok(response);
             }
             catch (ArgumentException ex)

@@ -14,13 +14,23 @@ public static class ApiExtensions
     /// </summary>
     public static IServiceCollection AddMillApi(this IServiceCollection services)
     {
+        // Core
         services.AddSingleton<MillPaths>();
+        services.AddSingleton<ProjectContext>();
         services.AddSingleton<MarkdownService>();
+
+        // Providers
         services.AddSingleton<IIssueProvider, GithubProvider>();
         services.AddSingleton<IIssueProvider, GitlabProvider>();
         services.AddSingleton<IssueProviderFactory>();
         services.AddSingleton<ILlmProvider, ClaudeCodeProvider>();
-        services.AddSingleton<MillService>();
+
+        // Domain services
+        services.AddSingleton<GroundService>();
+        services.AddSingleton<DraftService>();
+        services.AddSingleton<BriefService>();
+        services.AddSingleton<IssueService>();
+        services.AddSingleton<ShipService>();
 
         return services;
     }

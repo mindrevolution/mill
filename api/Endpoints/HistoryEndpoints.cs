@@ -9,9 +9,9 @@ public static class HistoryEndpoints
         var group = app.MapGroup("/api/history")
             .WithTags("History");
 
-        group.MapGet("/", async (MillService mill) =>
+        group.MapGet("/", async (ShipService ship) =>
         {
-            var history = await mill.GetHistory();
+            var history = await ship.GetHistory();
             return Results.Ok(history);
         })
         .WithName("GetHistory")

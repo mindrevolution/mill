@@ -10,32 +10,32 @@ public static class ProjectEndpoints
         var group = app.MapGroup("/api/project")
             .WithTags("Project");
 
-        group.MapGet("/", async (MillService mill) =>
+        group.MapGet("/", async (ProjectContext project, IssueService issues) =>
         {
-            var path = mill.GetProjectPath();
+            var path = project.GetProjectPath();
             if (string.IsNullOrEmpty(path))
                 return Results.Ok(new ProjectResponse(false));
 
-            var provider = await mill.GetIssueProviderName();
+            var provider = await issues.GetProviderName();
             return Results.Ok(new ProjectResponse(true, path, Path.GetFileName(path), provider));
         })
         .WithName("GetProject")
         .WithSummary("Get current project info including detected issue provider");
 
-        group.MapPost("/", (SetProjectRequest request, MillService mill) =>
+        group.MapPost("/", (SetProjectRequest request, ProjectContext project) =>
         {
             if (!Directory.Exists(request.Path))
                 return Results.BadRequest("Path does not exist");
 
-            mill.SetProjectPath(request.Path);
+            project.SetProjectPath(request.Path);
             return Results.Ok(new ProjectSetResponse(request.Path, Path.GetFileName(request.Path)));
         })
         .WithName("SetProject")
         .WithSummary("Set the active project path");
 
-        group.MapGet("/config", async (MillService mill) =>
+        group.MapGet("/config", async (ProjectContext project) =>
         {
-            var path = mill.GetProjectPath();
+            var path = project.GetProjectPath();
             if (string.IsNullOrEmpty(path))
                 return Results.BadRequest("No project configured");
 
