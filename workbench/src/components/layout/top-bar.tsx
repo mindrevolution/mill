@@ -1,12 +1,15 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
+import type { Job } from '@/lib/api'
 import { LandPlot, SquareStack, Orbit, Rocket, Settings, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { JobsIndicator } from '@/components/jobs'
 
 interface TopBarProps {
   active: Workspace
   onSwitch: (workspace: Workspace) => void
   onSettings?: () => void
+  onViewJobResult?: (job: Job) => void
   activeRuns?: number
   openObservations?: number
 }
@@ -22,6 +25,7 @@ export function TopBar({
   active,
   onSwitch,
   onSettings,
+  onViewJobResult,
   activeRuns = 0,
   openObservations = 0,
 }: TopBarProps) {
@@ -73,6 +77,9 @@ export function TopBar({
             <span>{openObservations}</span>
           </Button>
         )}
+
+        {/* Jobs indicator */}
+        <JobsIndicator onViewResult={onViewJobResult} />
 
         {/* Settings */}
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onSettings}>

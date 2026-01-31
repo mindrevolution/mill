@@ -28,6 +28,25 @@ public static class SpecEndpoints
         .WithName("GetDraftDetail")
         .WithSummary("Get single draft with full content");
 
+        group.MapPost("/drafts/{id}/validate", async (string id, DraftService drafts) =>
+        {
+            try
+            {
+                var result = await drafts.ValidateRelevance(id);
+                return Results.Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("ValidateDraft")
+        .WithSummary("Validate draft relevance against current codebase");
+
         group.MapGet("/issues", async (IssueService issues, bool refresh = false) =>
         {
             var list = await issues.GetAll(forceRefresh: refresh);

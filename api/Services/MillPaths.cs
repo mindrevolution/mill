@@ -32,6 +32,11 @@ public class MillPaths
     public string Shape => Path.Combine(Home, "shape");
 
     /// <summary>
+    /// Path to shape prompts.
+    /// </summary>
+    public string ShapePrompts => Path.Combine(Shape, "prompts");
+
+    /// <summary>
     /// Path to ship workspace assets.
     /// </summary>
     public string Ship => Path.Combine(Home, "ship");

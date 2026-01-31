@@ -187,6 +187,58 @@ public record LlmResponse(bool Success, string Output, string? Error);
 
 public record LlmOptions(string? WorkingDir = null, int TimeoutMs = 120000, string? SystemPrompt = null);
 
+// Draft Validation
+public record DraftValidationRequest(string DraftId);
+
+public record DraftValidationResponse(
+    int Score,
+    string Verdict,
+    List<ValidationFinding> Findings,
+    string Summary,
+    string Recommendation
+);
+
+public record ValidationFinding(
+    string Category,
+    string Severity,
+    string Reference,
+    string Expected,
+    string Actual,
+    string Impact
+);
+
+// Job Queue
+public enum JobType { DraftValidation, ContextWarmup, Kickstart }
+public enum JobStatus { Queued, Running, Completed, Failed, Cancelled }
+public enum JobQueue { Llm, Ship }
+
+public record Job(
+    string Id,
+    JobType Type,
+    JobQueue Queue,
+    JobStatus Status,
+    string Title,
+    Dictionary<string, object?> Params,
+    string? Stage,
+    int? ProgressPercent,
+    object? Result,
+    string? Error,
+    string? SourceWorkspace,
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? CompletedAt
+);
+
+public record CreateJobRequest(
+    JobType Type,
+    Dictionary<string, object?> Params,
+    string? SourceWorkspace
+);
+
+public record JobCreatedResponse(string Id);
+
+public record JobEvent(string EventType, Job Job);
+
 // API Response types
 public record ProjectResponse(bool Configured, string? Path = null, string? Name = null, string? IssueProvider = null);
 public record ProjectSetResponse(string Path, string Name);

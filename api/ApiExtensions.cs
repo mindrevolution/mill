@@ -32,6 +32,9 @@ public static class ApiExtensions
         services.AddSingleton<IssueService>();
         services.AddSingleton<ShipService>();
 
+        // Job queue
+        services.AddSingleton<JobService>();
+
         return services;
     }
 
@@ -47,6 +50,7 @@ public static class ApiExtensions
         app.MapSpecEndpoints();
         app.MapRunEndpoints();
         app.MapHistoryEndpoints();
+        app.MapJobEndpoints();
 
         return app;
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Tile, TileSplit } from '@/components/layout/tile'
 import { Button } from '@/components/ui/button'
@@ -39,7 +39,8 @@ import {
 } from '@/components/ui/dialog'
 import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
-import type { Draft, DraftDetail, Issue, IssueDetail, DraftValidationResponse } from '@/lib/api'
+import type { Draft, DraftDetail, Issue, IssueDetail, DraftValidationResponse, Job } from '@/lib/api'
+import { useJobsStore, getValidationResult } from '@/stores/jobs'
 import type { ChatMessage } from '@/types'
 import {
   Plus,
@@ -585,23 +586,54 @@ function SpecPreview({
   issueDetail?: IssueDetail
   loading?: boolean
 }) {
-  const [validating, setValidating] = useState(false)
   const [validationResult, setValidationResult] = useState<DraftValidationResponse | null>(null)
   const [showValidationDialog, setShowValidationDialog] = useState(false)
+  const [pendingValidationJobId, setPendingValidationJobId] = useState<string | null>(null)
+
+  const jobs = useJobsStore((s) => s.jobs)
+  const createJob = useJobsStore((s) => s.createJob)
+
+  // Watch for validation job completion
+  useEffect(() => {
+    if (!pendingValidationJobId) return
+
+    const job = jobs.find((j) => j.id === pendingValidationJobId)
+    if (!job) return
+
+    if (job.status === 'Completed') {
+      const result = getValidationResult(job)
+      if (result) {
+        setValidationResult(result)
+        setShowValidationDialog(true)
+      }
+      setPendingValidationJobId(null)
+    } else if (job.status === 'Failed' || job.status === 'Cancelled') {
+      setPendingValidationJobId(null)
+    }
+  }, [jobs, pendingValidationJobId])
 
   const handleValidate = async (draftId: string) => {
-    setValidating(true)
     try {
-      const result = await api.spec.validateDraft(draftId)
-      setValidationResult(result)
-      setShowValidationDialog(true)
+      const jobId = await createJob({
+        type: 'DraftValidation',
+        params: { draftId },
+        sourceWorkspace: 'shape',
+      })
+      setPendingValidationJobId(jobId)
     } catch (e) {
-      console.error('Validation failed:', e)
-      // TODO: Show error toast
-    } finally {
-      setValidating(false)
+      console.error('Failed to create validation job:', e)
     }
   }
+
+  // Check if there's a running validation job for the current draft
+  const currentDraftId = draftDetail?.id
+  const validatingJob = jobs.find(
+    (j) =>
+      j.type === 'DraftValidation' &&
+      j.params.draftId === currentDraftId &&
+      (j.status === 'Running' || j.status === 'Queued')
+  )
+  const validating = !!validatingJob
 
   // Show loading state
   if (loading) {

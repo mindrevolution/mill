@@ -187,6 +187,57 @@ export interface KickstartResponse {
   created: CreatedFile[]
 }
 
+// Draft Validation
+export interface ValidationFinding {
+  category: 'implemented' | 'moved' | 'renamed' | 'changed' | 'resolved' | 'obsolete'
+  severity: 'info' | 'warning' | 'critical'
+  reference: string
+  expected: string
+  actual: string
+  impact: string
+}
+
+export interface DraftValidationResponse {
+  score: number
+  verdict: 'current' | 'review' | 'discard'
+  findings: ValidationFinding[]
+  summary: string
+  recommendation: string
+}
+
+// Jobs
+export type JobType = 'DraftValidation' | 'ContextWarmup' | 'Kickstart'
+export type JobStatus = 'Queued' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
+export type JobQueue = 'Llm' | 'Ship'
+
+export interface Job {
+  id: string
+  type: JobType
+  queue: JobQueue
+  status: JobStatus
+  title: string
+  params: Record<string, unknown>
+  stage?: string
+  progressPercent?: number
+  result?: unknown
+  error?: string
+  sourceWorkspace?: string
+  createdAt: string
+  startedAt?: string
+  completedAt?: string
+}
+
+export interface CreateJobRequest {
+  type: JobType
+  params: Record<string, unknown>
+  sourceWorkspace?: string
+}
+
+export interface JobConfig {
+  llmConcurrency: number
+  shipConcurrency: number
+}
+
 // API client
 export const api = {
   // Health
@@ -205,6 +256,9 @@ export const api = {
   spec: {
     drafts: () => request<Draft[]>('/api/spec/drafts'),
     draft: (id: string) => request<DraftDetail>(`/api/spec/drafts/${id}`),
+    validateDraft: (id: string) => request<DraftValidationResponse>(`/api/spec/drafts/${id}/validate`, {
+      method: 'POST',
+    }),
     issues: (refresh = false) => request<Issue[]>(`/api/spec/issues${refresh ? '?refresh=true' : ''}`),
     issue: (number: number, refresh = false) => request<IssueDetail>(`/api/spec/issues/${number}${refresh ? '?refresh=true' : ''}`),
     start: (draftId?: string, type?: string) => request<SpecSession>('/api/spec/start', {
@@ -281,4 +335,43 @@ export const api = {
     }),
     dropped: () => request<DroppedBrief[]>('/api/brief/dropped'),
   },
+
+  // Jobs
+  jobs: {
+    list: () => request<Job[]>('/api/jobs'),
+    get: (id: string) => request<Job>(`/api/jobs/${id}`),
+    create: (req: CreateJobRequest) => request<{ id: string }>('/api/jobs', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    }),
+    cancel: (id: string) => request<void>(`/api/jobs/${id}`, { method: 'DELETE' }),
+    clear: () => request<void>('/api/jobs', { method: 'DELETE' }),
+    config: () => request<JobConfig>('/api/jobs/config'),
+    // SSE endpoint - use createJobEventSource() instead
+  },
+}
+
+// SSE helper for job events
+export function createJobEventSource(onEvent: (eventType: string, job: Job) => void): EventSource {
+  const url = `${API_BASE}/api/jobs/events`
+  const es = new EventSource(url)
+
+  const handleEvent = (e: MessageEvent) => {
+    try {
+      const job = JSON.parse(e.data) as Job
+      onEvent(e.type, job)
+    } catch (err) {
+      console.error('Failed to parse job event:', err)
+    }
+  }
+
+  es.addEventListener('job-sync', handleEvent)
+  es.addEventListener('job-created', handleEvent)
+  es.addEventListener('job-started', handleEvent)
+  es.addEventListener('job-progress', handleEvent)
+  es.addEventListener('job-completed', handleEvent)
+  es.addEventListener('job-failed', handleEvent)
+  es.addEventListener('job-cancelled', handleEvent)
+
+  return es
 }
