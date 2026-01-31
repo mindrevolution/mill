@@ -20,7 +20,7 @@ export function Tile({
   return (
     <div
       className={cn(
-        'flex flex-col h-full bg-background border border-border rounded-lg overflow-hidden',
+        'flex flex-col h-full bg-background border-2 border-border rounded-lg overflow-hidden',
         className
       )}
     >
