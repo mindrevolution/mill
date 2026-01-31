@@ -8,7 +8,7 @@
 
 Instead of starting with prompts or code, mill builds and maintains project ground — personas, standards, constraints, and concepts — and uses that shared understanding to continuously shape well-verified specs and execute them in bounded, test-driven loops.
 
-mill is not a code generator. It is the layer that makes AI behave like it understands the product.
+mill is not a code generator or orchestrator — it's the product layer. The specs mill produces can feed any AI dev tool, or you can run them directly in mill's bounded, verification-driven loops. mill focuses on the "what" and "why" so execution stays aligned.
 
 ## How It Works
 
