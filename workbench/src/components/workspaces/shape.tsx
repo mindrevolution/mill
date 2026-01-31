@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/dialog'
 import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
-import type { Draft, DraftDetail, Issue, IssueDetail } from '@/lib/api'
+import type { Draft, DraftDetail, Issue, IssueDetail, DraftValidationResponse } from '@/lib/api'
 import type { ChatMessage } from '@/types'
 import {
   Plus,
@@ -142,7 +142,15 @@ function IssueActionBar({ issueNumber, onDelete }: { issueNumber: number; onDele
   )
 }
 
-function DraftActionBar({ onDelete }: { onDelete?: () => void }) {
+function DraftActionBar({
+  onDelete,
+  onValidate,
+  validating,
+}: {
+  onDelete?: () => void
+  onValidate?: () => void
+  validating?: boolean
+}) {
   return (
     <FloatingActionBar>
       <Button
@@ -159,9 +167,14 @@ function DraftActionBar({ onDelete }: { onDelete?: () => void }) {
         variant="ghost"
         className="h-8 w-8 p-0"
         title="Validate relevance"
-        onClick={() => console.log('TODO: Validate relevance')}
+        onClick={onValidate}
+        disabled={validating}
       >
-        <SearchCheck className="h-4 w-4" />
+        {validating ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <SearchCheck className="h-4 w-4" />
+        )}
       </Button>
       <Separator orientation="vertical" className="h-4 mx-1" />
       <Button
@@ -317,7 +330,7 @@ function SpecList({
 
                   {/* Issues */}
               {issues.length > 0 && (
-                    <CommandGroup heading="Issues">
+                    <CommandGroup heading="Published Specs">
                       {issues.map((issue) => {
                         const Icon = typeIcons[issue.type] || FileText
                         const color = typeColors[issue.type] || 'text-muted-foreground'
@@ -488,6 +501,81 @@ function SpecChat({ draft, sessionId }: { draft?: Draft; sessionId?: string }) {
   )
 }
 
+const verdictColors = {
+  current: 'text-green-400 bg-green-500/15',
+  review: 'text-yellow-400 bg-yellow-500/15',
+  discard: 'text-red-400 bg-red-500/15',
+}
+
+const severityColors = {
+  info: 'text-blue-400',
+  warning: 'text-yellow-400',
+  critical: 'text-red-400',
+}
+
+function ValidationResultDialog({
+  open,
+  onOpenChange,
+  result,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  result: DraftValidationResponse | null
+}) {
+  if (!result) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <span>Relevance Validation</span>
+            <Badge className={cn('text-sm', verdictColors[result.verdict])}>
+              {result.score}/10 — {result.verdict}
+            </Badge>
+          </DialogTitle>
+          <DialogDescription>{result.summary}</DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          {result.findings.length > 0 && (
+            <div className="space-y-3 mb-4">
+              <h4 className="text-sm font-medium">Findings</h4>
+              {result.findings.map((finding, i) => (
+                <div key={i} className="text-sm border rounded-lg p-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={severityColors[finding.severity]}>
+                      {finding.severity}
+                    </Badge>
+                    <span className="font-medium">{finding.category}</span>
+                  </div>
+                  <p className="text-muted-foreground">{finding.reference}</p>
+                  <div className="text-xs space-y-1 pt-1">
+                    <p><span className="text-muted-foreground">Expected:</span> {finding.expected}</p>
+                    <p><span className="text-muted-foreground">Actual:</span> {finding.actual}</p>
+                    <p><span className="text-muted-foreground">Impact:</span> {finding.impact}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-medium mb-1">Recommendation</h4>
+            <p className="text-sm text-muted-foreground">{result.recommendation}</p>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function SpecPreview({
   draftDetail,
   issueDetail,
@@ -497,6 +585,24 @@ function SpecPreview({
   issueDetail?: IssueDetail
   loading?: boolean
 }) {
+  const [validating, setValidating] = useState(false)
+  const [validationResult, setValidationResult] = useState<DraftValidationResponse | null>(null)
+  const [showValidationDialog, setShowValidationDialog] = useState(false)
+
+  const handleValidate = async (draftId: string) => {
+    setValidating(true)
+    try {
+      const result = await api.spec.validateDraft(draftId)
+      setValidationResult(result)
+      setShowValidationDialog(true)
+    } catch (e) {
+      console.error('Validation failed:', e)
+      // TODO: Show error toast
+    } finally {
+      setValidating(false)
+    }
+  }
+
   // Show loading state
   if (loading) {
     return (
@@ -515,73 +621,85 @@ function SpecPreview({
     const bodyHtml = 'bodyHtml' in spec ? spec.bodyHtml : undefined
 
     return (
-      <DetailView
-        header={
-          <>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Icon className={cn('h-3 w-3', color)} />
-              {isDraft ? (
-                <Badge variant="outline">Draft</Badge>
-              ) : (
-                <span>#{(spec as IssueDetail).number}</span>
-              )}
-              <Badge variant="secondary">{spec.type}</Badge>
-              {!isDraft && (
-                <Badge variant={(spec as IssueDetail).status === 'open' ? 'default' : 'secondary'}>
-                  {(spec as IssueDetail).status}
-                </Badge>
-              )}
-              {spec.persona && <span>· {spec.persona}</span>}
-            </div>
-            <h2 className="text-lg font-semibold">
-              {isDraft ? spec.title : (
-                <span dangerouslySetInnerHTML={{ __html: (spec as IssueDetail).titleHtml }} />
-              )}
-            </h2>
-            {/* Labels (issues only) */}
-            {!isDraft && (spec as IssueDetail).labels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {(spec as IssueDetail).labels.map((label) => (
-                  <Badge key={label} variant="outline" className="text-xs">
-                    {label}
+      <>
+        <DetailView
+          header={
+            <>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Icon className={cn('h-3 w-3', color)} />
+                {isDraft ? (
+                  <Badge variant="outline">Draft</Badge>
+                ) : (
+                  <span>#{(spec as IssueDetail).number}</span>
+                )}
+                <Badge variant="secondary">{spec.type}</Badge>
+                {!isDraft && (
+                  <Badge variant={(spec as IssueDetail).status === 'open' ? 'default' : 'secondary'}>
+                    {(spec as IssueDetail).status}
                   </Badge>
-                ))}
+                )}
+                {spec.persona && <span>· {spec.persona}</span>}
+              </div>
+              <h2 className="text-lg font-semibold">
+                {isDraft ? spec.title : (
+                  <span dangerouslySetInnerHTML={{ __html: (spec as IssueDetail).titleHtml }} />
+                )}
+              </h2>
+              {/* Labels (issues only) */}
+              {!isDraft && (spec as IssueDetail).labels.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {(spec as IssueDetail).labels.map((label) => (
+                    <Badge key={label} variant="outline" className="text-xs">
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+          actions={
+            isDraft ? (
+              <DraftActionBar
+                onDelete={() => console.log('TODO: Delete draft', (spec as DraftDetail).id)}
+                onValidate={() => handleValidate((spec as DraftDetail).id)}
+                validating={validating}
+              />
+            ) : (
+              <IssueActionBar
+                issueNumber={(spec as IssueDetail).number}
+                onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
+              />
+            )
+          }
+        >
+          <div className="space-y-4">
+            {/* Body */}
+            {bodyHtml ? (
+              <div
+                className="prose prose-sm prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+              />
+            ) : (
+              <div className="text-sm text-muted-foreground italic">
+                No description provided
               </div>
             )}
-          </>
-        }
-        actions={
-          isDraft ? (
-            <DraftActionBar onDelete={() => console.log('TODO: Delete draft', (spec as DraftDetail).id)} />
-          ) : (
-            <IssueActionBar
-              issueNumber={(spec as IssueDetail).number}
-              onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
-            />
-          )
-        }
-      >
-        <div className="space-y-4">
-          {/* Body */}
-          {bodyHtml ? (
-            <div
-              className="prose prose-sm prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
-          ) : (
-            <div className="text-sm text-muted-foreground italic">
-              No description provided
-            </div>
-          )}
 
-          {/* Meta */}
-          <div className="text-xs text-muted-foreground pt-2 border-t">
-            {isDraft
-              ? `Updated ${formatDate((spec as DraftDetail).updatedAt)}`
-              : `Created ${formatDate((spec as IssueDetail).createdAt)}`}
+            {/* Meta */}
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              {isDraft
+                ? `Updated ${formatDate((spec as DraftDetail).updatedAt)}`
+                : `Created ${formatDate((spec as IssueDetail).createdAt)}`}
+            </div>
           </div>
-        </div>
-      </DetailView>
+        </DetailView>
+
+        <ValidationResultDialog
+          open={showValidationDialog}
+          onOpenChange={setShowValidationDialog}
+          result={validationResult}
+        />
+      </>
     )
   }
 
