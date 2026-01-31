@@ -146,11 +146,15 @@ function IssueActionBar({ issueNumber, onDelete }: { issueNumber: number; onDele
 function DraftActionBar({
   onDelete,
   onValidate,
+  onViewRelevance,
   validating,
+  hasRelevance,
 }: {
   onDelete?: () => void
   onValidate?: () => void
+  onViewRelevance?: () => void
   validating?: boolean
+  hasRelevance?: boolean
 }) {
   return (
     <FloatingActionBar>
@@ -163,20 +167,32 @@ function DraftActionBar({
       >
         <Terminal className="h-4 w-4" />
       </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-8 w-8 p-0"
-        title="Validate relevance"
-        onClick={onValidate}
-        disabled={validating}
-      >
-        {validating ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
+      {hasRelevance ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0 text-green-400"
+          title="View relevance"
+          onClick={onViewRelevance}
+        >
           <SearchCheck className="h-4 w-4" />
-        )}
-      </Button>
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          title="Validate relevance"
+          onClick={onValidate}
+          disabled={validating}
+        >
+          {validating ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <SearchCheck className="h-4 w-4" />
+          )}
+        </Button>
+      )}
       <Separator orientation="vertical" className="h-4 mx-1" />
       <Button
         size="sm"
@@ -581,10 +597,12 @@ function SpecPreview({
   draftDetail,
   issueDetail,
   loading,
+  onRelevanceChanged,
 }: {
   draftDetail?: DraftDetail
   issueDetail?: IssueDetail
   loading?: boolean
+  onRelevanceChanged?: () => void
 }) {
   const [validationResult, setValidationResult] = useState<DraftValidationResponse | null>(null)
   const [showValidationDialog, setShowValidationDialog] = useState(false)
@@ -605,12 +623,14 @@ function SpecPreview({
       if (result) {
         setValidationResult(result)
         setShowValidationDialog(true)
+        // Notify parent that relevance was created
+        onRelevanceChanged?.()
       }
       setPendingValidationJobId(null)
     } else if (job.status === 'Failed' || job.status === 'Cancelled') {
       setPendingValidationJobId(null)
     }
-  }, [jobs, pendingValidationJobId])
+  }, [jobs, pendingValidationJobId, onRelevanceChanged])
 
   const handleValidate = async (draftId: string) => {
     try {
@@ -622,6 +642,16 @@ function SpecPreview({
       setPendingValidationJobId(jobId)
     } catch (e) {
       console.error('Failed to create validation job:', e)
+    }
+  }
+
+  const handleViewRelevance = async (draftId: string) => {
+    try {
+      const result = await api.spec.getRelevance(draftId)
+      setValidationResult(result)
+      setShowValidationDialog(true)
+    } catch (e) {
+      console.error('Failed to load relevance:', e)
     }
   }
 
@@ -694,7 +724,9 @@ function SpecPreview({
               <DraftActionBar
                 onDelete={() => console.log('TODO: Delete draft', (spec as DraftDetail).id)}
                 onValidate={() => handleValidate((spec as DraftDetail).id)}
+                onViewRelevance={() => handleViewRelevance((spec as DraftDetail).id)}
                 validating={validating}
+                hasRelevance={(spec as DraftDetail).hasRelevance}
               />
             ) : (
               <IssueActionBar
@@ -802,6 +834,17 @@ export function ShapeWorkspace() {
     }
   }
 
+  // Refresh draft detail to update hasRelevance flag
+  const handleRelevanceChanged = async () => {
+    if (!draftDetail) return
+    try {
+      const detail = await api.spec.draft(draftDetail.id)
+      setDraftDetail(detail)
+    } catch (e) {
+      console.error('Failed to refresh draft details:', e)
+    }
+  }
+
   return (
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[25, 40, 35]}>
@@ -825,6 +868,7 @@ export function ShapeWorkspace() {
           <SpecPreview
             draftDetail={draftDetail}
             issueDetail={issueDetail}
+            onRelevanceChanged={handleRelevanceChanged}
             loading={loadingSpec}
           />
         </Tile>

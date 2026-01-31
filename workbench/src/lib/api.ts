@@ -38,6 +38,7 @@ export interface DraftDetail {
   status: 'draft' | 'ready'
   updatedAt: string
   persona?: string
+  hasRelevance?: boolean
 }
 
 export interface Issue {
@@ -258,6 +259,10 @@ export const api = {
     draft: (id: string) => request<DraftDetail>(`/api/spec/drafts/${id}`),
     validateDraft: (id: string) => request<DraftValidationResponse>(`/api/spec/drafts/${id}/validate`, {
       method: 'POST',
+    }),
+    getRelevance: (id: string) => request<DraftValidationResponse>(`/api/spec/drafts/${id}/relevance`),
+    deleteRelevance: (id: string) => request<void>(`/api/spec/drafts/${id}/relevance`, {
+      method: 'DELETE',
     }),
     issues: (refresh = false) => request<Issue[]>(`/api/spec/issues${refresh ? '?refresh=true' : ''}`),
     issue: (number: number, refresh = false) => request<IssueDetail>(`/api/spec/issues/${number}${refresh ? '?refresh=true' : ''}`),

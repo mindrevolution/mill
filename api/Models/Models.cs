@@ -23,7 +23,8 @@ public record DraftDetail(
     string Type,
     string Status,
     DateTime UpdatedAt,
-    string? Persona
+    string? Persona,
+    bool HasRelevance = false
 );
 
 public record Issue(

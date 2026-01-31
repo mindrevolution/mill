@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MillApi.Models;
 using MillApi.Services.Providers;
 
@@ -18,7 +19,15 @@ public class DraftService
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private static readonly JsonSerializerOptions WriteOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public DraftService(
@@ -36,6 +45,9 @@ public class DraftService
     }
 
     private string DraftsPath => Path.Combine(_project.MillFolder, "shape", "drafts");
+
+    private string GetRelevancePath(string draftId) =>
+        Path.Combine(DraftsPath, $"{draftId}.relevance.json");
 
     public async Task<List<Draft>> GetAll()
     {
@@ -74,6 +86,7 @@ public class DraftService
         var content = await File.ReadAllTextAsync(filePath);
         var fm = ParseFrontmatter(content);
         var body = MarkdownHelpers.ExtractBody(content);
+        var hasRelevance = File.Exists(GetRelevancePath(id));
 
         return new DraftDetail(
             Id: id,
@@ -84,7 +97,8 @@ public class DraftService
             Type: fm.type ?? "feature",
             Status: fm.status ?? "draft",
             UpdatedAt: info.LastWriteTime,
-            Persona: fm.persona
+            Persona: fm.persona,
+            HasRelevance: hasRelevance
         );
     }
 
@@ -126,7 +140,38 @@ public class DraftService
         _logger.LogInformation("Draft {DraftId} validation complete: score={Score}, verdict={Verdict}",
             draftId, result.Score, result.Verdict);
 
+        // Save result to file
+        await SaveRelevance(draftId, result);
+
         return result;
+    }
+
+    public async Task<DraftValidationResponse?> GetRelevance(string draftId)
+    {
+        var relevancePath = GetRelevancePath(draftId);
+        if (!File.Exists(relevancePath))
+            return null;
+
+        var json = await File.ReadAllTextAsync(relevancePath);
+        return JsonSerializer.Deserialize<DraftValidationResponse>(json, JsonOptions);
+    }
+
+    public void DeleteRelevance(string draftId)
+    {
+        var relevancePath = GetRelevancePath(draftId);
+        if (File.Exists(relevancePath))
+        {
+            File.Delete(relevancePath);
+            _logger.LogInformation("Deleted relevance file for draft {DraftId}", draftId);
+        }
+    }
+
+    private async Task SaveRelevance(string draftId, DraftValidationResponse result)
+    {
+        var relevancePath = GetRelevancePath(draftId);
+        var json = JsonSerializer.Serialize(result, WriteOptions);
+        await File.WriteAllTextAsync(relevancePath, json);
+        _logger.LogInformation("Saved relevance result for draft {DraftId}", draftId);
     }
 
     private DraftValidationResponse ParseValidationResponse(string output)

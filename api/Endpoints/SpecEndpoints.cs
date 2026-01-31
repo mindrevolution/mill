@@ -47,6 +47,24 @@ public static class SpecEndpoints
         .WithName("ValidateDraft")
         .WithSummary("Validate draft relevance against current codebase");
 
+        group.MapGet("/drafts/{id}/relevance", async (string id, DraftService drafts) =>
+        {
+            var result = await drafts.GetRelevance(id);
+            return result != null
+                ? Results.Ok(result)
+                : Results.NotFound();
+        })
+        .WithName("GetDraftRelevance")
+        .WithSummary("Get cached relevance result for a draft");
+
+        group.MapDelete("/drafts/{id}/relevance", (string id, DraftService drafts) =>
+        {
+            drafts.DeleteRelevance(id);
+            return Results.Ok();
+        })
+        .WithName("DeleteDraftRelevance")
+        .WithSummary("Delete cached relevance result for a draft");
+
         group.MapGet("/issues", async (IssueService issues, bool refresh = false) =>
         {
             var list = await issues.GetAll(forceRefresh: refresh);
