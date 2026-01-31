@@ -40,6 +40,7 @@ export interface Issue {
 export interface IssueDetail {
   number: number
   title: string
+  titleHtml: string
   body: string
   bodyHtml: string
   type: 'feature' | 'bug' | 'security' | 'task'

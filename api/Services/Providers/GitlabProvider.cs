@@ -86,6 +86,7 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
             return new IssueDetail(
                 Number: glIssue.Iid,
                 Title: glIssue.Title,
+                TitleHtml: _markdown.ToHtml(glIssue.Title),
                 Body: body,
                 BodyHtml: _markdown.ToHtml(body),
                 Type: ExtractType(glIssue.Labels),

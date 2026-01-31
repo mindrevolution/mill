@@ -151,6 +151,7 @@ public partial class GithubProvider : CliProviderBase, IIssueProvider
             var issueDetail = new IssueDetail(
                 Number: ghIssue.Number,
                 Title: ghIssue.Title,
+                TitleHtml: _markdown.ToHtml(ghIssue.Title),
                 Body: body,
                 BodyHtml: _markdown.ToHtml(body),
                 Type: ExtractType(ghIssue.Labels),

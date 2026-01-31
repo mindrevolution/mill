@@ -28,6 +28,7 @@ public record Issue(
 public record IssueDetail(
     int Number,
     string Title,
+    string TitleHtml,
     string Body,
     string BodyHtml,
     string Type,

@@ -491,7 +491,10 @@ function SpecPreview({
                 </Badge>
                 {issueDetail.persona && <span>· {issueDetail.persona}</span>}
               </div>
-              <h2 className="text-lg font-semibold">{issueDetail.title}</h2>
+              <h2
+                className="text-lg font-semibold"
+                dangerouslySetInnerHTML={{ __html: issueDetail.titleHtml }}
+              />
             </div>
 
             {/* Labels */}
