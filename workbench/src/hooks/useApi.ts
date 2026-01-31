@@ -75,3 +75,12 @@ export function useRuns() {
 export function useHistory() {
   return useQuery(() => api.history(), [])
 }
+
+// Brief hooks
+export function useBriefs() {
+  return useQuery(() => api.brief.list(), [])
+}
+
+export function useDroppedBriefs() {
+  return useQuery(() => api.brief.dropped(), [])
+}

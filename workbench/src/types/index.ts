@@ -1,5 +1,26 @@
 // Workspace types
-export type Workspace = 'ground' | 'shape' | 'ship'
+export type Workspace = 'ground' | 'brief' | 'shape' | 'ship'
+
+// Brief workspace
+export type BriefStage = 'spark' | 'grounded' | 'ready'
+
+export interface Brief {
+  id: string
+  title: string
+  stage: BriefStage
+  intent: string
+  createdAt: string
+  updatedAt: string
+  persona?: string
+  concepts?: string[]
+}
+
+export interface DroppedBrief {
+  id: string
+  essence: string
+  droppedAt: string
+  originalTitle: string
+}
 
 // Shape workspace
 export interface Draft {

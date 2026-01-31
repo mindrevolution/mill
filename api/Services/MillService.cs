@@ -214,6 +214,367 @@ public class MillService
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // Briefs
+    // ─────────────────────────────────────────────────────────────────
+
+    public async Task<List<Brief>> GetBriefs()
+    {
+        var briefsPath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "active");
+        if (!Directory.Exists(briefsPath))
+            return [];
+
+        var briefs = new List<Brief>();
+        foreach (var file in Directory.GetFiles(briefsPath, "*.md"))
+        {
+            var info = new FileInfo(file);
+            var id = Path.GetFileNameWithoutExtension(file);
+            var content = await File.ReadAllTextAsync(file);
+            var frontmatter = ParseBriefFrontmatter(content);
+
+            briefs.Add(new Brief(
+                Id: id,
+                Title: frontmatter.title ?? FormatName(id),
+                Stage: frontmatter.stage ?? "spark",
+                Intent: frontmatter.intent ?? "",
+                CreatedAt: info.CreationTime,
+                UpdatedAt: info.LastWriteTime,
+                Persona: frontmatter.persona,
+                Concepts: frontmatter.concepts
+            ));
+        }
+
+        return briefs.OrderByDescending(b => b.UpdatedAt).ToList();
+    }
+
+    public async Task<BriefDetail?> GetBrief(string id)
+    {
+        var filePath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "active", $"{id}.md");
+        if (!File.Exists(filePath))
+            return null;
+
+        var info = new FileInfo(filePath);
+        var content = await File.ReadAllTextAsync(filePath);
+        var frontmatter = ParseBriefFrontmatter(content);
+        var bodyContent = ExtractBodyContent(content);
+
+        return new BriefDetail(
+            Id: id,
+            Title: frontmatter.title ?? FormatName(id),
+            Stage: frontmatter.stage ?? "spark",
+            Intent: frontmatter.intent ?? "",
+            Content: bodyContent,
+            CreatedAt: info.CreationTime,
+            UpdatedAt: info.LastWriteTime,
+            Persona: frontmatter.persona,
+            Concepts: frontmatter.concepts
+        );
+    }
+
+    public async Task<Brief> CreateBrief(string title, string intent, string? type)
+    {
+        var briefsPath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "active");
+        Directory.CreateDirectory(briefsPath);
+
+        var slug = Slugify(title);
+        var filePath = Path.Combine(briefsPath, $"{slug}.md");
+
+        // Handle duplicates
+        var counter = 1;
+        while (File.Exists(filePath))
+        {
+            filePath = Path.Combine(briefsPath, $"{slug}-{counter++}.md");
+        }
+
+        var actualSlug = Path.GetFileNameWithoutExtension(filePath);
+        var content = $"""
+            ---
+            title: {title}
+            stage: spark
+            intent: {intent}
+            ---
+
+            ## Notes
+
+            """;
+
+        await File.WriteAllTextAsync(filePath, content);
+
+        var info = new FileInfo(filePath);
+        return new Brief(
+            Id: actualSlug,
+            Title: title,
+            Stage: "spark",
+            Intent: intent,
+            CreatedAt: info.CreationTime,
+            UpdatedAt: info.LastWriteTime,
+            Persona: null,
+            Concepts: null
+        );
+    }
+
+    public async Task<Brief?> UpdateBrief(string id, UpdateBriefRequest request)
+    {
+        var filePath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "active", $"{id}.md");
+        if (!File.Exists(filePath))
+            return null;
+
+        var content = await File.ReadAllTextAsync(filePath);
+        var frontmatter = ParseBriefFrontmatter(content);
+        var bodyContent = request.Content ?? ExtractBodyContent(content);
+
+        // Update frontmatter values
+        var newTitle = request.Title ?? frontmatter.title ?? FormatName(id);
+        var newStage = request.Stage ?? frontmatter.stage ?? "spark";
+        var newIntent = request.Intent ?? frontmatter.intent ?? "";
+        var newPersona = request.Persona ?? frontmatter.persona;
+        var newConcepts = request.Concepts ?? frontmatter.concepts;
+
+        var newContent = BuildBriefContent(newTitle, newStage, newIntent, newPersona, newConcepts, bodyContent);
+        await File.WriteAllTextAsync(filePath, newContent);
+
+        var info = new FileInfo(filePath);
+        return new Brief(
+            Id: id,
+            Title: newTitle,
+            Stage: newStage,
+            Intent: newIntent,
+            CreatedAt: info.CreationTime,
+            UpdatedAt: info.LastWriteTime,
+            Persona: newPersona,
+            Concepts: newConcepts
+        );
+    }
+
+    public async Task<DroppedBrief?> DropBrief(string id, string essence)
+    {
+        var filePath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "active", $"{id}.md");
+        if (!File.Exists(filePath))
+            return null;
+
+        var content = await File.ReadAllTextAsync(filePath);
+        var frontmatter = ParseBriefFrontmatter(content);
+
+        var dropped = new DroppedBrief(
+            Id: id,
+            Essence: essence,
+            DroppedAt: DateTime.UtcNow,
+            OriginalTitle: frontmatter.title ?? FormatName(id)
+        );
+
+        // Add to dropped.json
+        var droppedPath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "dropped.json");
+        var droppedList = await LoadDroppedBriefs(droppedPath);
+        droppedList.Add(dropped);
+        await SaveDroppedBriefs(droppedPath, droppedList);
+
+        // Delete the active brief
+        File.Delete(filePath);
+
+        return dropped;
+    }
+
+    public async Task<Draft?> PromoteBrief(string id, string type)
+    {
+        var filePath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "active", $"{id}.md");
+        if (!File.Exists(filePath))
+            return null;
+
+        var content = await File.ReadAllTextAsync(filePath);
+        var frontmatter = ParseBriefFrontmatter(content);
+        var bodyContent = ExtractBodyContent(content);
+
+        // Create draft in Shape
+        var draftsPath = Path.Combine(_projectPath ?? ".", ".mill", "shape", "drafts");
+        Directory.CreateDirectory(draftsPath);
+
+        var draftPath = Path.Combine(draftsPath, $"{id}.md");
+        var draftContent = $"""
+            ---
+            title: {frontmatter.title ?? FormatName(id)}
+            type: {type}
+            status: draft
+            persona: {frontmatter.persona ?? ""}
+            ---
+
+            ## Intent
+
+            {frontmatter.intent}
+
+            ## Notes
+
+            {bodyContent}
+            """;
+
+        await File.WriteAllTextAsync(draftPath, draftContent);
+
+        // Delete the brief
+        File.Delete(filePath);
+
+        var info = new FileInfo(draftPath);
+        return new Draft(
+            Id: id,
+            Slug: id,
+            Title: frontmatter.title ?? FormatName(id),
+            Type: type,
+            Status: "draft",
+            UpdatedAt: info.LastWriteTime,
+            Persona: frontmatter.persona
+        );
+    }
+
+    public async Task<List<DroppedBrief>> GetDroppedBriefs()
+    {
+        var droppedPath = Path.Combine(_projectPath ?? ".", ".mill", "brief", "dropped.json");
+        return await LoadDroppedBriefs(droppedPath);
+    }
+
+    private async Task<List<DroppedBrief>> LoadDroppedBriefs(string path)
+    {
+        if (!File.Exists(path))
+            return [];
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(path);
+            var data = JsonSerializer.Deserialize<DroppedBriefsFile>(json, JsonOptions);
+            return data?.Dropped ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse dropped.json");
+            return [];
+        }
+    }
+
+    private async Task SaveDroppedBriefs(string path, List<DroppedBrief> briefs)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var data = new DroppedBriefsFile(briefs);
+        var json = JsonSerializer.Serialize(data, JsonOptions);
+        await File.WriteAllTextAsync(path, json);
+    }
+
+    private static (string? title, string? stage, string? intent, string? persona, List<string>? concepts) ParseBriefFrontmatter(string content)
+    {
+        string? title = null, stage = null, intent = null, persona = null;
+        List<string>? concepts = null;
+
+        var lines = content.Split('\n');
+        var inFrontmatter = false;
+        var inConcepts = false;
+
+        foreach (var line in lines)
+        {
+            if (line.Trim() == "---")
+            {
+                if (inFrontmatter)
+                    break;
+                inFrontmatter = true;
+                continue;
+            }
+            if (!inFrontmatter)
+                continue;
+
+            // Handle concepts array
+            if (inConcepts)
+            {
+                if (line.TrimStart().StartsWith("- "))
+                {
+                    concepts ??= [];
+                    concepts.Add(line.TrimStart()[2..].Trim());
+                    continue;
+                }
+                inConcepts = false;
+            }
+
+            var parts = line.Split(':', 2);
+            if (parts.Length != 2)
+                continue;
+
+            var key = parts[0].Trim().ToLowerInvariant();
+            var value = parts[1].Trim();
+
+            switch (key)
+            {
+                case "title": title = value; break;
+                case "stage": stage = value; break;
+                case "intent": intent = value; break;
+                case "persona": persona = string.IsNullOrEmpty(value) ? null : value; break;
+                case "concepts":
+                    if (string.IsNullOrEmpty(value))
+                        inConcepts = true;
+                    break;
+            }
+        }
+
+        return (title, stage, intent, persona, concepts);
+    }
+
+    private static string ExtractBodyContent(string content)
+    {
+        var lines = content.Split('\n');
+        var inFrontmatter = false;
+        var pastFrontmatter = false;
+        var bodyLines = new List<string>();
+
+        foreach (var line in lines)
+        {
+            if (line.Trim() == "---")
+            {
+                if (inFrontmatter)
+                {
+                    pastFrontmatter = true;
+                    inFrontmatter = false;
+                    continue;
+                }
+                inFrontmatter = true;
+                continue;
+            }
+            if (pastFrontmatter)
+                bodyLines.Add(line);
+        }
+
+        return string.Join('\n', bodyLines).Trim();
+    }
+
+    private static string BuildBriefContent(string title, string stage, string intent, string? persona, List<string>? concepts, string bodyContent)
+    {
+        var lines = new List<string>
+        {
+            "---",
+            $"title: {title}",
+            $"stage: {stage}",
+            $"intent: {intent}"
+        };
+
+        if (!string.IsNullOrEmpty(persona))
+            lines.Add($"persona: {persona}");
+
+        if (concepts is { Count: > 0 })
+        {
+            lines.Add("concepts:");
+            foreach (var concept in concepts)
+                lines.Add($"  - {concept}");
+        }
+
+        lines.Add("---");
+        lines.Add("");
+        lines.Add(bodyContent);
+
+        return string.Join('\n', lines);
+    }
+
+    private static string Slugify(string text)
+    {
+        return text.ToLowerInvariant()
+            .Replace(' ', '-')
+            .Replace("--", "-")
+            .Trim('-');
+    }
+
+    private record DroppedBriefsFile(List<DroppedBrief> Dropped);
+
+    // ─────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────
 

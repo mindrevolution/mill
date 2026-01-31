@@ -93,6 +93,42 @@ public record SendMessageRequest(string SessionId, string Content);
 
 public record SendMessageResponse(string Content, Draft? UpdatedDraft);
 
+// Briefs
+public record Brief(
+    string Id,
+    string Title,
+    string Stage,
+    string Intent,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    string? Persona,
+    List<string>? Concepts
+);
+
+public record BriefDetail(
+    string Id,
+    string Title,
+    string Stage,
+    string Intent,
+    string Content,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    string? Persona,
+    List<string>? Concepts
+);
+
+public record DroppedBrief(
+    string Id,
+    string Essence,
+    DateTime DroppedAt,
+    string OriginalTitle
+);
+
+public record CreateBriefRequest(string Title, string Intent, string? Type);
+public record UpdateBriefRequest(string? Title, string? Stage, string? Intent, string? Persona, List<string>? Concepts, string? Content);
+public record DropBriefRequest(string Essence);
+public record PromoteBriefRequest(string Type);
+
 // Requests
 public record StartSpecRequest(string? DraftId, string? Type);
 

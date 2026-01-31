@@ -93,6 +93,30 @@ export interface HistoryEntry {
   contextAdded?: string[]
 }
 
+export type BriefStage = 'spark' | 'grounded' | 'ready'
+
+export interface Brief {
+  id: string
+  title: string
+  stage: BriefStage
+  intent: string
+  createdAt: string
+  updatedAt: string
+  persona?: string
+  concepts?: string[]
+}
+
+export interface BriefDetail extends Brief {
+  content: string
+}
+
+export interface DroppedBrief {
+  id: string
+  essence: string
+  droppedAt: string
+  originalTitle: string
+}
+
 // API client
 export const api = {
   // Health
@@ -140,4 +164,34 @@ export const api = {
 
   // History
   history: () => request<HistoryEntry[]>('/api/history'),
+
+  // Briefs
+  brief: {
+    list: () => request<Brief[]>('/api/brief'),
+    get: (id: string) => request<BriefDetail>(`/api/brief/${id}`),
+    create: (title: string, intent: string, type?: string) => request<Brief>('/api/brief', {
+      method: 'POST',
+      body: JSON.stringify({ title, intent, type }),
+    }),
+    update: (id: string, data: {
+      title?: string
+      stage?: BriefStage
+      intent?: string
+      persona?: string
+      concepts?: string[]
+      content?: string
+    }) => request<Brief>(`/api/brief/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    drop: (id: string, essence: string) => request<DroppedBrief>(`/api/brief/${id}/drop`, {
+      method: 'POST',
+      body: JSON.stringify({ essence }),
+    }),
+    promote: (id: string, type: string) => request<Draft>(`/api/brief/${id}/promote`, {
+      method: 'POST',
+      body: JSON.stringify({ type }),
+    }),
+    dropped: () => request<DroppedBrief[]>('/api/brief/dropped'),
+  },
 }

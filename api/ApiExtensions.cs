@@ -30,6 +30,7 @@ public static class ApiExtensions
     {
         app.MapProjectEndpoints();
         app.MapKnowledgeEndpoints();
+        app.MapBriefEndpoints();
         app.MapSpecEndpoints();
         app.MapRunEndpoints();
         app.MapHistoryEndpoints();

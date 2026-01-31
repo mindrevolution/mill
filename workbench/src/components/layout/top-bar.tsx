@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
-import { Layers, PenTool, Rocket, Settings, Lightbulb } from 'lucide-react'
+import { Layers, Zap, PenTool, Rocket, Settings, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TopBarProps {
@@ -13,8 +13,9 @@ interface TopBarProps {
 
 const workspaces: { id: Workspace; label: string; icon: typeof PenTool; key: string }[] = [
   { id: 'ground', label: 'Ground', icon: Layers, key: '1' },
-  { id: 'shape', label: 'Shape', icon: PenTool, key: '2' },
-  { id: 'ship', label: 'Ship', icon: Rocket, key: '3' },
+  { id: 'brief', label: 'Brief', icon: Zap, key: '2' },
+  { id: 'shape', label: 'Shape', icon: PenTool, key: '3' },
+  { id: 'ship', label: 'Ship', icon: Rocket, key: '4' },
 ]
 
 export function TopBar({

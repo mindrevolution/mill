@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
+import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { Separator } from '@/components/ui/separator'
 import {
   DropdownMenu,
@@ -55,7 +56,7 @@ import {
   RotateCcw,
   RefreshCw,
   Play,
-  Pencil,
+  Terminal,
   ExternalLink,
   MoreHorizontal,
 } from 'lucide-react'
@@ -74,71 +75,67 @@ const typeColors = {
   task: 'text-muted-foreground',
 }
 
-function FloatingActionBar({ issueNumber }: { issueNumber: number }) {
+function IssueActionBar({ issueNumber }: { issueNumber: number }) {
   const issueUrl = `https://github.com/mindrevolution/mill/issues/${issueNumber}`
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-      <Card className="bg-card/80 backdrop-blur-md shadow-lg">
-        <CardContent className="flex items-center gap-1 px-2 py-1.5">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
-            title="Start Run"
-          >
-            <Play className="h-4 w-4" />
-          </Button>
+    <FloatingActionBar>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+        title="Refine interactively"
+      >
+        <Terminal className="h-4 w-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0"
+        title="Open in Browser"
+        onClick={() => window.open(issueUrl, '_blank')}
+      >
+        <ExternalLink className="h-4 w-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0"
+        title="Ship this"
+      >
+        <Play className="h-4 w-4" />
+      </Button>
+      <Separator orientation="vertical" className="h-4 mx-1" />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
             size="sm"
             variant="ghost"
             className="h-8 w-8 p-0"
-            title="Edit Issue"
+            title="More Actions"
           >
-            <Pencil className="h-4 w-4" />
+            <MoreHorizontal className="h-4 w-4" />
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            title="Open in Browser"
-            onClick={() => window.open(issueUrl, '_blank')}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => console.log('TODO: Ship this')}>
+            Ship this
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => console.log('TODO: Refine interactively')}>
+            Refine interactively
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => window.open(issueUrl, '_blank')}>
+            Open in browser
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => navigator.clipboard?.writeText(issueUrl)}
           >
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-          <Separator orientation="vertical" className="h-4 mx-1" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                title="More Actions"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => console.log('TODO: Start run')}>
-                Start run
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => console.log('TODO: Edit issue')}>
-                Edit issue
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => window.open(issueUrl, '_blank')}>
-                Open in browser
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => navigator.clipboard?.writeText(issueUrl)}
-              >
-                Copy issue link
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardContent>
-      </Card>
-    </div>
+            Copy issue link
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </FloatingActionBar>
   )
 }
 
@@ -528,7 +525,7 @@ function SpecPreview({
         </ScrollArea>
 
         {/* Floating Action Bar */}
-        <FloatingActionBar issueNumber={issueDetail.number} />
+        <IssueActionBar issueNumber={issueDetail.number} />
       </div>
     )
   }
