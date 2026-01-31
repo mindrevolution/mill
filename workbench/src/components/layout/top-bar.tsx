@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { Workspace } from '@/types'
-import { Layers, Zap, PenTool, Rocket, Settings, Lightbulb } from 'lucide-react'
+import { LandPlot, SquareStack, Orbit, Rocket, Settings, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TopBarProps {
@@ -11,10 +11,10 @@ interface TopBarProps {
   openObservations?: number
 }
 
-const workspaces: { id: Workspace; label: string; icon: typeof PenTool; key: string }[] = [
-  { id: 'ground', label: 'Ground', icon: Layers, key: '1' },
-  { id: 'brief', label: 'Brief', icon: Zap, key: '2' },
-  { id: 'shape', label: 'Shape', icon: PenTool, key: '3' },
+const workspaces: { id: Workspace; label: string; icon: typeof LandPlot; key: string }[] = [
+  { id: 'ground', label: 'Ground', icon: LandPlot, key: '1' },
+  { id: 'brief', label: 'Brief', icon: SquareStack, key: '2' },
+  { id: 'shape', label: 'Shape', icon: Orbit, key: '3' },
   { id: 'ship', label: 'Ship', icon: Rocket, key: '4' },
 ]
 
