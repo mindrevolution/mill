@@ -52,7 +52,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     if (state._eventSource) return // Already connected
 
     const es = createJobEventSource((eventType, job) => {
-      const { _updateJob, _removeJob } = get()
+      const { _updateJob } = get()
 
       switch (eventType) {
         case 'job-sync':

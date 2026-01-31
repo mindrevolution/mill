@@ -3,10 +3,12 @@ import { ActivityButton } from '@/components/ui/activity-button'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import {
   useJobsStore,
   selectActiveJobCount,
@@ -181,8 +183,8 @@ export function JobsIndicator({ onViewResult }: JobsIndicatorProps) {
   const hasActive = activeCount > 0
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         <ActivityButton
           active={hasJobs}
           pulsing={hasActive}
@@ -195,28 +197,30 @@ export function JobsIndicator({ onViewResult }: JobsIndicatorProps) {
             <ServerCog className="absolute h-3 w-3" />
           </div>
         </ActivityButton>
-      </PopoverTrigger>
+      </SheetTrigger>
 
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between px-3 py-2 border-b">
-          <span className="text-sm font-medium">Jobs</span>
-          {completedJobs.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-muted-foreground"
-              onClick={() => clearCompleted()}
-            >
-              Clear
-            </Button>
-          )}
-        </div>
+      <SheetContent side="right" className="w-[400px] sm:max-w-[400px] p-0 flex flex-col">
+        <SheetHeader className="px-4 py-3 border-b">
+          <div className="flex items-center justify-between">
+            <SheetTitle>Jobs</SheetTitle>
+            {completedJobs.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-muted-foreground"
+                onClick={() => clearCompleted()}
+              >
+                Clear completed
+              </Button>
+            )}
+          </div>
+        </SheetHeader>
 
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="flex-1">
           {!hasJobs ? (
-            <div className="py-8 text-center text-muted-foreground">
-              <ServerCog className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No jobs</p>
+            <div className="py-16 text-center text-muted-foreground">
+              <ServerCog className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium">No jobs</p>
               <p className="text-xs mt-1">Background tasks will appear here</p>
             </div>
           ) : (
@@ -253,7 +257,7 @@ export function JobsIndicator({ onViewResult }: JobsIndicatorProps) {
             </div>
           )}
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+      </SheetContent>
+    </Sheet>
   )
 }

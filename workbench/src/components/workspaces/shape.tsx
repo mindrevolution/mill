@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/dialog'
 import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
-import type { Draft, DraftDetail, Issue, IssueDetail, DraftValidationResponse, Job } from '@/lib/api'
+import type { Draft, DraftDetail, Issue, IssueDetail, DraftValidationResponse } from '@/lib/api'
 import { useJobsStore, getValidationResult } from '@/stores/jobs'
 import type { ChatMessage } from '@/types'
 import {
