@@ -17,17 +17,21 @@ if (args is ["--api-only"] or ["-a"])
     return Workbench.RunApiOnly();
 }
 
-// Default: run workbench (requires STA thread for Photino/WebView2)
-// See: https://github.com/tryphotino/photino.NET/issues/180
+// Default: run workbench
+// Windows: requires STA thread for WebView2/COM - see https://github.com/tryphotino/photino.NET/issues/180
+// macOS/Linux: must run on main thread for AppKit/GTK
 if (args is [])
 {
-    var result = 0;
-    var thread = new Thread(() => result = Workbench.Run());
     if (OperatingSystem.IsWindows())
+    {
+        var result = 0;
+        var thread = new Thread(() => result = Workbench.Run());
         thread.SetApartmentState(ApartmentState.STA);
-    thread.Start();
-    thread.Join();
-    return result;
+        thread.Start();
+        thread.Join();
+        return result;
+    }
+    return Workbench.Run();
 }
 
 return args switch
