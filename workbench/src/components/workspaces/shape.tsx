@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FloatingActionBar } from '@/components/ui/floating-action-bar'
+import { ActionDialog } from '@/components/ui/action-dialog'
 import { DetailView } from '@/components/ui/detail-view'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -59,6 +60,7 @@ import {
   MoreHorizontal,
   Trash2,
   SearchCheck,
+  X,
 } from 'lucide-react'
 
 const typeIcons = {
@@ -522,62 +524,100 @@ function ValidationResultDialog({
   open,
   onOpenChange,
   result,
+  onDelete,
+  onRefine,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   result: DraftValidationResponse | null
+  onDelete?: () => void
+  onRefine?: () => void
 }) {
   if (!result) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <span>Relevance Validation</span>
-            <Badge className={cn('text-sm', verdictColors[result.verdict])}>
-              {result.score}/10 — {result.verdict}
-            </Badge>
-          </DialogTitle>
-          <DialogDescription>{result.summary}</DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          {result.findings.length > 0 && (
-            <div className="space-y-3 mb-4">
-              <h4 className="text-sm font-medium">Findings</h4>
-              {result.findings.map((finding, i) => (
-                <div key={i} className="text-sm border rounded-lg p-3 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={severityColors[finding.severity]}>
-                      {finding.severity}
-                    </Badge>
-                    <span className="font-medium">{finding.category}</span>
-                  </div>
-                  <p className="text-muted-foreground">{finding.reference}</p>
-                  <div className="text-xs space-y-1 pt-1">
-                    <p><span className="text-muted-foreground">Expected:</span> {finding.expected}</p>
-                    <p><span className="text-muted-foreground">Actual:</span> {finding.actual}</p>
-                    <p><span className="text-muted-foreground">Impact:</span> {finding.impact}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="border-t pt-3">
-            <h4 className="text-sm font-medium mb-1">Recommendation</h4>
-            <p className="text-sm text-muted-foreground">{result.recommendation}</p>
-          </div>
-        </ScrollArea>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+    <ActionDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      className="max-w-2xl"
+      title={
+        <span className="flex items-center gap-3">
+          <span>Relevance Validation</span>
+          <Badge className={cn('text-sm', verdictColors[result.verdict])}>
+            {result.score}/10 — {result.verdict}
+          </Badge>
+        </span>
+      }
+      description={result.summary}
+      actions={
+        <>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+            title="Refine interactively"
+            onClick={() => {
+              onRefine?.()
+              onOpenChange(false)
+            }}
+          >
+            <Terminal className="h-4 w-4" />
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            title="Delete cached result"
+            onClick={() => {
+              onDelete?.()
+              onOpenChange(false)
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            title="Close"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </>
+      }
+    >
+      {result.findings.length > 0 && (
+        <div className="mb-4">
+          <h4 className="text-sm font-medium mb-3">Findings</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {result.findings.map((finding, i) => (
+              <div key={i} className="text-sm border rounded-lg p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={severityColors[finding.severity]}>
+                    {finding.severity}
+                  </Badge>
+                  <span className="font-medium">{finding.category}</span>
+                </div>
+                <p className="text-muted-foreground">{finding.reference}</p>
+                <div className="text-xs space-y-1 pt-1">
+                  <p><span className="text-muted-foreground">Expected:</span> {finding.expected}</p>
+                  <p><span className="text-muted-foreground">Actual:</span> {finding.actual}</p>
+                  <p><span className="text-muted-foreground">Impact:</span> {finding.impact}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="border-t pt-3">
+        <h4 className="text-sm font-medium mb-1">Recommendation</h4>
+        <p className="text-sm text-muted-foreground">{result.recommendation}</p>
+      </div>
+    </ActionDialog>
   )
 }
 
@@ -640,6 +680,16 @@ function SpecPreview({
       setShowValidationDialog(true)
     } catch (e) {
       console.error('Failed to load relevance:', e)
+    }
+  }
+
+  const handleDeleteRelevance = async (draftId: string) => {
+    try {
+      await api.spec.deleteRelevance(draftId)
+      setValidationResult(null)
+      onRelevanceChanged?.()
+    } catch (e) {
+      console.error('Failed to delete relevance:', e)
     }
   }
 
@@ -750,6 +800,8 @@ function SpecPreview({
           open={showValidationDialog}
           onOpenChange={setShowValidationDialog}
           result={validationResult}
+          onDelete={draftDetail ? () => handleDeleteRelevance(draftDetail.id) : undefined}
+          onRefine={draftDetail ? () => console.log('TODO: Refine interactively', draftDetail.id) : undefined}
         />
       </>
     )
