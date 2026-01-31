@@ -57,6 +57,7 @@ import {
   ExternalLink,
   MoreHorizontal,
   Trash2,
+  SearchCheck,
 } from 'lucide-react'
 
 const typeIcons = {
@@ -152,6 +153,15 @@ function DraftActionBar({ onDelete }: { onDelete?: () => void }) {
         onClick={() => console.log('TODO: Refine interactively')}
       >
         <Terminal className="h-4 w-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0"
+        title="Validate relevance"
+        onClick={() => console.log('TODO: Validate relevance')}
+      >
+        <SearchCheck className="h-4 w-4" />
       </Button>
       <Separator orientation="vertical" className="h-4 mx-1" />
       <Button
