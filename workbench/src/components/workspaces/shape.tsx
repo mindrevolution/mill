@@ -552,7 +552,7 @@ function SpecPreview({
         }
         actions={
           isDraft ? (
-            <DraftActionBar onDelete={() => console.log('TODO: Delete draft', spec.id)} />
+            <DraftActionBar onDelete={() => console.log('TODO: Delete draft', (spec as DraftDetail).id)} />
           ) : (
             <IssueActionBar
               issueNumber={(spec as IssueDetail).number}
