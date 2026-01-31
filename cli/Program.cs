@@ -357,7 +357,7 @@ static partial class Mill
         Out.Step("building context...");
         Out.Blank();
 
-        var warmupPrompt = Path.Combine(FindMillHome(), "spec/prompts/context-warmup.md");
+        var warmupPrompt = Path.Combine(FindMillHome(), "shape/prompts/context-warmup.md");
         if (!File.Exists(warmupPrompt))
         {
             Out.Error($"warmup prompt not found: {warmupPrompt}");
@@ -547,7 +547,7 @@ static partial class Mill
             Out.Step("building context...");
             Out.Blank();
 
-            var exitCode = await RunClaudeStreaming("spec/prompts/context-warmup.md");
+            var exitCode = await RunClaudeStreaming("shape/prompts/context-warmup.md");
             if (exitCode != 0) return exitCode;
 
             Out.Blank();
@@ -568,7 +568,7 @@ static partial class Mill
             ? "continue this draft"
             : "start";
 
-        return RunClaudeInteractive("spec/prompts/spec-draft.md", selectedDraft, initialMessage);
+        return RunClaudeInteractive("shape/prompts/spec-draft.md", selectedDraft, initialMessage);
     }
 
     public static async Task<int> RunSpecRefine(string issueNumber)
@@ -623,7 +623,7 @@ static partial class Mill
             Out.Step("building context...");
             Out.Blank();
 
-            var warmupExitCode = await RunClaudeStreaming("spec/prompts/context-warmup.md");
+            var warmupExitCode = await RunClaudeStreaming("shape/prompts/context-warmup.md");
             if (warmupExitCode != 0) return warmupExitCode;
 
             Out.Blank();
@@ -634,7 +634,7 @@ static partial class Mill
         Out.Ok($"context loaded ({GetContextInfo()})");
         Out.Blank();
 
-        return RunClaudeInteractiveRefine("spec/prompts/spec-refine.md", issueNumber, issueDetail.Body ?? "");
+        return RunClaudeInteractiveRefine("shape/prompts/spec-refine.md", issueNumber, issueDetail.Body ?? "");
     }
 
     static int RunClaudeInteractiveRefine(string promptPath, string issueNumber, string issueBody)
@@ -759,7 +759,7 @@ static partial class Mill
 
         Out.Blank();
 
-        return RunClaudeInteractivePersonas("spec/prompts/personas.md", hasExisting);
+        return RunClaudeInteractivePersonas("shape/prompts/personas.md", hasExisting);
     }
 
     static int RunClaudeInteractivePersonas(string promptPath, bool hasExistingPersonas)
@@ -871,7 +871,7 @@ static partial class Mill
 
         Out.Blank();
 
-        return RunClaudeInteractiveStandards("spec/prompts/standards-infer.md", hasExisting);
+        return RunClaudeInteractiveStandards("shape/prompts/standards-infer.md", hasExisting);
     }
 
     static int RunClaudeInteractiveStandards(string promptPath, bool hasExistingStandards)
@@ -1016,7 +1016,7 @@ static partial class Mill
     /// </summary>
     static async Task<int> RunStandardsInference()
     {
-        var promptPath = Path.Combine(FindMillHome(), "spec/prompts/standards-infer.md");
+        var promptPath = Path.Combine(FindMillHome(), "shape/prompts/standards-infer.md");
         if (!File.Exists(promptPath))
         {
             Out.Error($"standards prompt not found: {promptPath}");
@@ -1752,7 +1752,7 @@ static partial class Mill
                 // Ensure worktree's .mill directory exists (may not if .mill/ wasn't committed)
                 Directory.CreateDirectory(CurrentMillDir);
 
-                var warmupPrompt = Path.Combine(FindMillHome(), "spec/prompts/context-warmup.md");
+                var warmupPrompt = Path.Combine(FindMillHome(), "shape/prompts/context-warmup.md");
                 var warmupExit = await RunClaudeStreaming(warmupPrompt);
                 if (warmupExit != 0)
                 {
@@ -2809,18 +2809,18 @@ static partial class Mill
     {
         // 1. Explicit override via environment variable
         var env = Environment.GetEnvironmentVariable("MILL_HOME");
-        if (!string.IsNullOrEmpty(env) && Directory.Exists(Path.Combine(env, "spec/prompts")))
+        if (!string.IsNullOrEmpty(env) && Directory.Exists(Path.Combine(env, "shape/prompts")))
             return env;
 
         // 2. System install location (~/.local/share/mill or %LOCALAPPDATA%\mill)
         var dataPath = Installer.GetDataPath();
-        if (Directory.Exists(Path.Combine(dataPath, "spec/prompts")))
+        if (Directory.Exists(Path.Combine(dataPath, "shape/prompts")))
             return dataPath;
 
         // 3. Development mode: prompts in repo relative to binary
         var exeDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
         var millRoot = Directory.GetParent(exeDir)?.FullName;
-        if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "spec/prompts")))
+        if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "shape/prompts")))
             return millRoot;
 
         // 4. Fallback to exe directory (will likely fail, but provides useful error)
