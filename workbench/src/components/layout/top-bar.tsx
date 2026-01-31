@@ -3,6 +3,7 @@ import type { Workspace } from '@/types'
 import type { Job } from '@/lib/api'
 import { LandPlot, SquareStack, Orbit, Rocket, Settings, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ActivityButton } from '@/components/ui/activity-button'
 import { JobsIndicator } from '@/components/jobs'
 
 interface TopBarProps {
@@ -55,7 +56,22 @@ export function TopBar({
       <div className="flex-1" />
 
       {/* Right: Status & actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        {/* Jobs indicator - first */}
+        <JobsIndicator onViewResult={onViewJobResult} />
+
+        {/* Observations indicator */}
+        {openObservations > 0 && (
+          <ActivityButton
+            active
+            count={openObservations}
+            onClick={() => onSwitch('ground')}
+            title="Open observations - click to view in Ground"
+          >
+            <Lightbulb className="h-3.5 w-3.5" />
+          </ActivityButton>
+        )}
+
         {/* Active runs indicator */}
         {activeRuns > 0 && (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary text-sm">
@@ -64,27 +80,12 @@ export function TopBar({
           </div>
         )}
 
-        {/* Observations indicator */}
-        {openObservations > 0 && (
-          <Button
-            onClick={() => onSwitch('ground')}
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 bg-primary/10 hover:bg-primary/20 text-primary"
-            title="Open observations - click to view in Ground"
-          >
-            <Lightbulb className="h-3.5 w-3.5 text-primary" />
-            <span>{openObservations}</span>
+        {/* Settings - separated */}
+        <div className="ml-3">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onSettings}>
+            <Settings className="h-4 w-4 text-muted-foreground" />
           </Button>
-        )}
-
-        {/* Jobs indicator */}
-        <JobsIndicator onViewResult={onViewJobResult} />
-
-        {/* Settings */}
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onSettings}>
-          <Settings className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        </div>
       </div>
     </div>
   )

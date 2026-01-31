@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { cn } from '@/lib/utils'
+import { ActivityButton } from '@/components/ui/activity-button'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Popover,
@@ -17,7 +16,7 @@ import {
   useCompletedJobs,
 } from '@/stores/jobs'
 import type { Job } from '@/lib/api'
-import { Loader2, CheckCircle2, XCircle, Circle, X, ChevronRight, Briefcase } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Circle, X, ChevronRight, ServerCog } from 'lucide-react'
 
 function formatElapsed(startedAt?: string): string {
   if (!startedAt) return ''
@@ -184,31 +183,18 @@ export function JobsIndicator({ onViewResult }: JobsIndicatorProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'h-8 w-8 p-0 relative',
-            hasActive && 'text-primary'
-          )}
+        <ActivityButton
+          active={hasJobs}
+          pulsing={hasActive}
+          count={hasJobs ? (activeCount > 0 ? activeCount : jobs.length) : undefined}
           title={hasActive ? `${activeCount} job(s) running` : 'Jobs'}
         >
-          {/* Progress ring */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <ProgressRing progress={hasActive ? progress : null} size={28} />
+          {/* Progress ring with icon */}
+          <div className="relative flex items-center justify-center">
+            <ProgressRing progress={hasActive ? progress : null} size={24} />
+            <ServerCog className="absolute h-3 w-3" />
           </div>
-          {/* Icon */}
-          <Briefcase className="h-3.5 w-3.5" />
-          {/* Count badge */}
-          {activeCount > 0 && (
-            <Badge
-              variant="default"
-              className="absolute -top-1 -right-1 h-4 min-w-4 p-0 flex items-center justify-center text-[10px]"
-            >
-              {activeCount}
-            </Badge>
-          )}
-        </Button>
+        </ActivityButton>
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-80 p-0">
@@ -229,7 +215,7 @@ export function JobsIndicator({ onViewResult }: JobsIndicatorProps) {
         <ScrollArea className="max-h-[400px]">
           {!hasJobs ? (
             <div className="py-8 text-center text-muted-foreground">
-              <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <ServerCog className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No jobs</p>
               <p className="text-xs mt-1">Background tasks will appear here</p>
             </div>
