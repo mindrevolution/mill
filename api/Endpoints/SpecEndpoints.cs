@@ -83,6 +83,16 @@ public static class SpecEndpoints
         .WithName("GetIssueDetail")
         .WithSummary("Get single GitHub issue with full details. Use ?refresh=true to bypass cache.");
 
+        group.MapPost("/issues/{number:int}/close", async (int number, IssueService issues) =>
+        {
+            var result = await issues.Close(number);
+            return result.Closed
+                ? Results.Ok(new { closed = true })
+                : Results.Json(new { closed = false, error = result.Error ?? $"Failed to close issue #{number}" }, statusCode: 500);
+        })
+        .WithName("CloseIssue")
+        .WithSummary("Close an issue on the configured provider.");
+
         group.MapPost("/start", (StartSpecRequest request) =>
         {
             // TODO: Start interactive spec session

@@ -25,6 +25,11 @@ public interface IIssueProvider
     Task<IssueDetail?> GetIssueDetail(int number, string workingDir, bool forceRefresh = false);
 
     /// <summary>
+    /// Close an issue in the provider.
+    /// </summary>
+    Task<IssueCloseResult> CloseIssue(int number, string workingDir);
+
+    /// <summary>
     /// Check if this provider can handle the given repository
     /// </summary>
     Task<bool> CanHandle(string workingDir);
@@ -34,3 +39,5 @@ public interface IIssueProvider
     /// </summary>
     void ClearCache() { }
 }
+
+public record IssueCloseResult(bool Closed, string? Error = null);

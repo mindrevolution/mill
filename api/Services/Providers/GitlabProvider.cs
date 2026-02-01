@@ -104,6 +104,24 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
         }
     }
 
+    public async Task<IssueCloseResult> CloseIssue(int number, string workingDir)
+    {
+        var result = await RunCommandWithResult("glab", $"issue close {number}", workingDir);
+        if (!result.Success)
+        {
+            var error = string.IsNullOrWhiteSpace(result.Error) ? "glab issue close failed" : result.Error.Trim();
+            Logger.LogWarning(
+                "Failed to close GitLab issue #{Number}. Exit {ExitCode}. Error: {Error}",
+                number,
+                result.ExitCode,
+                error
+            );
+            return new IssueCloseResult(false, error);
+        }
+
+        return new IssueCloseResult(true);
+    }
+
     private static string ExtractType(List<string>? labels)
     {
         if (labels == null)

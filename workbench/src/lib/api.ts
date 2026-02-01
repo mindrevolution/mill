@@ -11,10 +11,25 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    // Try to extract error message from JSON response
+    let errorMessage = `API error: ${res.status} ${res.statusText}`
+    try {
+      const errorBody = await res.json()
+      if (errorBody?.error) {
+        errorMessage = errorBody.error
+      }
+    } catch {
+      // Ignore JSON parse errors for error responses
+    }
+    throw new Error(errorMessage)
   }
 
-  return res.json()
+  // Handle empty responses gracefully
+  const text = await res.text()
+  if (!text) {
+    return undefined as T
+  }
+  return JSON.parse(text)
 }
 
 // Types matching API models
@@ -266,6 +281,9 @@ export const api = {
     }),
     issues: (refresh = false) => request<Issue[]>(`/api/spec/issues${refresh ? '?refresh=true' : ''}`),
     issue: (number: number, refresh = false) => request<IssueDetail>(`/api/spec/issues/${number}${refresh ? '?refresh=true' : ''}`),
+    closeIssue: (number: number) => request<void>(`/api/spec/issues/${number}/close`, {
+      method: 'POST',
+    }),
     start: (draftId?: string, type?: string) => request<SpecSession>('/api/spec/start', {
       method: 'POST',
       body: JSON.stringify({ draftId, type }),

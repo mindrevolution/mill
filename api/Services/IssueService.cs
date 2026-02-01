@@ -46,6 +46,24 @@ public class IssueService
         return await provider.GetIssueDetail(number, _project.ProjectPath, forceRefresh);
     }
 
+    public async Task<IssueCloseResult> Close(int number)
+    {
+        var provider = await _providerFactory.GetProvider(_project.ProjectPath);
+        if (provider == null)
+        {
+            _logger.LogWarning("No issue provider available for {WorkingDir}", _project.ProjectPath);
+            return new IssueCloseResult(false, "No issue provider available for this repository.");
+        }
+
+        var result = await provider.CloseIssue(number, _project.ProjectPath);
+        if (result.Closed)
+        {
+            provider.ClearCache();
+        }
+
+        return result;
+    }
+
     public async Task ClearCache()
     {
         var provider = await _providerFactory.GetProvider(_project.ProjectPath);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { Tile, TileSplit } from '@/components/layout/tile'
 import { Button } from '@/components/ui/button'
@@ -60,6 +60,7 @@ import {
   Terminal as TerminalIcon,
   ExternalLink,
   MoreHorizontal,
+  Archive,
   Trash2,
   SearchCheck,
   X,
@@ -82,11 +83,11 @@ const typeColors = {
 
 function IssueActionBar({
   issueNumber,
-  onDelete,
+  onClose,
   onRefine,
 }: {
   issueNumber: number
-  onDelete?: () => void
+  onClose?: () => void
   onRefine?: () => void
 }) {
   const issueUrl = `https://github.com/mindrevolution/mill/issues/${issueNumber}`
@@ -126,9 +127,9 @@ function IssueActionBar({
         variant="ghost"
         className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
         title="Close issue"
-        onClick={onDelete}
+        onClick={onClose}
       >
-        <Trash2 className="h-4 w-4" />
+        <Archive className="h-4 w-4" />
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -669,16 +670,25 @@ function SpecPreview({
   loading,
   onRelevanceChanged,
   onRefineInteractively,
+  onIssueClosed,
+  onIssueCloseStart,
+  onIssueCloseFailed,
 }: {
   draftDetail?: DraftDetail
   issueDetail?: IssueDetail
   loading?: boolean
   onRelevanceChanged?: () => void
   onRefineInteractively?: (draftId?: string, issueNumber?: number) => void
+  onIssueClosed?: (issueNumber: number) => void
+  onIssueCloseStart?: (issueNumber: number) => void
+  onIssueCloseFailed?: (issueNumber: number) => void
 }) {
   const [validationResult, setValidationResult] = useState<DraftValidationResponse | null>(null)
   const [showValidationDialog, setShowValidationDialog] = useState(false)
   const [pendingValidationJobId, setPendingValidationJobId] = useState<string | null>(null)
+  const [confirmCloseIssue, setConfirmCloseIssue] = useState<IssueDetail | null>(null)
+  const [closingIssue, setClosingIssue] = useState(false)
+  const [closeIssueError, setCloseIssueError] = useState<string | null>(null)
 
   const jobs = useJobsStore((s) => s.jobs)
   const createJob = useJobsStore((s) => s.createJob)
@@ -734,6 +744,23 @@ function SpecPreview({
       onRelevanceChanged?.()
     } catch (e) {
       console.error('Failed to delete relevance:', e)
+    }
+  }
+
+  const handleCloseIssue = async (issue: IssueDetail) => {
+    onIssueCloseStart?.(issue.number)
+    setCloseIssueError(null)
+    setClosingIssue(true)
+    try {
+      await api.spec.closeIssue(issue.number)
+      onIssueClosed?.(issue.number)
+      setConfirmCloseIssue(null)
+    } catch (e) {
+      console.error('Failed to close issue:', e)
+      onIssueCloseFailed?.(issue.number)
+      setCloseIssueError('Failed to close issue. Check permissions and try again.')
+    } finally {
+      setClosingIssue(false)
     }
   }
 
@@ -814,7 +841,7 @@ function SpecPreview({
             ) : (
               <IssueActionBar
                 issueNumber={(spec as IssueDetail).number}
-                onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
+                onClose={() => setConfirmCloseIssue(spec as IssueDetail)}
                 onRefine={() => onRefineInteractively?.(undefined, (spec as IssueDetail).number)}
               />
             )
@@ -849,6 +876,47 @@ function SpecPreview({
           onDelete={draftDetail ? () => handleDeleteRelevance(draftDetail.id) : undefined}
           onRefine={draftDetail ? () => onRefineInteractively?.(draftDetail.id) : undefined}
         />
+
+        <Dialog
+          open={confirmCloseIssue !== null}
+          onOpenChange={(open) => !open && !closingIssue && setConfirmCloseIssue(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Close issue #{confirmCloseIssue?.number}</DialogTitle>
+              <DialogDescription>
+                This will close the issue on GitHub and remove it from the open specs list.
+                You can reopen it later.
+              </DialogDescription>
+              {closeIssueError && (
+                <p className="text-sm text-destructive mt-2">{closeIssueError}</p>
+              )}
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setConfirmCloseIssue(null)}
+                disabled={closingIssue}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => confirmCloseIssue && handleCloseIssue(confirmCloseIssue)}
+                disabled={closingIssue}
+              >
+                {closingIssue ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Closing…
+                  </>
+                ) : (
+                  'Close issue'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </>
     )
   }
@@ -1042,6 +1110,7 @@ export function ShapeWorkspace() {
   const [draftDetail, setDraftDetail] = useState<DraftDetail | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
   const [loadingSpec, setLoadingSpec] = useState(false)
+  const [hiddenIssues, setHiddenIssues] = useState<Set<number>>(() => new Set())
 
   // Interactive terminal session state
   const [interactiveSession, setInteractiveSession] = useState<{
@@ -1084,6 +1153,24 @@ export function ShapeWorkspace() {
     setViewingJob(null)
   }, [viewingJobId, jobs, drafts, setViewingJob])
 
+  useEffect(() => {
+    if (hiddenIssues.size === 0) return
+    setHiddenIssues((prev) => {
+      const next = new Set<number>()
+      prev.forEach((id) => {
+        if (issues.some((issue) => issue.number === id)) {
+          next.add(id)
+        }
+      })
+      return next
+    })
+  }, [issues, hiddenIssues.size])
+
+  const visibleIssues = useMemo(
+    () => issues.filter((issue) => !hiddenIssues.has(issue.number)),
+    [issues, hiddenIssues]
+  )
+
   const handleSelectDraft = async (draft: Draft) => {
     setSelectedDraft(draft)
     setDraftDetail(undefined)
@@ -1116,6 +1203,31 @@ export function ShapeWorkspace() {
     } finally {
       setLoadingSpec(false)
     }
+  }
+
+  const handleIssueClosed = (issueNumber: number) => {
+    setHiddenIssues((prev) => new Set(prev).add(issueNumber))
+    if (selectedId === `issue-${issueNumber}`) {
+      setSelectedId(undefined)
+      setIssueDetail(undefined)
+      setSelectedDraft(undefined)
+      setDraftDetail(undefined)
+      setLoadingSpec(false)
+    }
+    refetch(true)
+  }
+
+  const handleIssueCloseStart = (issueNumber: number) => {
+    setHiddenIssues((prev) => new Set(prev).add(issueNumber))
+  }
+
+  const handleIssueCloseFailed = (issueNumber: number) => {
+    setHiddenIssues((prev) => {
+      const next = new Set(prev)
+      next.delete(issueNumber)
+      return next
+    })
+    refetch(true)
   }
 
   const handleNewSpec = async () => {
@@ -1157,7 +1269,7 @@ export function ShapeWorkspace() {
         <Tile>
           <SpecList
             drafts={drafts}
-            issues={issues}
+            issues={visibleIssues}
             loading={loading}
             error={error}
             onRefresh={() => refetch(true)}
@@ -1184,6 +1296,9 @@ export function ShapeWorkspace() {
             issueDetail={issueDetail}
             onRelevanceChanged={handleRelevanceChanged}
             onRefineInteractively={handleRefineInteractively}
+            onIssueClosed={handleIssueClosed}
+            onIssueCloseStart={handleIssueCloseStart}
+            onIssueCloseFailed={handleIssueCloseFailed}
             loading={loadingSpec}
           />
         </Tile>
