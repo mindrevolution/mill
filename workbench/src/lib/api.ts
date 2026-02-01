@@ -121,6 +121,9 @@ export interface HistoryEntry {
   intent: string
   outcome: 'shipped' | 'abandoned' | 'reverted'
   contextAdded?: string[]
+  iterations?: number
+  durationMs?: number
+  prUrl?: string
 }
 
 export type BriefStage = 'spark' | 'grounded' | 'ready'
@@ -222,9 +225,25 @@ export interface DraftValidationResponse {
 }
 
 // Jobs
-export type JobType = 'DraftValidation' | 'ContextWarmup' | 'Kickstart'
+export type JobType = 'DraftValidation' | 'ContextWarmup' | 'Kickstart' | 'ShipRun'
 export type JobStatus = 'Queued' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
 export type JobQueue = 'Llm' | 'Ship'
+
+// Ship Run
+export interface ShipRunIteration {
+  number: number
+  signal: string
+  summary?: string
+  completedAt: string
+}
+
+export interface ShipRunResult {
+  success: boolean
+  iterations: number
+  prUrl?: string
+  abortReason?: string
+  history: ShipRunIteration[]
+}
 
 export interface Job {
   id: string

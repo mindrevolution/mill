@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Tile, TileSplit } from '@/components/layout/tile'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { useRuntime } from '@/hooks/useRuntime'
-import type { HistoryEntry, RunStatus, RunEvent } from '@/types'
+import { useJobsStore } from '@/stores/jobs'
+import { api, type Job, type HistoryEntry } from '@/lib/api'
 import {
   Loader2,
   CheckCircle2,
@@ -21,143 +21,75 @@ import {
   GitPullRequest,
   History,
   Rocket,
-  Plus,
-  Terminal,
+  RefreshCw,
 } from 'lucide-react'
 
-// Live run state derived from runtime events
-interface LiveRun {
-  id: string
-  issue: number
-  status: RunStatus
-  iteration: number
-  maxIterations: number
-  startedAt: Date
-  logs: string[]
-}
-
-const typeIcons = {
+const typeIcons: Record<string, typeof FileText> = {
   feature: FileText,
   bug: Bug,
   security: Shield,
   task: Wrench,
 }
 
-const statusConfig: Record<RunStatus, { icon: typeof Loader2; color: string; label: string; animate: boolean }> = {
-  starting: { icon: Loader2, color: 'text-muted-foreground', label: 'Starting', animate: true },
-  running: { icon: Loader2, color: 'text-blue-400', label: 'Running', animate: true },
-  verifying: { icon: Loader2, color: 'text-yellow-400', label: 'Verifying', animate: true },
-  done: { icon: CheckCircle2, color: 'text-green-400', label: 'Done', animate: false },
-  failed: { icon: XCircle, color: 'text-red-400', label: 'Failed', animate: false },
-  aborted: { icon: StopCircle, color: 'text-muted-foreground', label: 'Aborted', animate: false },
+const jobStatusConfig: Record<string, { icon: typeof Loader2; color: string; label: string; animate: boolean }> = {
+  Queued: { icon: Clock, color: 'text-muted-foreground', label: 'Queued', animate: false },
+  Running: { icon: Loader2, color: 'text-blue-400', label: 'Running', animate: true },
+  Completed: { icon: CheckCircle2, color: 'text-green-400', label: 'Completed', animate: false },
+  Failed: { icon: XCircle, color: 'text-red-400', label: 'Failed', animate: false },
+  Cancelled: { icon: StopCircle, color: 'text-muted-foreground', label: 'Cancelled', animate: false },
 }
 
-const outcomeConfig = {
+const outcomeConfig: Record<string, { color: string; bg: string }> = {
   shipped: { color: 'text-green-400', bg: 'bg-green-400/10' },
   abandoned: { color: 'text-muted-foreground', bg: 'bg-muted' },
   reverted: { color: 'text-red-400', bg: 'bg-red-400/10' },
 }
 
-// Helper to format event as log line
-function eventToLog(event: RunEvent): string | null {
-  switch (event.type) {
-    case 'output':
-      return event.text
-    case 'tool_call':
-      return `• ${event.tool}${event.args ? ` ${event.args}` : ''}`
-    case 'tool_result':
-      return `  ↳ ${event.result || 'ok'}`
-    case 'status':
-      return `• status: ${event.status}`
-    case 'iteration':
-      return null // handled separately
-    case 'error':
-      return `✕ ${event.message}`
-    case 'input_needed':
-      return `❯ ${event.prompt}`
-    default:
-      return null
-  }
-}
-
 // Helper to format relative time
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr)
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
   if (seconds < 60) return 'just now'
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.floor(minutes / 60)
-  return `${hours}h ago`
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
-const mockHistory: HistoryEntry[] = [
-  {
-    date: '2026-01-30',
-    issue: 40,
-    pr: 45,
-    title: 'Refactor auth module',
-    type: 'task',
-    intent: 'Clean up authentication code for better maintainability',
-    outcome: 'shipped',
-    contextAdded: ['standard:error-handling'],
-  },
-  {
-    date: '2026-01-28',
-    issue: 38,
-    pr: 42,
-    title: 'Fix session expiry bug',
-    type: 'bug',
-    persona: 'mobile-user',
-    intent: 'Users reported being logged out unexpectedly on mobile',
-    outcome: 'shipped',
-  },
-  {
-    date: '2026-01-25',
-    issue: 35,
-    pr: 39,
-    title: 'Add user preferences page',
-    type: 'feature',
-    persona: 'power-user',
-    intent: 'Allow users to customize their experience',
-    outcome: 'shipped',
-    contextAdded: ['concept:preferences', 'persona:power-user'],
-  },
-  {
-    date: '2026-01-20',
-    issue: 32,
-    title: 'Implement WebSocket reconnection',
-    type: 'feature',
-    intent: 'Handle network interruptions gracefully',
-    outcome: 'abandoned',
-  },
-]
+// Helper to format duration
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  if (minutes < 60) return `${minutes}m ${remainingSeconds}s`
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  return `${hours}h ${remainingMinutes}m`
+}
 
 function ActiveRuns({
-  runs,
+  jobs,
   onSelect,
   selectedId,
-  onStartDemo,
 }: {
-  runs: LiveRun[]
-  onSelect: (run: LiveRun) => void
+  jobs: Job[]
+  onSelect: (job: Job) => void
   selectedId?: string
-  onStartDemo: () => void
 }) {
-  if (runs.length === 0) {
+  if (jobs.length === 0) {
     return (
       <div className="h-full flex flex-col">
         <div className="p-3 border-b flex items-center justify-between">
           <span className="text-sm font-medium">Active Runs</span>
-          <Button size="sm" variant="outline" className="h-7" onClick={onStartDemo}>
-            <Plus className="h-3 w-3 mr-1" />
-            Demo
-          </Button>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <Rocket className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No active runs</p>
-            <p className="text-xs mt-1">Click Demo to simulate a run</p>
+            <p className="text-xs mt-1">Start a run from the Shape workspace</p>
           </div>
         </div>
       </div>
@@ -168,26 +100,25 @@ function ActiveRuns({
     <div className="h-full flex flex-col">
       <div className="p-3 border-b flex items-center justify-between">
         <span className="text-sm font-medium">Active Runs</span>
-        <Button size="sm" variant="outline" className="h-7" onClick={onStartDemo}>
-          <Plus className="h-3 w-3 mr-1" />
-          Demo
-        </Button>
+        <Badge variant="secondary">{jobs.length}</Badge>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
-          {runs.map((run) => {
-            const status = statusConfig[run.status]
+          {jobs.map((job) => {
+            const status = jobStatusConfig[job.status] || jobStatusConfig.Running
             const StatusIcon = status.icon
+            const issueNumber = job.params.issueNumber as number
+            const issueTitle = job.params.issueTitle as string
 
             return (
               <Button
-                key={run.id}
-                onClick={() => onSelect(run)}
-                variant={selectedId === run.id ? 'secondary' : 'ghost'}
+                key={job.id}
+                onClick={() => onSelect(job)}
+                variant={selectedId === job.id ? 'secondary' : 'ghost'}
                 size="sm"
                 className={cn(
                   'h-auto w-full justify-start p-3 text-left border',
-                  selectedId === run.id ? 'border-primary/50' : 'border-transparent hover:border-muted-foreground/30'
+                  selectedId === job.id ? 'border-primary/50' : 'border-transparent hover:border-muted-foreground/30'
                 )}
               >
                 <div className="w-full">
@@ -199,20 +130,22 @@ function ActiveRuns({
                         status.animate && 'animate-spin'
                       )}
                     />
-                    <span className="text-xs text-muted-foreground">#{run.issue}</span>
-                    <span className="text-sm font-medium truncate flex-1">Issue #{run.issue}</span>
+                    <span className="text-xs text-muted-foreground">#{issueNumber}</span>
+                    <span className="text-sm font-medium truncate flex-1">{issueTitle || `Issue #${issueNumber}`}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Iteration {run.iteration}/{run.maxIterations}</span>
-                    <span>{formatRelativeTime(run.startedAt)}</span>
+                    <span>{job.stage || status.label}</span>
+                    <span>{job.startedAt ? formatRelativeTime(job.startedAt) : 'queued'}</span>
                   </div>
                   {/* Progress bar */}
-                  <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className={cn('h-full transition-all', status.color.replace('text-', 'bg-'))}
-                      style={{ width: `${(run.iteration / run.maxIterations) * 100}%` }}
-                    />
-                  </div>
+                  {job.progressPercent != null && (
+                    <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className={cn('h-full transition-all', status.color.replace('text-', 'bg-'))}
+                        style={{ width: `${job.progressPercent}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               </Button>
             )
@@ -223,29 +156,22 @@ function ActiveRuns({
   )
 }
 
-function RunDetail({ run, onAbort }: { run?: LiveRun; onAbort: () => void }) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const isTerminal = run?.status === 'done' || run?.status === 'failed' || run?.status === 'aborted'
-
-  // Auto-scroll to bottom when new logs arrive
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [run?.logs.length])
-
-  if (!run) {
+function RunDetail({ job, onCancel }: { job?: Job; onCancel: (jobId: string) => void }) {
+  if (!job) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
-          <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Select a run to view logs</p>
+          <Rocket className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Select a run to view details</p>
         </div>
       </div>
     )
   }
 
-  const status = statusConfig[run.status]
+  const status = jobStatusConfig[job.status] || jobStatusConfig.Running
+  const isTerminal = job.status === 'Completed' || job.status === 'Failed' || job.status === 'Cancelled'
+  const issueNumber = job.params.issueNumber as number
+  const issueTitle = job.params.issueTitle as string
 
   return (
     <div className="h-full flex flex-col">
@@ -253,37 +179,93 @@ function RunDetail({ run, onAbort }: { run?: LiveRun; onAbort: () => void }) {
       <div className="p-3 border-b">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">#{run.issue}</Badge>
-            <span className="font-medium">Issue #{run.issue}</span>
+            <Badge variant="secondary">#{issueNumber}</Badge>
+            <span className="font-medium truncate">{issueTitle || `Issue #${issueNumber}`}</span>
           </div>
           {!isTerminal && (
-            <Button size="sm" variant="destructive" className="h-7" onClick={onAbort}>
+            <Button size="sm" variant="destructive" className="h-7" onClick={() => onCancel(job.id)}>
               <StopCircle className="h-3 w-3 mr-1" />
-              Abort
+              Cancel
             </Button>
           )}
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className={status.color}>{status.label}</span>
-          <span>Iteration {run.iteration}/{run.maxIterations}</span>
-          <span>Started {formatRelativeTime(run.startedAt)}</span>
+          {job.stage && <span>{job.stage}</span>}
+          {job.startedAt && <span>Started {formatRelativeTime(job.startedAt)}</span>}
         </div>
       </div>
 
-      {/* Logs */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
-        <div className="p-3 font-mono text-xs space-y-1">
-          {run.logs.map((log, i) => (
-            <div key={i} className="text-muted-foreground whitespace-pre-wrap">
-              {log}
-            </div>
-          ))}
-          {(run.status === 'running' || run.status === 'starting') && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>working...</span>
+      {/* Content */}
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-4">
+          {/* Progress */}
+          {job.progressPercent != null && (
+            <div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span>Progress</span>
+                <span>{job.progressPercent}%</span>
+              </div>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full transition-all', status.color.replace('text-', 'bg-'))}
+                  style={{ width: `${job.progressPercent}%` }}
+                />
+              </div>
             </div>
           )}
+
+          {/* Error */}
+          {job.error ? (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <h4 className="text-sm font-medium text-destructive mb-1">Error</h4>
+              <p className="text-sm text-destructive/80">{job.error}</p>
+            </div>
+          ) : null}
+
+          {/* Result for completed jobs */}
+          {job.status === 'Completed' && job.result != null && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Result</h4>
+              {(() => {
+                const result = job.result as { success?: boolean; prUrl?: string; iterations?: number; abortReason?: string }
+                return (
+                  <div className="space-y-2">
+                    {result.success ? (
+                      <div className="flex items-center gap-2 text-green-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Successfully completed</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-400">
+                        <XCircle className="h-4 w-4" />
+                        <span>{result.abortReason || 'Failed'}</span>
+                      </div>
+                    )}
+                    {result.iterations && (
+                      <p className="text-sm text-muted-foreground">Completed in {result.iterations} iteration(s)</p>
+                    )}
+                    {result.prUrl && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={result.prUrl} target="_blank" rel="noopener noreferrer">
+                          <GitPullRequest className="h-4 w-4 mr-2" />
+                          View PR
+                          <ExternalLink className="h-3 w-3 ml-2" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>Created: {new Date(job.createdAt).toLocaleString()}</p>
+            {job.startedAt && <p>Started: {new Date(job.startedAt).toLocaleString()}</p>}
+            {job.completedAt && <p>Completed: {new Date(job.completedAt).toLocaleString()}</p>}
+          </div>
         </div>
       </ScrollArea>
     </div>
@@ -292,12 +274,16 @@ function RunDetail({ run, onAbort }: { run?: LiveRun; onAbort: () => void }) {
 
 function HistoryList({
   entries,
+  loading,
   onSelect,
-  selectedDate,
+  onRefresh,
+  selectedIssue,
 }: {
   entries: HistoryEntry[]
+  loading: boolean
   onSelect: (entry: HistoryEntry) => void
-  selectedDate?: string
+  onRefresh: () => void
+  selectedIssue?: number
 }) {
   return (
     <div className="h-full flex flex-col">
@@ -306,45 +292,59 @@ function HistoryList({
           <History className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">History</span>
         </div>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={onRefresh}>
+          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} />
+        </Button>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
-          {entries.map((entry) => {
-            const TypeIcon = typeIcons[entry.type]
-            const outcome = outcomeConfig[entry.outcome]
-
-            return (
-              <Button
-                key={`${entry.date}-${entry.issue}`}
-                onClick={() => onSelect(entry)}
-                variant={selectedDate === entry.date ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-auto w-full justify-start p-3 text-left"
-              >
-                <div className="w-full">
-                  <div className="flex items-center gap-2 mb-1">
-                    <TypeIcon className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">#{entry.issue}</span>
-                    <span className="text-sm truncate flex-1">{entry.title}</span>
-                    <Badge variant="secondary" className={cn('text-[10px]', outcome.color, outcome.bg)}>
-                      {entry.outcome}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{entry.date}</span>
-                    {entry.persona && <span>· {entry.persona}</span>}
-                    {entry.pr && (
-                      <span className="flex items-center gap-1">
-                        · <GitPullRequest className="h-3 w-3" /> #{entry.pr}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Button>
-            )
-          })}
+      {entries.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No history yet</p>
+            <p className="text-xs mt-1">Completed runs will appear here</p>
+          </div>
         </div>
-      </ScrollArea>
+      ) : (
+        <ScrollArea className="flex-1">
+          <div className="p-2 space-y-1">
+            {entries.map((entry, idx) => {
+              const TypeIcon = typeIcons[entry.type] || FileText
+              const outcome = outcomeConfig[entry.outcome] || outcomeConfig.abandoned
+
+              return (
+                <Button
+                  key={`${entry.date}-${entry.issue}-${idx}`}
+                  onClick={() => onSelect(entry)}
+                  variant={selectedIssue === entry.issue ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-auto w-full justify-start p-3 text-left"
+                >
+                  <div className="w-full">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TypeIcon className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">#{entry.issue}</span>
+                      <span className="text-sm truncate flex-1">{entry.title}</span>
+                      <Badge variant="secondary" className={cn('text-[10px]', outcome.color, outcome.bg)}>
+                        {entry.outcome}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{new Date(entry.date).toLocaleDateString()}</span>
+                      {entry.persona && <span>· {entry.persona}</span>}
+                      {entry.pr && (
+                        <span className="flex items-center gap-1">
+                          · <GitPullRequest className="h-3 w-3" /> #{entry.pr}
+                        </span>
+                      )}
+                      {entry.iterations && <span>· {entry.iterations} iter</span>}
+                    </div>
+                  </div>
+                </Button>
+              )
+            })}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   )
 }
@@ -361,8 +361,8 @@ function HistoryDetail({ entry }: { entry?: HistoryEntry }) {
     )
   }
 
-  const TypeIcon = typeIcons[entry.type]
-  const outcome = outcomeConfig[entry.outcome]
+  const TypeIcon = typeIcons[entry.type] || FileText
+  const outcome = outcomeConfig[entry.outcome] || outcomeConfig.abandoned
 
   return (
     <ScrollArea className="h-full">
@@ -391,6 +391,16 @@ function HistoryDetail({ entry }: { entry?: HistoryEntry }) {
           </div>
         )}
 
+        {entry.iterations && (
+          <div>
+            <h3 className="text-sm font-medium mb-2">Execution</h3>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>Iterations: {entry.iterations}</p>
+              {entry.durationMs && <p>Duration: {formatDuration(entry.durationMs)}</p>}
+            </div>
+          </div>
+        )}
+
         {entry.contextAdded && entry.contextAdded.length > 0 && (
           <div>
             <h3 className="text-sm font-medium mb-2">Context Added</h3>
@@ -407,13 +417,20 @@ function HistoryDetail({ entry }: { entry?: HistoryEntry }) {
         <Separator />
 
         <div className="flex gap-2">
-          {entry.pr && (
+          {entry.prUrl ? (
+            <Button variant="outline" className="flex-1" asChild>
+              <a href={entry.prUrl} target="_blank" rel="noopener noreferrer">
+                <GitPullRequest className="h-4 w-4 mr-2" />
+                View PR #{entry.pr}
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </a>
+            </Button>
+          ) : entry.pr ? (
             <Button variant="outline" className="flex-1">
               <GitPullRequest className="h-4 w-4 mr-2" />
-              View PR #{entry.pr}
-              <ExternalLink className="h-3 w-3 ml-2" />
+              PR #{entry.pr}
             </Button>
-          )}
+          ) : null}
           <Button variant="outline">
             View Issue
             <ExternalLink className="h-3 w-3 ml-2" />
@@ -425,66 +442,41 @@ function HistoryDetail({ entry }: { entry?: HistoryEntry }) {
 }
 
 export function ShipWorkspace() {
-  const runtime = useRuntime()
-  const [runs, setRuns] = useState<Map<string, LiveRun>>(new Map())
-  const [selectedRunId, setSelectedRunId] = useState<string | undefined>()
+  const jobs = useJobsStore((s) => s.jobs)
+  const cancelJob = useJobsStore((s) => s.cancelJob)
+
+  const [selectedJobId, setSelectedJobId] = useState<string | undefined>()
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [selectedHistory, setSelectedHistory] = useState<HistoryEntry | undefined>()
-  const [demoIssue, setDemoIssue] = useState(42)
 
-  const selectedRun = selectedRunId ? runs.get(selectedRunId) : undefined
-  const activeRuns = Array.from(runs.values()).filter(
-    (r) => r.status !== 'done' && r.status !== 'failed' && r.status !== 'aborted'
-  )
+  // Filter for ShipRun jobs
+  const shipRunJobs = jobs.filter((j) => j.type === 'ShipRun')
+  const activeJobs = shipRunJobs.filter((j) => j.status === 'Running' || j.status === 'Queued')
+  const selectedJob = selectedJobId ? shipRunJobs.find((j) => j.id === selectedJobId) : undefined
 
-  // Subscribe to run events when a run is started
-  const subscribeToRun = (runId: string, issue: number) => {
-    const liveRun: LiveRun = {
-      id: runId,
-      issue,
-      status: 'starting',
-      iteration: 1,
-      maxIterations: 5,
-      startedAt: new Date(),
-      logs: [],
+  // Load history on mount
+  useEffect(() => {
+    loadHistory()
+  }, [])
+
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+    try {
+      const entries = await api.history()
+      setHistory(entries)
+    } catch (e) {
+      console.error('Failed to load history:', e)
+    } finally {
+      setHistoryLoading(false)
     }
-    setRuns((prev) => new Map(prev).set(runId, liveRun))
-
-    return runtime.subscribe(runId, (event) => {
-      setRuns((prev) => {
-        const updated = new Map(prev)
-        const run = updated.get(runId)
-        if (!run) return prev
-
-        const newRun = { ...run }
-
-        if (event.type === 'status') {
-          newRun.status = event.status
-        } else if (event.type === 'iteration') {
-          newRun.iteration = event.current
-          newRun.maxIterations = event.max
-        }
-
-        const logLine = eventToLog(event)
-        if (logLine) {
-          newRun.logs = [...newRun.logs, logLine]
-        }
-
-        updated.set(runId, newRun)
-        return updated
-      })
-    })
   }
 
-  const handleStartDemo = async () => {
-    const handle = await runtime.start(demoIssue)
-    subscribeToRun(handle.id, handle.issue)
-    setSelectedRunId(handle.id)
-    setDemoIssue((prev) => prev + 1) // increment for next demo
-  }
-
-  const handleAbort = () => {
-    if (selectedRunId) {
-      runtime.abort(selectedRunId)
+  const handleCancel = async (jobId: string) => {
+    try {
+      await cancelJob(jobId)
+    } catch (e) {
+      console.error('Failed to cancel job:', e)
     }
   }
 
@@ -495,14 +487,13 @@ export function ShipWorkspace() {
         <TileSplit direction="horizontal" sizes={[40, 60]}>
           <Tile>
             <ActiveRuns
-              runs={activeRuns}
-              selectedId={selectedRunId}
-              onSelect={(run) => setSelectedRunId(run.id)}
-              onStartDemo={handleStartDemo}
+              jobs={activeJobs}
+              selectedId={selectedJobId}
+              onSelect={(job) => setSelectedJobId(job.id)}
             />
           </Tile>
           <Tile>
-            <RunDetail run={selectedRun} onAbort={handleAbort} />
+            <RunDetail job={selectedJob} onCancel={handleCancel} />
           </Tile>
         </TileSplit>
 
@@ -510,9 +501,11 @@ export function ShipWorkspace() {
         <TileSplit direction="horizontal" sizes={[50, 50]}>
           <Tile>
             <HistoryList
-              entries={mockHistory}
-              selectedDate={selectedHistory?.date}
+              entries={history}
+              loading={historyLoading}
+              selectedIssue={selectedHistory?.issue}
               onSelect={setSelectedHistory}
+              onRefresh={loadHistory}
             />
           </Tile>
           <Tile>

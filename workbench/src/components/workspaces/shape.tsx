@@ -82,10 +82,14 @@ function IssueActionBar({
   issueNumber,
   onClose,
   onRefine,
+  onShip,
+  shipping,
 }: {
   issueNumber: number
   onClose?: () => void
   onRefine?: () => void
+  onShip?: () => void
+  shipping?: boolean
 }) {
   const issueUrl = `https://github.com/mindrevolution/mill/issues/${issueNumber}`
 
@@ -114,9 +118,14 @@ function IssueActionBar({
         variant="ghost"
         className="h-8 w-8 p-0"
         title="Ship this"
-        onClick={() => console.log('TODO: Ship this')}
+        onClick={onShip}
+        disabled={shipping}
       >
-        <Play className="h-4 w-4" />
+        {shipping ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Play className="h-4 w-4" />
+        )}
       </Button>
       <Separator orientation="vertical" className="h-4 mx-1" />
       <Button
@@ -693,6 +702,18 @@ function SpecPreview({
     }
   }
 
+  const handleShip = async (issueNumber: number, issueTitle: string) => {
+    try {
+      await createJob({
+        type: 'ShipRun',
+        params: { issueNumber, issueTitle },
+        sourceWorkspace: 'ship',
+      })
+    } catch (e) {
+      console.error('Failed to create ship run job:', e)
+    }
+  }
+
   // Check if there's a running validation job for the current draft
   const currentDraftId = draftDetail?.id
   const validatingJob = jobs.find(
@@ -702,6 +723,16 @@ function SpecPreview({
       (j.status === 'Running' || j.status === 'Queued')
   )
   const validating = !!validatingJob
+
+  // Check if there's a running ship run for the current issue
+  const currentIssueNumber = issueDetail?.number
+  const shippingJob = jobs.find(
+    (j) =>
+      j.type === 'ShipRun' &&
+      j.params.issueNumber === currentIssueNumber &&
+      (j.status === 'Running' || j.status === 'Queued')
+  )
+  const shipping = !!shippingJob
 
   // Show loading state
   if (loading) {
@@ -772,6 +803,8 @@ function SpecPreview({
                 issueNumber={(spec as IssueDetail).number}
                 onClose={() => setConfirmCloseIssue(spec as IssueDetail)}
                 onRefine={() => onRefineInteractively?.(spec.title, undefined, (spec as IssueDetail).number)}
+                onShip={() => handleShip((spec as IssueDetail).number, (spec as IssueDetail).title)}
+                shipping={shipping}
               />
             )
           }

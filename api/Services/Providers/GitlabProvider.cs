@@ -122,6 +122,50 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
         return new IssueCloseResult(true);
     }
 
+    public async Task<PrCreateResult> CreatePullRequest(int issueNumber, string branch, string title, string body, string workingDir)
+    {
+        // Build MR body with reference to the issue
+        var mrBody = $"{body}\n\nCloses #{issueNumber}";
+
+        // Push the branch first (with upstream tracking)
+        var pushResult = await RunCommandWithResult("git", $"push -u origin {branch}", workingDir);
+        if (!pushResult.Success)
+        {
+            Logger.LogWarning(
+                "Failed to push branch {Branch}. Exit {ExitCode}. Error: {Error}",
+                branch,
+                pushResult.ExitCode,
+                pushResult.Error
+            );
+            return new PrCreateResult(false, Error: $"Failed to push branch: {pushResult.Error?.Trim()}");
+        }
+
+        // Create MR using glab CLI
+        var escapedTitle = title.Replace("\"", "\\\"");
+        var escapedBody = mrBody.Replace("\"", "\\\"").Replace("\n", "\\n");
+
+        var args = $"mr create --source-branch \"{branch}\" --title \"{escapedTitle}\" --description \"{escapedBody}\" --yes";
+        var result = await RunCommandWithResult("glab", args, workingDir);
+
+        if (!result.Success)
+        {
+            var error = string.IsNullOrWhiteSpace(result.Error) ? "glab mr create failed" : result.Error.Trim();
+            Logger.LogWarning(
+                "Failed to create MR for issue #{Number}. Exit {ExitCode}. Error: {Error}",
+                issueNumber,
+                result.ExitCode,
+                error
+            );
+            return new PrCreateResult(false, Error: error);
+        }
+
+        // glab mr create outputs the MR URL on success
+        var mrUrl = result.Output?.Trim();
+        Logger.LogInformation("Created MR for issue #{Number}: {Url}", issueNumber, mrUrl);
+
+        return new PrCreateResult(true, Url: mrUrl);
+    }
+
     private static string ExtractType(List<string>? labels)
     {
         if (labels == null)

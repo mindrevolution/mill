@@ -41,6 +41,11 @@ public class MillPaths
     /// </summary>
     public string Ship => Path.Combine(Home, "ship");
 
+    /// <summary>
+    /// Path to ship prompts.
+    /// </summary>
+    public string ShipPrompts => Path.Combine(Ship, "prompts");
+
     public MillPaths(IConfiguration config)
     {
         Home = FindMillHome(config["Mill:Home"]);

@@ -95,6 +95,9 @@ export interface HistoryEntry {
   intent: string
   outcome: 'shipped' | 'abandoned' | 'reverted'
   contextAdded?: string[]
+  iterations?: number
+  durationMs?: number
+  prUrl?: string
 }
 
 // Project

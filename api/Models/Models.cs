@@ -92,7 +92,10 @@ public record HistoryEntry(
     string? Persona,
     string Intent,
     string Outcome,
-    List<string>? ContextAdded
+    List<string>? ContextAdded,
+    int? Iterations = null,
+    long? DurationMs = null,
+    string? PrUrl = null
 );
 
 // Spec Chat
@@ -209,9 +212,25 @@ public record ValidationFinding(
 );
 
 // Job Queue
-public enum JobType { DraftValidation, ContextWarmup, Kickstart }
+public enum JobType { DraftValidation, ContextWarmup, Kickstart, ShipRun }
 public enum JobStatus { Queued, Running, Completed, Failed, Cancelled }
 public enum JobQueue { Llm, Ship }
+
+// Ship Run
+public record ShipRunResult(
+    bool Success,
+    int Iterations,
+    string? PrUrl,
+    string? AbortReason,
+    List<ShipRunIteration> History
+);
+
+public record ShipRunIteration(
+    int Number,
+    string Signal,
+    string? Summary,
+    DateTime CompletedAt
+);
 
 public record Job(
     string Id,

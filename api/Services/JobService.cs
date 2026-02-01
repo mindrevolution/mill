@@ -199,6 +199,7 @@ public class JobService : IDisposable
                     JobType.DraftValidation => await ExecuteDraftValidationAsync(job, cts.Token),
                     JobType.ContextWarmup => await ExecuteContextWarmupAsync(job, cts.Token),
                     JobType.Kickstart => await ExecuteKickstartAsync(job, cts.Token),
+                    JobType.ShipRun => await ExecuteShipRunAsync(job, cts.Token),
                     _ => throw new NotSupportedException($"Unknown job type: {job.Type}")
                 };
 
@@ -316,11 +317,37 @@ public class JobService : IDisposable
         return result;
     }
 
+    private async Task<ShipRunResult> ExecuteShipRunAsync(Job job, CancellationToken ct)
+    {
+        using var scope = _services.CreateScope();
+        var ship = scope.ServiceProvider.GetRequiredService<ShipService>();
+        var llmProvider = scope.ServiceProvider.GetRequiredService<ILlmProvider>();
+
+        var issueNumber = job.Params.GetValueOrDefault("issueNumber") switch
+        {
+            int n => n,
+            long l => (int)l,
+            string s when int.TryParse(s, out var parsed) => parsed,
+            System.Text.Json.JsonElement je when je.ValueKind == System.Text.Json.JsonValueKind.Number => je.GetInt32(),
+            _ => throw new ArgumentException("Missing or invalid issueNumber parameter")
+        };
+
+        var result = await ship.ExecuteShipRun(
+            issueNumber,
+            llmProvider,
+            (stage, percent) => UpdateProgress(job.Id, stage, percent),
+            ct
+        );
+
+        return result;
+    }
+
     private static JobQueue GetQueueForType(JobType type) => type switch
     {
         JobType.DraftValidation => JobQueue.Llm,
         JobType.ContextWarmup => JobQueue.Llm,
         JobType.Kickstart => JobQueue.Llm,
+        JobType.ShipRun => JobQueue.Ship,
         _ => JobQueue.Llm
     };
 
@@ -329,6 +356,7 @@ public class JobService : IDisposable
         JobType.DraftValidation => $"Validate: {p.GetValueOrDefault("draftId")}",
         JobType.ContextWarmup => "Context warmup",
         JobType.Kickstart => $"Kickstart: {p.GetValueOrDefault("name")}",
+        JobType.ShipRun => $"Ship: #{p.GetValueOrDefault("issueNumber")} - {p.GetValueOrDefault("issueTitle")}",
         _ => type.ToString()
     };
 

@@ -75,4 +75,22 @@ public class IssueService
         var provider = await _providerFactory.GetProvider(_project.ProjectPath);
         return provider?.Name;
     }
+
+    public async Task<PrCreateResult> CreatePullRequest(int issueNumber, string branch, string title, string body)
+    {
+        var provider = await _providerFactory.GetProvider(_project.ProjectPath);
+        if (provider == null)
+        {
+            _logger.LogWarning("No issue provider available for {WorkingDir}", _project.ProjectPath);
+            return new PrCreateResult(false, Error: "No issue provider available for this repository.");
+        }
+
+        var result = await provider.CreatePullRequest(issueNumber, branch, title, body, _project.ProjectPath);
+        if (result.Success)
+        {
+            provider.ClearCache();
+        }
+
+        return result;
+    }
 }
