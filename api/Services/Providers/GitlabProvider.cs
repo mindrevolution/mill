@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MillApi.Models;
 
 namespace MillApi.Services.Providers;
@@ -124,6 +125,19 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
     }
 
     // GitLab CLI response types (glab uses different field names)
-    private record GlIssue(int Iid, string Title, List<string>? Labels, string State, DateTime CreatedAt);
-    private record GlIssueDetail(int Iid, string Title, string? Description, List<string>? Labels, string State, DateTime CreatedAt);
+    private record GlIssue(
+        int Iid,
+        string Title,
+        List<string>? Labels,
+        string State,
+        [property: JsonPropertyName("created_at")] DateTime CreatedAt
+    );
+    private record GlIssueDetail(
+        int Iid,
+        string Title,
+        string? Description,
+        List<string>? Labels,
+        string State,
+        [property: JsonPropertyName("created_at")] DateTime CreatedAt
+    );
 }

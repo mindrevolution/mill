@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using MillApi.Models;
 
@@ -303,7 +304,20 @@ public partial class GithubProvider : CliProviderBase, IIssueProvider
     }
 
     // GitHub API response types
-    private record GhIssue(int Number, string Title, List<GhLabel>? Labels, string State, DateTime CreatedAt);
-    private record GhIssueDetail(int Number, string Title, string? Body, List<GhLabel>? Labels, string State, DateTime CreatedAt);
+    private record GhIssue(
+        int Number,
+        string Title,
+        List<GhLabel>? Labels,
+        string State,
+        [property: JsonPropertyName("created_at")] DateTime CreatedAt
+    );
+    private record GhIssueDetail(
+        int Number,
+        string Title,
+        string? Body,
+        List<GhLabel>? Labels,
+        string State,
+        [property: JsonPropertyName("created_at")] DateTime CreatedAt
+    );
     private record GhLabel(string Name);
 }
