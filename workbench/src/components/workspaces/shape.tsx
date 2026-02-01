@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Tile, TileSplit } from '@/components/layout/tile'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,8 @@ import { FloatingActionBar } from '@/components/ui/floating-action-bar'
 import { ActionDialog } from '@/components/ui/action-dialog'
 import { DetailView } from '@/components/ui/detail-view'
 import { Separator } from '@/components/ui/separator'
+import { Terminal as TerminalComponent, type TerminalHandle } from '@/components/ui/terminal'
+import { startInteractiveSession, type InteractiveSession } from '@/lib/runtime/pty'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,12 +57,13 @@ import {
   AlertCircle,
   RefreshCw,
   Play,
-  Terminal,
+  Terminal as TerminalIcon,
   ExternalLink,
   MoreHorizontal,
   Trash2,
   SearchCheck,
   X,
+  Square,
 } from 'lucide-react'
 
 const typeIcons = {
@@ -77,7 +80,15 @@ const typeColors = {
   task: 'text-muted-foreground',
 }
 
-function IssueActionBar({ issueNumber, onDelete }: { issueNumber: number; onDelete?: () => void }) {
+function IssueActionBar({
+  issueNumber,
+  onDelete,
+  onRefine,
+}: {
+  issueNumber: number
+  onDelete?: () => void
+  onRefine?: () => void
+}) {
   const issueUrl = `https://github.com/mindrevolution/mill/issues/${issueNumber}`
 
   return (
@@ -87,9 +98,9 @@ function IssueActionBar({ issueNumber, onDelete }: { issueNumber: number; onDele
         variant="ghost"
         className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
         title="Refine interactively"
-        onClick={() => console.log('TODO: Refine interactively')}
+        onClick={onRefine}
       >
-        <Terminal className="h-4 w-4" />
+        <TerminalIcon className="h-4 w-4" />
       </Button>
       <Button
         size="sm"
@@ -149,12 +160,14 @@ function DraftActionBar({
   onDelete,
   onValidate,
   onViewRelevance,
+  onRefine,
   validating,
   hasRelevance,
 }: {
   onDelete?: () => void
   onValidate?: () => void
   onViewRelevance?: () => void
+  onRefine?: () => void
   validating?: boolean
   hasRelevance?: boolean
 }) {
@@ -165,9 +178,9 @@ function DraftActionBar({
         variant="ghost"
         className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
         title="Refine interactively"
-        onClick={() => console.log('TODO: Refine interactively')}
+        onClick={onRefine}
       >
-        <Terminal className="h-4 w-4" />
+        <TerminalIcon className="h-4 w-4" />
       </Button>
       <Button
         size="sm"
@@ -561,7 +574,7 @@ function ValidationResultDialog({
               onOpenChange(false)
             }}
           >
-            <Terminal className="h-4 w-4" />
+            <TerminalIcon className="h-4 w-4" />
           </Button>
           <Separator orientation="vertical" className="h-4 mx-1" />
           <Button
@@ -626,11 +639,13 @@ function SpecPreview({
   issueDetail,
   loading,
   onRelevanceChanged,
+  onRefineInteractively,
 }: {
   draftDetail?: DraftDetail
   issueDetail?: IssueDetail
   loading?: boolean
   onRelevanceChanged?: () => void
+  onRefineInteractively?: (draftId?: string, issueNumber?: number) => void
 }) {
   const [validationResult, setValidationResult] = useState<DraftValidationResponse | null>(null)
   const [showValidationDialog, setShowValidationDialog] = useState(false)
@@ -763,6 +778,7 @@ function SpecPreview({
                 onDelete={() => console.log('TODO: Delete draft', (spec as DraftDetail).id)}
                 onValidate={() => handleValidate((spec as DraftDetail).id)}
                 onViewRelevance={() => handleViewRelevance((spec as DraftDetail).id)}
+                onRefine={() => onRefineInteractively?.((spec as DraftDetail).id)}
                 validating={validating}
                 hasRelevance={(spec as DraftDetail).hasRelevance}
               />
@@ -770,6 +786,7 @@ function SpecPreview({
               <IssueActionBar
                 issueNumber={(spec as IssueDetail).number}
                 onDelete={() => console.log('TODO: Close issue', (spec as IssueDetail).number)}
+                onRefine={() => onRefineInteractively?.(undefined, (spec as IssueDetail).number)}
               />
             )
           }
@@ -801,7 +818,7 @@ function SpecPreview({
           onOpenChange={setShowValidationDialog}
           result={validationResult}
           onDelete={draftDetail ? () => handleDeleteRelevance(draftDetail.id) : undefined}
-          onRefine={draftDetail ? () => console.log('TODO: Refine interactively', draftDetail.id) : undefined}
+          onRefine={draftDetail ? () => onRefineInteractively?.(draftDetail.id) : undefined}
         />
       </>
     )
@@ -819,6 +836,154 @@ function SpecPreview({
   )
 }
 
+interface InteractiveTerminalProps {
+  draftId?: string
+  issueNumber?: number
+  onClose: () => void
+}
+
+function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTerminalProps) {
+  const terminalRef = useRef<TerminalHandle>(null)
+  const sessionRef = useRef<InteractiveSession | null>(null)
+  const [exited, setExited] = useState(false)
+  const [exitCode, setExitCode] = useState<number | null>(null)
+
+  // Build Claude Code command based on context
+  const buildCommand = useCallback(() => {
+    const args: string[] = []
+
+    // Add system prompt for spec refinement
+    // TODO: Load actual prompt path from config
+    if (draftId) {
+      args.push('--system-prompt', 'You are helping refine a spec draft. Be concise and helpful.')
+    } else if (issueNumber) {
+      args.push('--system-prompt', 'You are helping refine an existing spec. Be concise and helpful.')
+    }
+
+    return { command: 'claude', args }
+  }, [draftId, issueNumber])
+
+  // Start session on mount
+  useEffect(() => {
+    let cancelled = false
+    let unsubOutput: (() => void) | undefined
+    let unsubExit: (() => void) | undefined
+
+    const startSession = async () => {
+      const { cols, rows } = terminalRef.current?.getDimensions() ?? { cols: 80, rows: 24 }
+      const { command, args } = buildCommand()
+
+      try {
+        const session = await startInteractiveSession({
+          command,
+          args,
+          cols,
+          rows,
+        })
+
+        if (cancelled) {
+          session.kill()
+          return
+        }
+
+        sessionRef.current = session
+
+        // Wire up output
+        unsubOutput = session.onOutput((data) => {
+          terminalRef.current?.write(data)
+        })
+
+        // Wire up exit
+        unsubExit = session.onExit((code) => {
+          setExited(true)
+          setExitCode(code)
+        })
+
+        // Focus terminal
+        terminalRef.current?.focus()
+      } catch (error) {
+        console.error('[PTY] Failed to start session:', error)
+        setExited(true)
+        setExitCode(-1)
+      }
+    }
+
+    startSession()
+
+    return () => {
+      cancelled = true
+      unsubOutput?.()
+      unsubExit?.()
+      sessionRef.current?.kill()
+    }
+  }, [buildCommand])
+
+  // Handle user input
+  const handleData = useCallback((data: string) => {
+    sessionRef.current?.write(data)
+  }, [])
+
+  // Handle resize
+  const handleResize = useCallback((cols: number, rows: number) => {
+    sessionRef.current?.resize(cols, rows)
+  }, [])
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-card/50">
+        <div className="flex items-center gap-2 text-sm">
+          <TerminalIcon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">Interactive Session</span>
+          {draftId && <Badge variant="outline" className="text-xs">Draft</Badge>}
+          {issueNumber && <Badge variant="outline" className="text-xs">#{issueNumber}</Badge>}
+        </div>
+        <div className="flex items-center gap-1">
+          {exited && (
+            <Badge
+              variant={exitCode === 0 ? 'default' : 'destructive'}
+              className="text-xs mr-2"
+            >
+              Exited ({exitCode})
+            </Badge>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            title="Stop session"
+            onClick={() => {
+              sessionRef.current?.kill()
+              onClose()
+            }}
+          >
+            <Square className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            title="Close"
+            onClick={onClose}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Terminal */}
+      <div className="flex-1 min-h-0">
+        <TerminalComponent
+          ref={terminalRef}
+          onData={handleData}
+          onResize={handleResize}
+          className="h-full"
+        />
+      </div>
+    </div>
+  )
+}
+
 export function ShapeWorkspace() {
   const { drafts, issues, loading, error, refetch } = useSpecs()
   const [selectedDraft, setSelectedDraft] = useState<Draft | undefined>()
@@ -827,6 +992,12 @@ export function ShapeWorkspace() {
   const [draftDetail, setDraftDetail] = useState<DraftDetail | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
   const [loadingSpec, setLoadingSpec] = useState(false)
+
+  // Interactive terminal session state
+  const [interactiveSession, setInteractiveSession] = useState<{
+    draftId?: string
+    issueNumber?: number
+  } | null>(null)
 
   // Watch for job result viewing
   const viewingJobId = useJobsStore((s) => s.viewingJobId)
@@ -920,6 +1091,16 @@ export function ShapeWorkspace() {
     }
   }
 
+  // Start interactive refinement session
+  const handleRefineInteractively = (draftId?: string, issueNumber?: number) => {
+    setInteractiveSession({ draftId, issueNumber })
+  }
+
+  // Close interactive session
+  const handleCloseInteractiveSession = () => {
+    setInteractiveSession(null)
+  }
+
   return (
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[25, 40, 35]}>
@@ -937,13 +1118,22 @@ export function ShapeWorkspace() {
           />
         </Tile>
         <Tile>
-          <SpecChat draft={selectedDraft} sessionId={sessionId} />
+          {interactiveSession ? (
+            <InteractiveTerminal
+              draftId={interactiveSession.draftId}
+              issueNumber={interactiveSession.issueNumber}
+              onClose={handleCloseInteractiveSession}
+            />
+          ) : (
+            <SpecChat draft={selectedDraft} sessionId={sessionId} />
+          )}
         </Tile>
         <Tile>
           <SpecPreview
             draftDetail={draftDetail}
             issueDetail={issueDetail}
             onRelevanceChanged={handleRelevanceChanged}
+            onRefineInteractively={handleRefineInteractively}
             loading={loadingSpec}
           />
         </Tile>

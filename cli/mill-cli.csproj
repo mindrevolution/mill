@@ -17,6 +17,7 @@
   <ItemGroup>
     <PackageReference Include="Photino.NET" Version="3.2.3" />
     <PackageReference Include="Markdig" Version="0.44.0" />
+    <PackageReference Include="PTY" Version="1.0.3" />
   </ItemGroup>
 
   <ItemGroup>

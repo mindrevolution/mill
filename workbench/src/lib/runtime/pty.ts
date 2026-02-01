@@ -2,83 +2,316 @@ import type { Runtime } from '@/lib/runtime'
 import type { RunEvent, RunHandle, RunStatus, TaskRequest, TaskResult } from '@/types'
 
 /**
- * PtyRuntime - Interactive Claude Code CLI sessions via Photino + Pty.Net.
+ * PtyRuntime - Interactive Claude Code CLI sessions via HTTP/SSE.
+ *
+ * Cross-platform architecture:
+ * - Output: SSE stream from /api/pty/{sessionId}/stream
+ * - Input: HTTP POST to /api/pty/{sessionId}/input (or Photino IPC as fallback)
  *
  * Primary use: Multi-turn conversations requiring user interaction
  * - Spec elicitation (chat to build spec)
  * - Work loop with input prompts
  * - Debug sessions
- *
- * Architecture:
- * - Pty.Net spawns Claude Code with full PTY support (.NET side)
- * - xterm.js renders terminal output (React side)
- * - Photino IPC bridges the two (no WebSocket needed)
- *
- * Non-interactive tasks (execute) should use ApiRuntime instead.
- *
- * Implementation requires:
- * - Photino.NET for webview hosting
- * - Pty.Net (microsoft/vs-pty.net) for cross-platform PTY
- * - xterm.js (@xterm/xterm) for terminal rendering
- * - Photino IPC message handlers
  */
+
+// Session state
+interface Session {
+  id: string
+  status: RunStatus
+  eventSource: EventSource | null
+  handlers: Set<(event: RunEvent) => void>
+  outputHandlers: Set<(data: string) => void>
+  exitHandlers: Set<(exitCode: number) => void>
+}
+
+// Shared session state (module-level for persistence)
+const sessions = new Map<string, Session>()
+
+// Photino IPC for input (works on all platforms)
+function getPhotinoExternal(): { sendMessage: (msg: string) => void } | null {
+  if (typeof window === 'undefined') return null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ext = (window as any).external
+  if (ext && typeof ext.sendMessage === 'function') {
+    return ext
+  }
+  return null
+}
+
 export function createPtyRuntime(): Runtime {
-  // Photino IPC will be available as window.external when running in Photino
-  // const photino = (window as any).external
-
-  const runs = new Map<string, { status: RunStatus; handlers: Set<(event: RunEvent) => void> }>()
-
   return {
-    // === Interactive methods ===
-
     async start(issue: number): Promise<RunHandle> {
-      // TODO: Send message to .NET to spawn PTY
-      // photino.sendMessage(JSON.stringify({ type: 'start_run', issue }))
-      throw new Error(
-        `PtyRuntime.start(${issue}): Not implemented. Requires Photino + Pty.Net setup.`
-      )
+      // Start session via HTTP
+      const response = await fetch('/api/pty/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: 'claude',
+          args: ['--issue', issue.toString()],
+          cols: 80,
+          rows: 24,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to start PTY session: ${response.statusText}`)
+      }
+
+      const { sessionId } = await response.json()
+
+      const session: Session = {
+        id: sessionId,
+        status: 'running',
+        eventSource: null,
+        handlers: new Set(),
+        outputHandlers: new Set(),
+        exitHandlers: new Set(),
+      }
+      sessions.set(sessionId, session)
+
+      // Connect SSE
+      connectSSE(session)
+
+      return {
+        id: sessionId,
+        issue,
+        status: session.status,
+      }
     },
 
-    async send(runId: string, _input: string): Promise<void> {
-      // TODO: Send input to PTY via Photino IPC
-      // photino.sendMessage(JSON.stringify({ type: 'pty_input', runId, input }))
-      throw new Error(
-        `PtyRuntime.send(${runId}): Not implemented. Requires Photino + Pty.Net setup.`
-      )
+    async send(runId: string, input: string): Promise<void> {
+      const session = sessions.get(runId)
+      if (!session) {
+        throw new Error(`Session ${runId} not found`)
+      }
+
+      // Try Photino IPC first (lower latency), fall back to HTTP
+      const photino = getPhotinoExternal()
+      if (photino) {
+        photino.sendMessage(
+          JSON.stringify({
+            type: 'pty_input',
+            sessionId: runId,
+            data: input,
+          })
+        )
+      } else {
+        await fetch(`/api/pty/${runId}/input`, {
+          method: 'POST',
+          body: input,
+        })
+      }
     },
 
     async abort(runId: string): Promise<void> {
-      // TODO: Send abort signal to PTY
-      // photino.sendMessage(JSON.stringify({ type: 'abort_run', runId }))
-      throw new Error(
-        `PtyRuntime.abort(${runId}): Not implemented. Requires Photino + Pty.Net setup.`
-      )
+      const session = sessions.get(runId)
+      if (!session) return
+
+      session.eventSource?.close()
+      await fetch(`/api/pty/${runId}`, { method: 'DELETE' })
+
+      session.status = 'aborted'
+      session.handlers.forEach((h) => h({ type: 'status', runId, status: 'aborted' }))
+      sessions.delete(runId)
     },
 
     subscribe(runId: string, handler: (event: RunEvent) => void): () => void {
-      // TODO: Register handler for Photino messages
-      // photino.receiveMessage((msg) => { ... })
-      let run = runs.get(runId)
-      if (!run) {
-        run = { status: 'starting', handlers: new Set() }
-        runs.set(runId, run)
+      let session = sessions.get(runId)
+      if (!session) {
+        session = {
+          id: runId,
+          status: 'starting',
+          eventSource: null,
+          handlers: new Set(),
+          outputHandlers: new Set(),
+          exitHandlers: new Set(),
+        }
+        sessions.set(runId, session)
       }
-      run.handlers.add(handler)
+
+      session.handlers.add(handler)
       return () => {
-        run?.handlers.delete(handler)
+        session?.handlers.delete(handler)
       }
     },
 
     status(runId: string): RunStatus | null {
-      return runs.get(runId)?.status ?? null
+      return sessions.get(runId)?.status ?? null
     },
-
-    // === Non-interactive: Not supported ===
 
     async execute(_task: TaskRequest): Promise<TaskResult> {
       throw new Error(
         'PtyRuntime does not support non-interactive tasks. Use ApiRuntime.execute() instead.'
       )
+    },
+  }
+}
+
+function connectSSE(session: Session) {
+  const eventSource = new EventSource(`/api/pty/${session.id}/stream`)
+  session.eventSource = eventSource
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+
+      switch (data.type) {
+        case 'output':
+          session.outputHandlers.forEach((h) => h(data.data))
+          session.handlers.forEach((h) =>
+            h({ type: 'output', runId: session.id, text: data.data })
+          )
+          break
+
+        case 'exit':
+          session.status = data.exitCode === 0 ? 'done' : 'failed'
+          session.exitHandlers.forEach((h) => h(data.exitCode))
+          session.handlers.forEach((h) =>
+            h({ type: 'status', runId: session.id, status: session.status })
+          )
+          eventSource.close()
+          break
+
+        case 'error':
+          session.status = 'failed'
+          session.handlers.forEach((h) =>
+            h({ type: 'error', runId: session.id, message: data.error })
+          )
+          eventSource.close()
+          break
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  eventSource.onerror = () => {
+    // SSE connection lost - session may have ended
+    if (session.status === 'running') {
+      session.status = 'failed'
+      session.handlers.forEach((h) =>
+        h({ type: 'error', runId: session.id, message: 'Connection lost' })
+      )
+    }
+    eventSource.close()
+  }
+}
+
+// === Interactive session API for Terminal component ===
+
+export interface InteractiveSession {
+  sessionId: string
+  onOutput: (handler: (data: string) => void) => () => void
+  onExit: (handler: (exitCode: number) => void) => () => void
+  write: (data: string) => void
+  resize: (cols: number, rows: number) => void
+  kill: () => void
+}
+
+/**
+ * Start an interactive PTY session with Claude Code.
+ * Used by Terminal component in Shape workspace.
+ */
+export async function startInteractiveSession(options: {
+  command: string
+  args?: string[]
+  cwd?: string
+  cols?: number
+  rows?: number
+}): Promise<InteractiveSession> {
+  console.log('[PTY] Starting session via HTTP:', options)
+
+  // Start session via HTTP
+  const response = await fetch('/api/pty/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      command: options.command,
+      args: options.args ?? [],
+      cwd: options.cwd,
+      cols: options.cols ?? 80,
+      rows: options.rows ?? 24,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to start PTY session: ${error}`)
+  }
+
+  const { sessionId } = await response.json()
+  console.log('[PTY] Session started:', sessionId)
+
+  const session: Session = {
+    id: sessionId,
+    status: 'running',
+    eventSource: null,
+    handlers: new Set(),
+    outputHandlers: new Set(),
+    exitHandlers: new Set(),
+  }
+  sessions.set(sessionId, session)
+
+  // Connect SSE for output
+  connectSSE(session)
+
+  return {
+    sessionId,
+
+    onOutput(handler) {
+      session.outputHandlers.add(handler)
+      return () => session.outputHandlers.delete(handler)
+    },
+
+    onExit(handler) {
+      session.exitHandlers.add(handler)
+      return () => session.exitHandlers.delete(handler)
+    },
+
+    write(data) {
+      // Try Photino IPC first (lower latency), fall back to HTTP
+      const photino = getPhotinoExternal()
+      if (photino) {
+        photino.sendMessage(
+          JSON.stringify({
+            type: 'pty_input',
+            sessionId,
+            data,
+          })
+        )
+      } else {
+        fetch(`/api/pty/${sessionId}/input`, {
+          method: 'POST',
+          body: data,
+        })
+      }
+    },
+
+    resize(cols, rows) {
+      // Try Photino IPC first, fall back to HTTP
+      const photino = getPhotinoExternal()
+      if (photino) {
+        photino.sendMessage(
+          JSON.stringify({
+            type: 'pty_resize',
+            sessionId,
+            cols,
+            rows,
+          })
+        )
+      } else {
+        fetch(`/api/pty/${sessionId}/resize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cols, rows }),
+        })
+      }
+    },
+
+    kill() {
+      session.eventSource?.close()
+      fetch(`/api/pty/${sessionId}`, { method: 'DELETE' })
+      sessions.delete(sessionId)
     },
   }
 }

@@ -141,6 +141,10 @@ static class Workbench
             builder.Services.AddCors();
             builder.Services.AddMillApi();
 
+            // Register PtyManager as singleton for HTTP endpoints
+            var ptyManager = new PtyManager();
+            builder.Services.AddSingleton(ptyManager);
+
             app = builder.Build();
 
             app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
@@ -159,6 +163,9 @@ static class Workbench
             // Health endpoint
             app.MapGet("/api/health", () =>
                 Results.Json(new HealthResponse("ok", Mill.Version)));
+
+            // PTY endpoints for cross-platform terminal support
+            app.MapPtyEndpoints(ptyManager);
 
             app.MapMillApi();
 
@@ -199,7 +206,7 @@ static class Workbench
                 window.SetSize(DefaultWidth, DefaultHeight).Center();
             }
 
-            // Save window state on close
+            // Save window state on close and clean up PTY sessions
             window.WindowClosing += (sender, e) =>
             {
                 SaveWindowState(new WindowState(
@@ -208,23 +215,24 @@ static class Workbench
                     window.Width,
                     window.Height
                 ));
+                ptyManager.Dispose();
                 return false; // allow close
             };
 
-            // Show window when content signals it's ready
+            // Route PTY messages from JS
             window.RegisterWebMessageReceivedHandler((sender, msg) =>
             {
-                if (msg == "ready")
+                Console.WriteLine($"[JS->PTY] Received: {msg.Substring(0, Math.Min(100, msg.Length))}...");
+                // Route PTY messages
+                if (msg.StartsWith("{") && msg.Contains("\"type\":\"pty_"))
                 {
-                    window.SetMinimized(false);
-                    // Bring to front: briefly set topmost, then turn off
-                    window.SetTopMost(true);
-                    window.SetTopMost(false);
+                    ptyManager.HandleMessage(msg);
                 }
             });
 
-            // Load dark splash page that signals when app is loaded
-            window.LoadRawString(GetSplashHtml(serverUrl));
+            // Load app directly
+            window.SetMinimized(false);
+            window.Load(serverUrl);
             window.WaitForClose();
             return 0;
         }
@@ -292,6 +300,18 @@ static class Workbench
                     // Replace current page with iframe content for proper navigation
                     setTimeout(() => window.location.replace('{{serverUrl}}'), 50);
                 };
+
+                // Bridge for PTY messages from .NET
+                // window.external.receiveMessage is called by Photino when .NET sends a message
+                if (window.external && !window.external.receiveMessage) {
+                    window.external.receiveMessage = function(msg) {
+                        // Forward to iframe if loaded, otherwise to current window
+                        const target = iframe.contentWindow || window;
+                        if (target.__ptyMessageHandler) {
+                            target.__ptyMessageHandler(msg);
+                        }
+                    };
+                }
             </script>
         </body>
         </html>
