@@ -200,6 +200,7 @@ public class JobService : IDisposable
                     JobType.ContextWarmup => await ExecuteContextWarmupAsync(job, cts.Token),
                     JobType.Kickstart => await ExecuteKickstartAsync(job, cts.Token),
                     JobType.ShipRun => await ExecuteShipRunAsync(job, cts.Token),
+                    JobType.ObservationExtraction => await ExecuteObservationExtractionAsync(job, cts.Token),
                     _ => throw new NotSupportedException($"Unknown job type: {job.Type}")
                 };
 
@@ -342,12 +343,80 @@ public class JobService : IDisposable
         return result;
     }
 
+    private async Task<ObservationExtractionResult> ExecuteObservationExtractionAsync(Job job, CancellationToken ct)
+    {
+        using var scope = _services.CreateScope();
+        var observations = scope.ServiceProvider.GetRequiredService<ObservationService>();
+        var llmProvider = scope.ServiceProvider.GetRequiredService<ILlmProvider>();
+
+        // Parse params
+        var issueNumber = job.Params.GetValueOrDefault("issueNumber") switch
+        {
+            int n => n,
+            long l => (int)l,
+            string s when int.TryParse(s, out var parsed) => parsed,
+            System.Text.Json.JsonElement je1 when je1.ValueKind == System.Text.Json.JsonValueKind.Number => je1.GetInt32(),
+            _ => 0
+        };
+
+        var issueTitle = job.Params.GetValueOrDefault("issueTitle")?.ToString() ?? "";
+        var specContent = job.Params.GetValueOrDefault("specContent")?.ToString() ?? "";
+
+        var runSuccess = job.Params.GetValueOrDefault("runSuccess") switch
+        {
+            bool b => b,
+            System.Text.Json.JsonElement je2 when je2.ValueKind == System.Text.Json.JsonValueKind.True => true,
+            System.Text.Json.JsonElement je3 when je3.ValueKind == System.Text.Json.JsonValueKind.False => false,
+            _ => false
+        };
+
+        var iterations = job.Params.GetValueOrDefault("iterations") switch
+        {
+            int n => n,
+            long l => (int)l,
+            System.Text.Json.JsonElement je4 when je4.ValueKind == System.Text.Json.JsonValueKind.Number => je4.GetInt32(),
+            _ => 0
+        };
+
+        var iterationHistory = new List<ShipRunIteration>();
+        if (job.Params.GetValueOrDefault("iterationHistory") is System.Text.Json.JsonElement historyJson
+            && historyJson.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in historyJson.EnumerateArray())
+            {
+                var number = item.TryGetProperty("number", out var np) ? np.GetInt32() : 0;
+                var signal = item.TryGetProperty("signal", out var sp) ? sp.GetString() ?? "" : "";
+                var summary = item.TryGetProperty("summary", out var sump) ? sump.GetString() : null;
+                var completedAt = item.TryGetProperty("completedAt", out var cap) && cap.TryGetDateTime(out var dt)
+                    ? dt : DateTime.UtcNow;
+                iterationHistory.Add(new ShipRunIteration(number, signal, summary, completedAt));
+            }
+        }
+
+        var extractParams = new ObservationExtractionParams(
+            IssueNumber: issueNumber,
+            IssueTitle: issueTitle,
+            SpecContent: specContent,
+            RunSuccess: runSuccess,
+            Iterations: iterations,
+            IterationHistory: iterationHistory
+        );
+
+        return await observations.ExtractFromRun(
+            extractParams,
+            llmProvider,
+            (stage, percent) => UpdateProgress(job.Id, stage, percent),
+            ct
+        );
+    }
+
     private static JobQueue GetQueueForType(JobType type) => type switch
     {
         JobType.DraftValidation => JobQueue.Llm,
         JobType.ContextWarmup => JobQueue.Llm,
         JobType.Kickstart => JobQueue.Llm,
         JobType.ShipRun => JobQueue.Ship,
+        JobType.ObservationExtraction => JobQueue.Llm,
         _ => JobQueue.Llm
     };
 
@@ -357,6 +426,7 @@ public class JobService : IDisposable
         JobType.ContextWarmup => "Context warmup",
         JobType.Kickstart => $"Kickstart: {p.GetValueOrDefault("name")}",
         JobType.ShipRun => $"Ship: #{p.GetValueOrDefault("issueNumber")} - {p.GetValueOrDefault("issueTitle")}",
+        JobType.ObservationExtraction => $"Extract observations: #{p.GetValueOrDefault("issueNumber")}",
         _ => type.ToString()
     };
 

@@ -91,5 +91,44 @@ public static class GroundEndpoints
         })
         .WithName("RunKickstart")
         .WithSummary("Run kickstart to generate initial ground files");
+
+        // ─────────────────────────────────────────────────────────────────
+        // Observations
+        // ─────────────────────────────────────────────────────────────────
+
+        group.MapGet("/observations", async (ObservationService observations) =>
+        {
+            var list = await observations.GetAll();
+            return Results.Ok(list);
+        })
+        .WithName("GetObservations")
+        .WithSummary("Get all pending observations");
+
+        group.MapPost("/observations/{id}/accept", async (string id, ObservationService observations) =>
+        {
+            var item = await observations.Accept(id);
+            if (item == null)
+                return Results.NotFound();
+
+            return Results.Ok(item);
+        })
+        .WithName("AcceptObservation")
+        .WithSummary("Accept an observation, promoting it to a ground item");
+
+        group.MapDelete("/observations/{id}", async (string id, ObservationService observations) =>
+        {
+            await observations.Delete(id);
+            return Results.NoContent();
+        })
+        .WithName("DismissObservation")
+        .WithSummary("Dismiss an observation without adding to ground");
+
+        group.MapPost("/observations/{id}/ban", async (string id, ObservationService observations) =>
+        {
+            await observations.Ban(id);
+            return Results.NoContent();
+        })
+        .WithName("BanObservation")
+        .WithSummary("Ban an observation and never suggest it again");
     }
 }

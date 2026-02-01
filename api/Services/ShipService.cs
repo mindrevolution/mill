@@ -14,9 +14,13 @@ public partial class ShipService
     private readonly ILogger<ShipService> _logger;
     private readonly ProjectContext _project;
     private readonly IssueService _issueService;
+    private readonly JobService _jobService;
     private readonly MillPaths _paths;
 
     private const int MaxIterations = 5;
+
+    // Lock for history file writes to prevent corruption from concurrent writes
+    private static readonly SemaphoreSlim HistoryLock = new(1, 1);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -28,11 +32,13 @@ public partial class ShipService
         ILogger<ShipService> logger,
         ProjectContext project,
         IssueService issueService,
+        JobService jobService,
         MillPaths paths)
     {
         _logger = logger;
         _project = project;
         _issueService = issueService;
+        _jobService = jobService;
         _paths = paths;
     }
 
@@ -103,6 +109,20 @@ public partial class ShipService
             {
                 _logger.LogError("Work iteration {Iteration} failed: {Error}", iteration, workResponse.Error);
                 history.Add(new ShipRunIteration(iteration, "ERROR", workResponse.Error, DateTime.UtcNow));
+                await WriteHistoryEntry(new HistoryEntry(
+                    Date: DateTime.UtcNow,
+                    Issue: issueNumber,
+                    Pr: null,
+                    Title: issue.Title,
+                    Type: issue.Type,
+                    Persona: issue.Persona,
+                    Intent: ExtractIntent(issue.Body),
+                    Outcome: "abandoned",
+                    ContextAdded: null,
+                    Iterations: iteration,
+                    DurationMs: (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                    PrUrl: null
+                ));
                 return new ShipRunResult(
                     Success: false,
                     Iterations: iteration,
@@ -133,6 +153,10 @@ public partial class ShipService
                     DurationMs: (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
                     PrUrl: null
                 ));
+
+                // Spawn observation extraction even for aborted runs
+                SpawnObservationExtraction(issueNumber, issue.Title, specContent, false, iteration, history);
+
                 return new ShipRunResult(
                     Success: false,
                     Iterations: iteration,
@@ -177,6 +201,20 @@ public partial class ShipService
                 {
                     _logger.LogError("Verification failed: {Error}", verifyResponse.Error);
                     history.Add(new ShipRunIteration(iteration, "VERIFY_ERROR", verifyResponse.Error, DateTime.UtcNow));
+                    await WriteHistoryEntry(new HistoryEntry(
+                        Date: DateTime.UtcNow,
+                        Issue: issueNumber,
+                        Pr: null,
+                        Title: issue.Title,
+                        Type: issue.Type,
+                        Persona: issue.Persona,
+                        Intent: ExtractIntent(issue.Body),
+                        Outcome: "abandoned",
+                        ContextAdded: null,
+                        Iterations: iteration,
+                        DurationMs: (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                        PrUrl: null
+                    ));
                     return new ShipRunResult(
                         Success: false,
                         Iterations: iteration,
@@ -255,6 +293,9 @@ public partial class ShipService
                         PrUrl: prResult.Url
                     ));
 
+                    // Spawn observation extraction (async, fire and forget)
+                    SpawnObservationExtraction(issueNumber, issue.Title, specContent, true, iteration, history);
+
                     return new ShipRunResult(
                         Success: true,
                         Iterations: iteration,
@@ -278,6 +319,20 @@ public partial class ShipService
                 // Unknown verify signal - treat as failure
                 _logger.LogWarning("Unknown verify signal: {Signal}", verifySignal.Signal);
                 history.Add(new ShipRunIteration(iteration, "UNKNOWN", verifySignal.Signal, DateTime.UtcNow));
+                await WriteHistoryEntry(new HistoryEntry(
+                    Date: DateTime.UtcNow,
+                    Issue: issueNumber,
+                    Pr: null,
+                    Title: issue.Title,
+                    Type: issue.Type,
+                    Persona: issue.Persona,
+                    Intent: ExtractIntent(issue.Body),
+                    Outcome: "abandoned",
+                    ContextAdded: null,
+                    Iterations: iteration,
+                    DurationMs: (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                    PrUrl: null
+                ));
                 return new ShipRunResult(
                     Success: false,
                     Iterations: iteration,
@@ -290,6 +345,20 @@ public partial class ShipService
             // Unknown work signal
             _logger.LogWarning("Unknown work signal: {Signal}", workSignal.Signal);
             history.Add(new ShipRunIteration(iteration, "UNKNOWN", workSignal.Signal, DateTime.UtcNow));
+            await WriteHistoryEntry(new HistoryEntry(
+                Date: DateTime.UtcNow,
+                Issue: issueNumber,
+                Pr: null,
+                Title: issue.Title,
+                Type: issue.Type,
+                Persona: issue.Persona,
+                Intent: ExtractIntent(issue.Body),
+                Outcome: "abandoned",
+                ContextAdded: null,
+                Iterations: iteration,
+                DurationMs: (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                PrUrl: null
+            ));
             return new ShipRunResult(
                 Success: false,
                 Iterations: iteration,
@@ -315,6 +384,10 @@ public partial class ShipService
             DurationMs: (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
             PrUrl: null
         ));
+
+        // Spawn observation extraction even for abandoned runs (may still have useful patterns)
+        SpawnObservationExtraction(issueNumber, issue.Title, specContent, false, iteration, history);
+
         return new ShipRunResult(
             Success: false,
             Iterations: iteration,
@@ -623,28 +696,36 @@ public partial class ShipService
 
     public async Task WriteHistoryEntry(HistoryEntry entry)
     {
-        var historyPath = Path.Combine(_project.MillFolder, "ship", "history.json");
-
-        // Ensure directory exists
-        var dir = Path.GetDirectoryName(historyPath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+        await HistoryLock.WaitAsync();
+        try
         {
-            Directory.CreateDirectory(dir);
+            var historyPath = Path.Combine(_project.MillFolder, "ship", "history.json");
+
+            // Ensure directory exists
+            var dir = Path.GetDirectoryName(historyPath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            // Read existing entries
+            var entries = await GetHistory();
+            var mutableEntries = entries.ToList();
+
+            // Prepend new entry (most recent first)
+            mutableEntries.Insert(0, entry);
+
+            // Write back
+            var historyFile = new HistoryFile(mutableEntries);
+            var json = JsonSerializer.Serialize(historyFile, JsonOptions);
+            await File.WriteAllTextAsync(historyPath, json);
+
+            _logger.LogInformation("Wrote history entry for issue #{Issue}", entry.Issue);
         }
-
-        // Read existing entries
-        var entries = await GetHistory();
-        var mutableEntries = entries.ToList();
-
-        // Prepend new entry (most recent first)
-        mutableEntries.Insert(0, entry);
-
-        // Write back
-        var historyFile = new HistoryFile(mutableEntries);
-        var json = JsonSerializer.Serialize(historyFile, JsonOptions);
-        await File.WriteAllTextAsync(historyPath, json);
-
-        _logger.LogInformation("Wrote history entry for issue #{Issue}", entry.Issue);
+        finally
+        {
+            HistoryLock.Release();
+        }
     }
 
     private static string ExtractIntent(string body)
@@ -659,6 +740,35 @@ public partial class ShipService
         }
         // Truncate if too long
         return firstLine.Length > 200 ? firstLine[..200] + "..." : firstLine;
+    }
+
+    /// <summary>
+    /// Spawn an observation extraction job after a ship run completes.
+    /// Fire and forget - runs async on the LLM queue.
+    /// </summary>
+    private void SpawnObservationExtraction(
+        int issueNumber,
+        string issueTitle,
+        string specContent,
+        bool runSuccess,
+        int iterations,
+        List<ShipRunIteration> history)
+    {
+        _jobService.Enqueue(new CreateJobRequest(
+            Type: JobType.ObservationExtraction,
+            Params: new Dictionary<string, object?>
+            {
+                ["issueNumber"] = issueNumber,
+                ["issueTitle"] = issueTitle,
+                ["specContent"] = specContent,
+                ["runSuccess"] = runSuccess,
+                ["iterations"] = iterations,
+                ["iterationHistory"] = history
+            },
+            SourceWorkspace: "ship"
+        ));
+
+        _logger.LogInformation("Spawned observation extraction job for issue #{Issue}", issueNumber);
     }
 
     private record HistoryFile(List<HistoryEntry> Entries);

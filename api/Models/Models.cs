@@ -64,9 +64,10 @@ public record Observation(
     string Id,
     string Category,
     string Suggestion,
-    string Source,
+    List<string> Sources,
     double Confidence,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    DateTime UpdatedAt
 );
 
 // Runs
@@ -212,7 +213,7 @@ public record ValidationFinding(
 );
 
 // Job Queue
-public enum JobType { DraftValidation, ContextWarmup, Kickstart, ShipRun }
+public enum JobType { DraftValidation, ContextWarmup, Kickstart, ShipRun, ObservationExtraction }
 public enum JobStatus { Queued, Running, Completed, Failed, Cancelled }
 public enum JobQueue { Llm, Ship }
 
@@ -230,6 +231,23 @@ public record ShipRunIteration(
     string Signal,
     string? Summary,
     DateTime CompletedAt
+);
+
+// Observation Extraction
+public record ObservationExtractionParams(
+    int IssueNumber,
+    string IssueTitle,
+    string SpecContent,
+    bool RunSuccess,
+    int Iterations,
+    List<ShipRunIteration> IterationHistory
+);
+
+public record ObservationExtractionResult(
+    int Extracted,
+    int Added,
+    int Updated,
+    int Discarded
 );
 
 public record Job(

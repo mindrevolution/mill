@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
-import type { Observation } from '@/types'
-import { Lightbulb, Check, X, Ban, Sparkles } from 'lucide-react'
+import type { Observation, KnowledgeItem } from '@/types'
+import { Lightbulb, Check, X, Ban, Sparkles, Loader2 } from 'lucide-react'
 import { categoryMeta, categoryColors } from './utils'
+import { api } from '@/lib/api'
 
 // Confidence indicator component - thin progress bar
 function ConfidenceBar({ confidence }: { confidence: number }) {
@@ -37,23 +39,75 @@ function parseSuggestion(suggestion: string): { title: string; detail: string } 
   }
 }
 
-// Count sources from comma-separated string
-function parseSourceCount(source: string): number {
-  return source.split(',').length
+// Format relative time from ISO date string
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
 }
 
 interface ObservationsTrayProps {
   observations: Observation[]
+  onAccept?: (item: KnowledgeItem) => void
+  onUpdate?: () => void
 }
 
-export function ObservationsTray({ observations }: ObservationsTrayProps) {
+export function ObservationsTray({ observations, onAccept, onUpdate }: ObservationsTrayProps) {
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
+
+  const handleAccept = async (id: string) => {
+    setPendingAction(id)
+    try {
+      const item = await api.ground.acceptObservation(id)
+      onAccept?.(item)
+      onUpdate?.()
+    } catch (err) {
+      console.error('Failed to accept observation:', err)
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleDismiss = async (id: string) => {
+    setPendingAction(id)
+    try {
+      await api.ground.dismissObservation(id)
+      onUpdate?.()
+    } catch (err) {
+      console.error('Failed to dismiss observation:', err)
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleBan = async (id: string) => {
+    setPendingAction(id)
+    try {
+      await api.ground.banObservation(id)
+      onUpdate?.()
+    } catch (err) {
+      console.error('Failed to ban observation:', err)
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
   if (observations.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
           <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">No new observations</p>
-          <p className="text-xs mt-1">Mill will suggest additions as you work</p>
+          <p className="text-xs mt-1">mill will suggest additions as you work</p>
         </div>
       </div>
     )
@@ -70,17 +124,15 @@ export function ObservationsTray({ observations }: ObservationsTrayProps) {
           <span className="text-sm font-medium">Observations</span>
           <Badge>{observations.length}</Badge>
         </div>
-        <Button size="sm" variant="ghost" className="h-7 text-xs">
-          Review all
-        </Button>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {sorted.map((obs, index) => {
             const meta = categoryMeta[obs.category]
             const { title, detail } = parseSuggestion(obs.suggestion)
-            const sourceCount = parseSourceCount(obs.source)
+            const sourceCount = obs.sources.length
             const isTop = index === 0
+            const isPending = pendingAction === obs.id
 
             return (
               <Card
@@ -89,7 +141,8 @@ export function ObservationsTray({ observations }: ObservationsTrayProps) {
                   'group transition-colors shadow-none',
                   isTop
                     ? 'border-primary/40 hover:border-primary/60'
-                    : 'hover:border-muted-foreground/40'
+                    : 'hover:border-muted-foreground/40',
+                  isPending && 'opacity-50'
                 )}
               >
                 <CardContent className="p-3">
@@ -116,9 +169,9 @@ export function ObservationsTray({ observations }: ObservationsTrayProps) {
                   <div className="flex items-center justify-between mt-3">
                     <p
                       className="text-[10px] text-muted-foreground"
-                      title={obs.source}
+                      title={obs.sources.join(', ')}
                     >
-                      {sourceCount} {sourceCount === 1 ? 'source' : 'sources'} · {obs.createdAt}
+                      {sourceCount} {sourceCount === 1 ? 'source' : 'sources'} · {formatRelativeTime(obs.createdAt)}
                     </p>
 
                     {/* Actions - subtle until hover */}
@@ -127,15 +180,25 @@ export function ObservationsTray({ observations }: ObservationsTrayProps) {
                         size="sm"
                         variant="ghost"
                         className="h-6 px-2 text-xs hover:bg-primary/20 hover:text-primary"
+                        onClick={() => handleAccept(obs.id)}
+                        disabled={isPending}
                       >
-                        <Check className="h-3 w-3 mr-1" />
-                        Add
+                        {isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Add
+                          </>
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="h-6 w-6 p-0 text-muted-foreground"
                         title="Dismiss"
+                        onClick={() => handleDismiss(obs.id)}
+                        disabled={isPending}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -144,6 +207,8 @@ export function ObservationsTray({ observations }: ObservationsTrayProps) {
                         variant="ghost"
                         className="h-6 w-6 p-0 text-muted-foreground/60"
                         title="Never suggest again"
+                        onClick={() => handleBan(obs.id)}
+                        disabled={isPending}
                       >
                         <Ban className="h-3 w-3" />
                       </Button>

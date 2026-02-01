@@ -36,6 +36,7 @@ public static class ApiExtensions
 
         // Domain services
         services.AddSingleton<GroundService>();
+        services.AddSingleton<ObservationService>();
         services.AddSingleton<DraftService>();
         services.AddSingleton<BriefService>();
         services.AddSingleton<IssueService>();

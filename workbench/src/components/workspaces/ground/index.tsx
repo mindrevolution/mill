@@ -6,29 +6,31 @@ import { LibraryTree } from './library-tree'
 import { ItemDetail } from './item-detail'
 import { ObservationsTray } from './observations-tray'
 import { KickstartWizard } from './kickstart-wizard'
-import { mockObservations } from './utils'
-import { api, type GroundStatus, type KnowledgeItem } from '@/lib/api'
+import { api, type GroundStatus, type KnowledgeItem, type Observation } from '@/lib/api'
 
 export function GroundWorkspace() {
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | undefined>()
   const [groundStatus, setGroundStatus] = useState<GroundStatus | null>(null)
   const [items, setItems] = useState<KnowledgeItem[]>([])
+  const [observations, setObservations] = useState<Observation[]>([])
   const [loading, setLoading] = useState(true)
   const [wizardOpen, setWizardOpen] = useState(false)
 
-  // Load ground status and items
+  // Load ground status, items, and observations
   const loadGround = useCallback(async () => {
     setLoading(true)
     try {
-      const [status, personas, standards, concepts, design] = await Promise.all([
+      const [status, personas, standards, concepts, design, obs] = await Promise.all([
         api.ground.status(),
         api.ground.items('personas'),
         api.ground.items('standards'),
         api.ground.items('concepts'),
         api.ground.items('design'),
+        api.ground.observations(),
       ])
       setGroundStatus(status)
       setItems([...personas, ...standards, ...concepts, ...design])
+      setObservations(obs)
 
       // Auto-open wizard if ground is empty
       if (status.isEmpty) {
@@ -83,7 +85,14 @@ export function GroundWorkspace() {
           <ItemDetail item={selectedItem} />
         </Tile>
         <Tile>
-          <ObservationsTray observations={mockObservations} />
+          <ObservationsTray
+            observations={observations}
+            onAccept={(item) => {
+              // Add the new item to the list
+              setItems((prev) => [...prev, item])
+            }}
+            onUpdate={loadGround}
+          />
         </Tile>
       </TileSplit>
 

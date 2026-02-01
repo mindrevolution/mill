@@ -101,6 +101,16 @@ export interface KnowledgeItem {
   updatedAt: string
 }
 
+export interface Observation {
+  id: string
+  category: KnowledgeCategory
+  suggestion: string
+  sources: string[]
+  confidence: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Run {
   id: string
   issue: number
@@ -225,7 +235,7 @@ export interface DraftValidationResponse {
 }
 
 // Jobs
-export type JobType = 'DraftValidation' | 'ContextWarmup' | 'Kickstart' | 'ShipRun'
+export type JobType = 'DraftValidation' | 'ContextWarmup' | 'Kickstart' | 'ShipRun' | 'ObservationExtraction'
 export type JobStatus = 'Queued' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
 export type JobQueue = 'Llm' | 'Ship'
 
@@ -334,6 +344,17 @@ export const api = {
     kickstart: (data: KickstartRequest) => request<KickstartResponse>('/api/ground/kickstart', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+    // Observations
+    observations: () => request<Observation[]>('/api/ground/observations'),
+    acceptObservation: (id: string) => request<KnowledgeItem>(`/api/ground/observations/${id}/accept`, {
+      method: 'POST',
+    }),
+    dismissObservation: (id: string) => request<void>(`/api/ground/observations/${id}`, {
+      method: 'DELETE',
+    }),
+    banObservation: (id: string) => request<void>(`/api/ground/observations/${id}/ban`, {
+      method: 'POST',
     }),
   },
 

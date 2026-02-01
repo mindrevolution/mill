@@ -66,9 +66,10 @@ export interface Observation {
   id: string
   category: KnowledgeCategory
   suggestion: string
-  source: string // what triggered this observation
+  sources: string[] // issues that surfaced this observation
   confidence: number
   createdAt: string
+  updatedAt: string
 }
 
 // Ship workspace
