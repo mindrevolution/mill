@@ -165,12 +165,20 @@ function ActiveRuns({
                     <span className="text-xs text-muted-foreground">#{issueNumber}</span>
                     <span className="text-sm font-medium truncate flex-1">{issueTitle || `Issue #${issueNumber}`}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{job.stage || status.label}</span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground gap-2">
+                    <span className="flex items-center gap-1.5 truncate">
+                      {job.status === 'Running' && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                      )}
+                      <span className="truncate">{job.stage || status.label}</span>
+                    </span>
                     {job.status === 'Running' && job.startedAt ? (
                       <ElapsedTime startedAt={job.startedAt} />
                     ) : (
-                      <span>{job.startedAt ? formatRelativeTime(job.startedAt) : 'queued'}</span>
+                      <span className="shrink-0">{job.startedAt ? formatRelativeTime(job.startedAt) : 'queued'}</span>
                     )}
                   </div>
                   {/* Progress bar */}
@@ -225,9 +233,18 @@ function RunDetail({ job, onCancel }: { job?: Job; onCancel: (jobId: string) => 
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
           <span className={status.color}>{status.label}</span>
-          {job.stage && <span>{job.stage}</span>}
+          {job.stage && job.status === 'Running' && (
+            <span className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
+              {job.stage}
+            </span>
+          )}
+          {job.stage && job.status !== 'Running' && <span>{job.stage}</span>}
           {job.startedAt && (
             job.status === 'Running' ? (
               <span>Running for <ElapsedTime startedAt={job.startedAt} /></span>
@@ -253,6 +270,24 @@ function RunDetail({ job, onCancel }: { job?: Job; onCancel: (jobId: string) => 
                   className={cn('h-full transition-all', status.color.replace('text-', 'bg-'))}
                   style={{ width: `${job.progressPercent}%` }}
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Live iterations for running jobs */}
+          {job.status === 'Running' && job.iterations && job.iterations.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium mb-2">Completed Slices</h4>
+              <div className="space-y-1.5">
+                {job.iterations.map((iter) => (
+                  <div key={iter.number} className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-muted-foreground">Slice {iter.number}:</span>{' '}
+                      <span className="text-foreground">{iter.summary || iter.signal}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

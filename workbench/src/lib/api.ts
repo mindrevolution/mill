@@ -255,6 +255,13 @@ export interface ShipRunResult {
   history: ShipRunIteration[]
 }
 
+export interface JobIteration {
+  number: number
+  signal: string
+  summary?: string
+  completedAt: string
+}
+
 export interface Job {
   id: string
   type: JobType
@@ -264,6 +271,7 @@ export interface Job {
   params: Record<string, unknown>
   stage?: string
   progressPercent?: number
+  iterations?: JobIteration[]
   result?: unknown
   error?: string
   sourceWorkspace?: string

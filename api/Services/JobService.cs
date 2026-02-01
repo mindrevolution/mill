@@ -62,6 +62,7 @@ public class JobService : IDisposable
             Params: request.Params,
             Stage: null,
             ProgressPercent: null,
+            Iterations: null,
             Result: null,
             Error: null,
             SourceWorkspace: request.SourceWorkspace,
@@ -253,6 +254,21 @@ public class JobService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Add a completed iteration to a running job (for ShipRun progress tracking).
+    /// </summary>
+    public void AddIteration(string jobId, JobIteration iteration)
+    {
+        if (_jobs.TryGetValue(jobId, out var job))
+        {
+            var iterations = job.Iterations?.ToList() ?? [];
+            iterations.Add(iteration);
+            var updated = job with { Iterations = iterations };
+            _jobs[jobId] = updated;
+            BroadcastEvent("job-iteration", updated);
+        }
+    }
+
     private async Task<DraftValidationResponse> ExecuteDraftValidationAsync(Job job, CancellationToken ct)
     {
         using var scope = _services.CreateScope();
@@ -337,6 +353,7 @@ public class JobService : IDisposable
             issueNumber,
             llmProvider,
             (stage, percent) => UpdateProgress(job.Id, stage, percent),
+            (iteration) => AddIteration(job.Id, iteration),
             ct
         );
 

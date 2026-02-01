@@ -190,7 +190,12 @@ public record CreatedFile(string Category, string Id, string Path);
 // LLM Provider
 public record LlmResponse(bool Success, string Output, string? Error);
 
-public record LlmOptions(string? WorkingDir = null, int? TimeoutMs = null, string? SystemPrompt = null);
+public record LlmOptions(
+    string? WorkingDir = null,
+    int? TimeoutMs = null,
+    string? SystemPrompt = null,
+    Action<string>? OnStderr = null  // Real-time stderr line callback for progress parsing
+);
 
 // Draft Validation
 public record DraftValidationRequest(string DraftId);
@@ -259,12 +264,21 @@ public record Job(
     Dictionary<string, object?> Params,
     string? Stage,
     int? ProgressPercent,
+    List<JobIteration>? Iterations,  // In-progress iterations for ShipRun jobs
     object? Result,
     string? Error,
     string? SourceWorkspace,
     DateTime CreatedAt,
     DateTime? StartedAt,
     DateTime? CompletedAt
+);
+
+// Iteration info sent during job execution (lighter than full ShipRunIteration)
+public record JobIteration(
+    int Number,
+    string Signal,
+    string? Summary,
+    DateTime CompletedAt
 );
 
 public record CreateJobRequest(

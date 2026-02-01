@@ -71,6 +71,8 @@ public class ClaudeCodeProvider : CliProviderBase, ILlmProvider
                 while ((line = await process.StandardError.ReadLineAsync()) != null)
                 {
                     errorBuilder.AppendLine(line);
+                    // Invoke callback for real-time progress tracking
+                    options.OnStderr?.Invoke(line);
                 }
             });
 

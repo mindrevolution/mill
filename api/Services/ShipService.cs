@@ -54,6 +54,7 @@ public partial class ShipService
         int issueNumber,
         ILlmProvider llmProvider,
         Action<string, int?> onProgress,
+        Action<JobIteration>? onIteration,
         CancellationToken ct)
     {
         var history = new List<ShipRunIteration>();
@@ -131,9 +132,19 @@ public partial class ShipService
                 rejectionContext
             );
 
+            var lastStage = "";
             var workResponse = await llmProvider.Execute(workPrompt, new LlmOptions(
-                WorkingDir: _project.ProjectPath
+                WorkingDir: _project.ProjectPath,
                 // No per-iteration timeout; run-level 60min check is the safety net
+                OnStderr: line =>
+                {
+                    var stage = ParseStderrForProgress(line);
+                    if (stage != null && stage != lastStage)
+                    {
+                        lastStage = stage;
+                        onProgress($"Iteration {iteration}/{MaxIterations} — {stage}", (iteration - 1) * 100 / MaxIterations);
+                    }
+                }
             ));
 
             if (!workResponse.Success)
@@ -205,6 +216,9 @@ public partial class ShipService
                 history.Add(new ShipRunIteration(iteration, "MILL_CONTINUE", doneSummary, DateTime.UtcNow));
                 rejectionContext = null; // Clear rejection context on successful continue
 
+                // Report iteration completion
+                onIteration?.Invoke(new JobIteration(iteration, "MILL_CONTINUE", doneSummary, DateTime.UtcNow));
+
                 // Update progress with what was accomplished
                 onProgress($"Iteration {iteration}/{MaxIterations} - {doneSummary}", iteration * 100 / MaxIterations);
                 continue;
@@ -217,6 +231,9 @@ public partial class ShipService
                 _logger.LogInformation("Work iteration {Iteration} done: {Done}", iteration, doneSummary);
                 history.Add(new ShipRunIteration(iteration, "MILL_VERIFY", doneSummary, DateTime.UtcNow));
 
+                // Report iteration completion (verifying)
+                onIteration?.Invoke(new JobIteration(iteration, "MILL_VERIFY", doneSummary, DateTime.UtcNow));
+
                 // ───────────────────────────────────────────────────────
                 // Verification
                 // ───────────────────────────────────────────────────────
@@ -228,9 +245,19 @@ public partial class ShipService
                     testCommand
                 );
 
+                var verifyStage = "";
                 var verifyResponse = await llmProvider.Execute(verifyPrompt, new LlmOptions(
-                    WorkingDir: _project.ProjectPath
+                    WorkingDir: _project.ProjectPath,
                     // No per-step timeout; run-level 60min check is the safety net
+                    OnStderr: line =>
+                    {
+                        var stage = ParseStderrForProgress(line);
+                        if (stage != null && stage != verifyStage)
+                        {
+                            verifyStage = stage;
+                            onProgress($"Iteration {iteration}/{MaxIterations} — Verifying: {stage}", iteration * 100 / MaxIterations);
+                        }
+                    }
                 ));
 
                 if (!verifyResponse.Success)
@@ -718,6 +745,58 @@ public partial class ShipService
 
     [GeneratedRegex(@"[Tt]est[_ ][Cc]ommand:\s*`?([^`\n]+)`?", RegexOptions.Multiline)]
     private static partial Regex TestCommandRegex();
+
+    /// <summary>
+    /// Parse stderr line from Claude CLI for meaningful progress indicators.
+    /// Returns a short, user-friendly stage description or null if not meaningful.
+    /// </summary>
+    private static string? ParseStderrForProgress(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return null;
+
+        var trimmed = line.Trim();
+
+        // Tool invocations - Claude Code outputs these to stderr
+        if (trimmed.Contains("Read(", StringComparison.OrdinalIgnoreCase))
+            return "Reading files...";
+        if (trimmed.Contains("Write(", StringComparison.OrdinalIgnoreCase))
+            return "Writing files...";
+        if (trimmed.Contains("Edit(", StringComparison.OrdinalIgnoreCase))
+            return "Editing files...";
+        if (trimmed.Contains("Bash(", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Contains("bash:", StringComparison.OrdinalIgnoreCase))
+            return "Running commands...";
+        if (trimmed.Contains("Grep(", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Contains("Glob(", StringComparison.OrdinalIgnoreCase))
+            return "Searching codebase...";
+        if (trimmed.Contains("git commit", StringComparison.OrdinalIgnoreCase))
+            return "Committing changes...";
+        if (trimmed.Contains("git push", StringComparison.OrdinalIgnoreCase))
+            return "Pushing to remote...";
+        if (trimmed.Contains("npm ", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Contains("pnpm ", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Contains("yarn ", StringComparison.OrdinalIgnoreCase))
+            return "Running package manager...";
+        if (trimmed.Contains("dotnet ", StringComparison.OrdinalIgnoreCase))
+            return "Running dotnet...";
+        if (trimmed.Contains("test", StringComparison.OrdinalIgnoreCase) &&
+            (trimmed.Contains("running", StringComparison.OrdinalIgnoreCase) ||
+             trimmed.Contains("pass", StringComparison.OrdinalIgnoreCase) ||
+             trimmed.Contains("fail", StringComparison.OrdinalIgnoreCase)))
+            return "Running tests...";
+
+        // Task tool spawning agents
+        if (trimmed.Contains("Task(", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Contains("spawning", StringComparison.OrdinalIgnoreCase))
+            return "Spawning agent...";
+
+        // Thinking indicators
+        if (trimmed.StartsWith("Thinking", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Contains("analyzing", StringComparison.OrdinalIgnoreCase))
+            return "Thinking...";
+
+        return null;
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // Legacy Run Methods (kept for compatibility)
