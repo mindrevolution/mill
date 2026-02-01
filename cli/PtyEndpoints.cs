@@ -42,11 +42,10 @@ public static class PtyEndpoints
                             // Copy prompt to temp file (will be cleaned up when session ends)
                             promptTempFile = Path.Combine(Path.GetTempPath(), $"mill-prompt-{Guid.NewGuid():N}.md");
                             File.Copy(fullPath, promptTempFile);
-                            Console.WriteLine($"[PTY] Prompt file: {promptPath} -> {promptTempFile}");
                         }
                         else
                         {
-                            Console.WriteLine($"[PTY] Prompt file not found: {fullPath}");
+                            Console.WriteLine($"[PTY] Warning: prompt file not found: {fullPath}");
                         }
                         i++; // Skip the path argument
                     }
@@ -94,18 +93,13 @@ public static class PtyEndpoints
         // SSE stream for PTY output
         app.MapGet("/api/pty/{sessionId}/stream", async (string sessionId, HttpContext ctx) =>
         {
-            Console.WriteLine($"[SSE] Stream requested for session: {sessionId}");
-
             var channel = ptyManager.GetOutputChannel(sessionId);
             if (channel == null)
             {
-                Console.WriteLine($"[SSE] Session not found: {sessionId}");
                 ctx.Response.StatusCode = 404;
                 await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = "Session not found" }));
                 return;
             }
-
-            Console.WriteLine($"[SSE] Starting stream for session: {sessionId}");
 
             ctx.Response.Headers.Append("Content-Type", "text/event-stream");
             ctx.Response.Headers.Append("Cache-Control", "no-cache");
@@ -113,15 +107,11 @@ public static class PtyEndpoints
             ctx.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
 
             var ct = ctx.RequestAborted;
-            var eventCount = 0;
 
             try
             {
                 await foreach (var evt in channel.ReadAllAsync(ct))
                 {
-                    eventCount++;
-                    Console.WriteLine($"[SSE] Event {eventCount} for {sessionId}: type={evt.Type}, dataLen={evt.Data?.Length ?? 0}");
-
                     var json = JsonSerializer.Serialize(new
                     {
                         type = evt.Type,
@@ -133,11 +123,10 @@ public static class PtyEndpoints
                     await ctx.Response.WriteAsync($"data: {json}\n\n", ct);
                     await ctx.Response.Body.FlushAsync(ct);
                 }
-                Console.WriteLine($"[SSE] Stream ended for {sessionId}, sent {eventCount} events");
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"[SSE] Client disconnected from {sessionId} after {eventCount} events");
+                // Client disconnected, no logging needed
             }
         });
 

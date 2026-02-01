@@ -152,7 +152,6 @@ export function createPtyRuntime(): Runtime {
 }
 
 function connectSSE(session: Session) {
-  console.log('[SSE] Connecting to stream for session:', session.id)
   const eventSource = new EventSource(`/api/pty/${session.id}/stream`)
   session.eventSource = eventSource
 
@@ -229,8 +228,6 @@ export async function startInteractiveSession(options: {
   cols?: number
   rows?: number
 }): Promise<InteractiveSession> {
-  console.log('[PTY] Starting session via HTTP:', options)
-
   // Start session via HTTP
   const response = await fetch('/api/pty/start', {
     method: 'POST',
@@ -250,7 +247,6 @@ export async function startInteractiveSession(options: {
   }
 
   const { sessionId } = await response.json()
-  console.log('[PTY] Session started:', sessionId)
 
   const session: Session = {
     id: sessionId,
@@ -272,11 +268,11 @@ export async function startInteractiveSession(options: {
     onOutput(handler) {
       session.outputHandlers.add(handler)
       // Flush any buffered output that arrived before handler was registered
+      // Use requestAnimationFrame to let the terminal fully initialize before flushing
       if (session.outputBuffer.length > 0) {
-        console.log('[PTY] Flushing', session.outputBuffer.length, 'buffered events')
         const buffered = session.outputBuffer.join('')
         session.outputBuffer = []
-        handler(buffered)
+        requestAnimationFrame(() => handler(buffered))
       }
       return () => session.outputHandlers.delete(handler)
     },

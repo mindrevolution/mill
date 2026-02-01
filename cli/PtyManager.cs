@@ -19,8 +19,8 @@ public sealed class PtyManager : IDisposable
         var sessionId = $"pty_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Guid.NewGuid():N}".Substring(0, 32);
         cwd ??= Directory.GetCurrentDirectory();
 
-        Console.WriteLine($"[PtyManager] Starting session {sessionId}: {command} {string.Join(" ", args)}");
-        Console.WriteLine($"[PtyManager] Working dir: {cwd}, size: {cols}x{rows}");
+        // Startup logging reduced to single line
+        Console.WriteLine($"[PTY] Starting {sessionId}: {command} {string.Join(" ", args)} ({cols}x{rows})");
 
         // Build environment with current env vars
         var env = new Dictionary<string, string>();
@@ -46,9 +46,7 @@ public sealed class PtyManager : IDisposable
             Environment = env
         };
 
-        Console.WriteLine($"[PtyManager] Spawning PTY...");
         var pty = await PtyProvider.SpawnAsync(options, CancellationToken.None);
-        Console.WriteLine($"[PtyManager] PTY spawned successfully");
 
         var session = new PtySession(sessionId, pty, tempFileToCleanup);
 
@@ -150,7 +148,7 @@ public sealed class PtyManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[PtyManager] Error handling message: {ex.Message}");
+            Console.WriteLine($"[PTY] Error handling message: {ex.Message}");
         }
     }
 
@@ -214,40 +212,32 @@ internal sealed class PtySession : IDisposable
 
     public void StartReading(Action onExit)
     {
-        Console.WriteLine($"[PtySession] Starting read loop for {_sessionId}");
         Task.Run(async () =>
         {
             var buffer = new byte[4096];
-            var totalBytes = 0;
             try
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
                     var read = await _pty.ReaderStream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
-                    if (read == 0)
-                    {
-                        Console.WriteLine($"[PtySession] EOF for {_sessionId}, total bytes read: {totalBytes}");
-                        break;
-                    }
+                    if (read == 0) break;
 
-                    totalBytes += read;
                     var data = System.Text.Encoding.UTF8.GetString(buffer, 0, read);
-                    Console.WriteLine($"[PtySession] Output for {_sessionId}: {read} bytes (total: {totalBytes})");
                     await _outputChannel.Writer.WriteAsync(new PtyEvent("output", Data: data), _cts.Token);
                 }
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"[PtySession] Cancelled for {_sessionId}");
+                // Normal cancellation, no logging needed
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PtySession] Read error for {_sessionId}: {ex.Message}");
+                Console.WriteLine($"[PTY] Read error for {_sessionId}: {ex.Message}");
             }
             finally
             {
                 ExitCode = _pty.ExitCode;
-                Console.WriteLine($"[PtySession] Exiting {_sessionId} with code {ExitCode}");
+                Console.WriteLine($"[PTY] Session {_sessionId} exited with code {ExitCode}");
                 _outputChannel.Writer.TryWrite(new PtyEvent("exit", ExitCode: ExitCode));
                 _outputChannel.Writer.Complete();
                 onExit();
@@ -275,15 +265,7 @@ internal sealed class PtySession : IDisposable
         // Clean up temp prompt file if one was created
         if (_tempFileToCleanup != null)
         {
-            try
-            {
-                File.Delete(_tempFileToCleanup);
-                Console.WriteLine($"[PtySession] Cleaned up temp file: {_tempFileToCleanup}");
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
+            try { File.Delete(_tempFileToCleanup); } catch { }
         }
 
         _cts.Dispose();

@@ -913,7 +913,6 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
     const { command, args } = buildCommand()
 
     try {
-      console.log('[PTY] Starting session with dimensions:', cols, rows)
       const session = await startInteractiveSession({
         command,
         args,
@@ -952,6 +951,7 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
     }
   }, [])
 
+
   // Handle user input
   const handleData = useCallback((data: string) => {
     sessionRef.current?.write(data)
@@ -969,13 +969,11 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
     }
     lastDimensionsRef.current = { cols, rows }
 
-    console.log('[Terminal] Resize event:', { cols, rows, hasSession: !!sessionRef.current })
     if (!sessionRef.current) {
       // First resize callback = terminal is ready, start session
       startSession(cols, rows)
     } else {
-      // Subsequent resizes, update PTY
-      console.log('[Terminal] Sending resize to PTY:', cols, rows)
+      // Resize PTY - Claude Code will re-render at new size
       sessionRef.current.resize(cols, rows)
     }
   }, [startSession])

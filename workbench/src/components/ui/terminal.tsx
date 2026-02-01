@@ -44,14 +44,17 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
     const fitAddonRef = useRef<FitAddon | null>(null)
 
     // Debounced resize callback to avoid flooding PTY with resize events
+    // Use longer debounce (250ms) to handle app focus changes gracefully
     const debouncedOnResize = useMemo(
-      () => (onResize ? debounce(onResize, 100) : undefined),
+      () => (onResize ? debounce(onResize, 250) : undefined),
       [onResize]
     )
 
     // Fit the terminal to container
     const fit = useCallback(() => {
       if (fitAddonRef.current && termRef.current) {
+        // Skip if document is hidden (app switched away)
+        if (document.hidden) return
         fitAddonRef.current.fit()
         const { cols, rows } = termRef.current
         debouncedOnResize?.(cols, rows)
@@ -123,7 +126,23 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
       })
       resizeObserver.observe(containerRef.current)
 
+      // Handle visibility change - refresh xterm when tab becomes visible
+      // This fixes rendering corruption after app-switch
+      const handleVisibilityChange = () => {
+        if (!document.hidden && termRef.current) {
+          // Force xterm to refresh its display
+          // Use requestAnimationFrame to ensure DOM is ready
+          requestAnimationFrame(() => {
+            fitAddonRef.current?.fit()
+            // Refresh the viewport to fix any rendering artifacts
+            termRef.current?.refresh(0, termRef.current.rows - 1)
+          })
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
       return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
         resizeObserver.disconnect()
         term.dispose()
         termRef.current = null
@@ -147,31 +166,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
         const data = writeBufferRef.current.join('')
         writeBufferRef.current = []
 
-        // Debug: log data stats periodically
-        const hasAltScreen = data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')
-        const hasMainScreen = data.includes('\x1b[?1049l') || data.includes('\x1b[?47l')
-        const hasClear = data.includes('\x1b[2J') || data.includes('\x1b[H')
-        const hasSyncStart = data.includes('\x1b[?2026h')
-        const hasSyncEnd = data.includes('\x1b[?2026l')
-
-        // Find any readable text in the data (skip escape sequences)
-        const textOnly = data.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '').trim()
-        const hasText = textOnly.length > 50
-
-        if (hasAltScreen || hasMainScreen || hasClear || hasSyncStart || hasText) {
-          console.log('[Terminal] Write:', {
-            altScreen: hasAltScreen,
-            mainScreen: hasMainScreen,
-            clear: hasClear,
-            syncStart: hasSyncStart,
-            syncEnd: hasSyncEnd,
-            dataLen: data.length,
-            textLen: textOnly.length,
-            // Show text preview if substantial
-            textPreview: hasText ? textOnly.slice(0, 300) : undefined,
-          })
-        }
-
         termRef.current.write(data)
       } else {
         // Terminal not ready yet, retry after a short delay
@@ -180,6 +174,23 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
     }, [])
 
     const bufferedWrite = useCallback((data: string) => {
+      // Check for screen clear sequences - write immediately to avoid stale content
+      const hasClear = data.includes('\x1b[2J') || data.includes('\x1b[3J')
+      if (hasClear) {
+        // Flush any pending writes first, then write clear immediately
+        if (writeTimeoutRef.current) {
+          clearTimeout(writeTimeoutRef.current)
+          writeTimeoutRef.current = null
+        }
+        if (writeBufferRef.current.length > 0) {
+          const buffered = writeBufferRef.current.join('')
+          writeBufferRef.current = []
+          termRef.current?.write(buffered)
+        }
+        termRef.current?.write(data)
+        return
+      }
+
       writeBufferRef.current.push(data)
       // Batch writes within 16ms (~60fps) to reduce flickering
       if (!writeTimeoutRef.current) {
