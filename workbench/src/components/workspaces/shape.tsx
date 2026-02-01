@@ -308,10 +308,11 @@ function SpecList({
                               <CommandItem
                                 value={draft.title}
                                 onSelect={() => onSelectDraft(draft)}
-                                onMouseDown={() => onSelectDraft(draft)}
                                 className={cn(
-                                  'group relative flex-col items-start gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-sm transition-colors hover:bg-muted/40 aria-selected:bg-secondary/70 aria-selected:text-foreground aria-selected:border-primary/30',
-                                  "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-transparent aria-selected:before:bg-[#ffcc00]",
+                                  'group relative flex-col items-start gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-sm transition-colors hover:bg-muted/40',
+                                  // Override base aria-selected styles from commandItemVariants
+                                  'aria-selected:bg-muted/20 aria-selected:text-inherit',
+                                  "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-transparent",
                                   selectedId === draft.id &&
                                     "bg-secondary/70 text-foreground border-primary/30 before:bg-[#ffcc00]"
                                 )}
@@ -374,8 +375,10 @@ function SpecList({
                             value={`${issue.number} ${issue.title}`}
                             onSelect={() => onSelectIssue(issue)}
                             className={cn(
-                              'group relative flex-col items-start gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-sm transition-colors hover:bg-muted/40 aria-selected:bg-secondary/70 aria-selected:text-foreground aria-selected:border-primary/30',
-                              "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-transparent aria-selected:before:bg-[#ffcc00]",
+                              'group relative flex-col items-start gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-sm transition-colors hover:bg-muted/40',
+                              // Override base aria-selected styles from commandItemVariants
+                              'aria-selected:bg-muted/20 aria-selected:text-inherit',
+                              "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-transparent",
                               selectedId === `issue-${issue.number}` &&
                                 "bg-secondary/70 text-foreground border-primary/30 before:bg-[#ffcc00]"
                             )}
