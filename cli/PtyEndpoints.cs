@@ -1,6 +1,9 @@
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using MillApi.Services;
 
 /// <summary>
 /// HTTP endpoints for PTY terminal sessions.
@@ -10,6 +13,100 @@ public static class PtyEndpoints
 {
     public static void MapPtyEndpoints(this WebApplication app, PtyManager ptyManager)
     {
+        // High-level spec session endpoint - backend handles all command building
+        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, ProjectContext projectContext) =>
+        {
+            try
+            {
+                using var doc = await JsonDocument.ParseAsync(ctx.Request.Body);
+                var root = doc.RootElement;
+
+                var mode = root.GetProperty("mode").GetString()!; // "draft" or "refine"
+                var issueNumber = root.TryGetProperty("issueNumber", out var issueEl) ? issueEl.GetInt32() : (int?)null;
+                var draftId = root.TryGetProperty("draftId", out var draftEl) ? draftEl.GetString() : null;
+                var initialPrompt = root.TryGetProperty("initialPrompt", out var promptEl) ? promptEl.GetString() : null;
+                var cols = root.TryGetProperty("cols", out var colsEl) ? colsEl.GetInt32() : 80;
+                var rows = root.TryGetProperty("rows", out var rowsEl) ? rowsEl.GetInt32() : 24;
+
+                // Build the prompt content
+                var promptFile = mode == "refine" ? "shape/prompts/spec-refine.md" : "shape/prompts/spec-draft.md";
+                var fullPromptPath = Path.Combine(Directory.GetCurrentDirectory(), promptFile);
+
+                if (!File.Exists(fullPromptPath))
+                {
+                    ctx.Response.StatusCode = 400;
+                    await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = $"Prompt file not found: {promptFile}" }));
+                    return;
+                }
+
+                var promptContent = await File.ReadAllTextAsync(fullPromptPath);
+                var appendContent = new StringBuilder();
+
+                // For refine mode with issue, inject the full issue content
+                if (mode == "refine" && issueNumber.HasValue)
+                {
+                    var issue = await issueService.Get(issueNumber.Value);
+                    if (issue != null)
+                    {
+                        // Get GitHub URL
+                        var repoUrl = await GetGitHubRepoUrl(projectContext.ProjectPath);
+                        var issueUrl = repoUrl != null ? $"{repoUrl}/issues/{issueNumber}" : $"Issue #{issueNumber}";
+
+                        appendContent.AppendLine();
+                        appendContent.AppendLine("---");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine($"# Issue #{issue.Number}: {issue.Title}");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine($"**URL:** {issueUrl}");
+                        appendContent.AppendLine($"**Type:** {issue.Type}");
+                        appendContent.AppendLine($"**Status:** {issue.Status}");
+                        if (issue.Labels.Count > 0)
+                            appendContent.AppendLine($"**Labels:** {string.Join(", ", issue.Labels)}");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine("## Spec Content");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine(issue.Body);
+                    }
+                }
+                else if (draftId != null)
+                {
+                    appendContent.AppendLine();
+                    appendContent.AppendLine($"Resume draft: {draftId}");
+                }
+
+                // Combine prompt with appended content
+                var fullPrompt = promptContent + appendContent.ToString();
+
+                // Write to temp file
+                var promptTempFile = Path.Combine(Path.GetTempPath(), $"mill-prompt-{Guid.NewGuid():N}.md");
+                await File.WriteAllTextAsync(promptTempFile, fullPrompt);
+
+                // Build command args
+                var userMessage = initialPrompt ?? "";
+
+                string sessionId;
+                if (OperatingSystem.IsWindows())
+                {
+                    var escapedMessage = userMessage.Replace("'", "''");
+                    var psCommand = $"& claude --system-prompt (Get-Content -Raw '{promptTempFile}') -- '{escapedMessage}'";
+                    sessionId = await ptyManager.StartSession("powershell", new[] { "-NoProfile", "-Command", psCommand }, projectContext.ProjectPath, cols, rows, promptTempFile);
+                }
+                else
+                {
+                    var escapedMessage = userMessage.Replace("'", "'\\''");
+                    var shellCommand = $"claude --system-prompt \"$(cat '{promptTempFile}')\" -- '{escapedMessage}'";
+                    sessionId = await ptyManager.StartSession("/bin/sh", new[] { "-c", shellCommand }, projectContext.ProjectPath, cols, rows, promptTempFile);
+                }
+
+                ctx.Response.ContentType = "application/json";
+                await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { sessionId }));
+            }
+            catch (Exception ex)
+            {
+                ctx.Response.StatusCode = 500;
+                await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = ex.Message }));
+            }
+        });
         // Start a new PTY session
         app.MapPost("/api/pty/start", async (HttpContext ctx) =>
         {
@@ -177,5 +274,56 @@ public static class PtyEndpoints
             ctx.Response.ContentType = "application/json";
             await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { ok = true }));
         });
+    }
+
+    /// <summary>
+    /// Get GitHub repo URL from git remote.
+    /// Returns null if not a GitHub repo or git command fails.
+    /// </summary>
+    private static async Task<string?> GetGitHubRepoUrl(string workingDir)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = "remote get-url origin",
+                WorkingDirectory = workingDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi);
+            if (process == null) return null;
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0) return null;
+
+            var remoteUrl = output.Trim();
+
+            // Convert SSH URL to HTTPS URL if needed
+            // git@github.com:owner/repo.git -> https://github.com/owner/repo
+            if (remoteUrl.StartsWith("git@github.com:"))
+            {
+                var path = remoteUrl["git@github.com:".Length..].TrimEnd(".git".ToCharArray());
+                return $"https://github.com/{path}";
+            }
+
+            // https://github.com/owner/repo.git -> https://github.com/owner/repo
+            if (remoteUrl.StartsWith("https://github.com/"))
+            {
+                return remoteUrl.TrimEnd(".git".ToCharArray());
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

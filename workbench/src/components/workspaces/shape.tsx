@@ -10,7 +10,7 @@ import { ActionDialog } from '@/components/ui/action-dialog'
 import { DetailView } from '@/components/ui/detail-view'
 import { Separator } from '@/components/ui/separator'
 import { Terminal as TerminalComponent, type TerminalHandle } from '@/components/ui/terminal'
-import { startInteractiveSession, type InteractiveSession } from '@/lib/runtime/pty'
+import { startSpecSession, type InteractiveSession } from '@/lib/runtime/pty'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -883,44 +883,19 @@ function InteractiveTerminal({ draftId, issueNumber, initialPrompt, onClose }: I
     unsubExit?: () => void
   }>({})
 
-  // Build Claude Code command based on context
-  const buildCommand = useCallback(() => {
-    const args: string[] = []
-
-    // Use actual mill prompts for spec work
-    // Claude Code will load the prompt file
-    if (issueNumber) {
-      // Refining an existing spec (published issue)
-      args.push('--system-prompt-file', 'shape/prompts/spec-refine.md')
-      args.push('--append-system-prompt', `Issue: #${issueNumber}`)
-    } else {
-      // Creating/refining a new spec draft
-      args.push('--system-prompt-file', 'shape/prompts/spec-draft.md')
-      if (draftId) {
-        args.push('--append-system-prompt', `Resume draft: ${draftId}`)
-      }
-    }
-
-    // Add initial prompt as the message to Claude
-    if (initialPrompt) {
-      args.push('--', initialPrompt)
-    }
-
-    return { command: 'claude', args }
-  }, [draftId, issueNumber, initialPrompt])
-
   // Start session when terminal reports its initial dimensions
   const startSession = useCallback(async (cols: number, rows: number) => {
     // Synchronous guard using ref to prevent race conditions
     if (sessionStartingRef.current || sessionRef.current) return
     sessionStartingRef.current = true
 
-    const { command, args } = buildCommand()
-
     try {
-      const session = await startInteractiveSession({
-        command,
-        args,
+      // Use high-level spec session API - backend handles all command building
+      const session = await startSpecSession({
+        mode: issueNumber ? 'refine' : 'draft',
+        issueNumber,
+        draftId,
+        initialPrompt,
         cols,
         rows,
       })
@@ -945,7 +920,7 @@ function InteractiveTerminal({ draftId, issueNumber, initialPrompt, onClose }: I
       setExited(true)
       setExitCode(-1)
     }
-  }, [buildCommand])
+  }, [issueNumber, draftId, initialPrompt])
 
   // Cleanup on unmount
   useEffect(() => {

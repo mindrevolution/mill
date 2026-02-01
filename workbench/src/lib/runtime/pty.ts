@@ -329,3 +329,114 @@ export async function startInteractiveSession(options: {
     },
   }
 }
+
+/**
+ * Start a high-level spec session.
+ * Backend handles all command building and issue content injection.
+ */
+export async function startSpecSession(options: {
+  mode: 'draft' | 'refine'
+  issueNumber?: number
+  draftId?: string
+  initialPrompt?: string
+  cols?: number
+  rows?: number
+}): Promise<InteractiveSession> {
+  const response = await fetch('/api/pty/spec-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mode: options.mode,
+      issueNumber: options.issueNumber,
+      draftId: options.draftId,
+      initialPrompt: options.initialPrompt,
+      cols: options.cols ?? 80,
+      rows: options.rows ?? 24,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to start spec session: ${error}`)
+  }
+
+  const { sessionId } = await response.json()
+
+  const session: Session = {
+    id: sessionId,
+    status: 'running',
+    eventSource: null,
+    handlers: new Set(),
+    outputHandlers: new Set(),
+    exitHandlers: new Set(),
+    outputBuffer: [],
+  }
+  sessions.set(sessionId, session)
+
+  // Connect SSE for output
+  connectSSE(session)
+
+  return {
+    sessionId,
+
+    onOutput(handler) {
+      session.outputHandlers.add(handler)
+      // Flush any buffered output
+      if (session.outputBuffer.length > 0) {
+        const buffered = session.outputBuffer.join('')
+        session.outputBuffer = []
+        requestAnimationFrame(() => handler(buffered))
+      }
+      return () => session.outputHandlers.delete(handler)
+    },
+
+    onExit(handler) {
+      session.exitHandlers.add(handler)
+      return () => session.exitHandlers.delete(handler)
+    },
+
+    write(data) {
+      const photino = getPhotinoExternal()
+      if (photino) {
+        photino.sendMessage(
+          JSON.stringify({
+            type: 'pty_input',
+            sessionId,
+            data,
+          })
+        )
+      } else {
+        fetch(`/api/pty/${sessionId}/input`, {
+          method: 'POST',
+          body: data,
+        })
+      }
+    },
+
+    resize(cols, rows) {
+      const photino = getPhotinoExternal()
+      if (photino) {
+        photino.sendMessage(
+          JSON.stringify({
+            type: 'pty_resize',
+            sessionId,
+            cols,
+            rows,
+          })
+        )
+      } else {
+        fetch(`/api/pty/${sessionId}/resize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cols, rows }),
+        })
+      }
+    },
+
+    kill() {
+      session.eventSource?.close()
+      fetch(`/api/pty/${sessionId}`, { method: 'DELETE' })
+      sessions.delete(sessionId)
+    },
+  }
+}
