@@ -293,6 +293,7 @@ window.RegisterWebMessageReceivedHandler((_, msg) => pty.Write(msg));
 - **Do not run `dotnet publish`** after each change — the user will build periodically when needed
 - **Use pnpm** for the workbench (not npm or yarn)
 - **Enum serialization:** Always serialize enums as strings, never as integers. Use `JsonStringEnumConverter` for all JSON serialization.
+- **UI testing with playwriter:** When running via `dev.sh`, the workbench is available at `http://localhost:5173/`. Use the playwriter MCP to verify UI changes work correctly — navigate, click, fill inputs, take screenshots. Use sparingly (slow and token-heavy), but invaluable for debugging recurring issues or regressions where you need full-circle feedback.
 
 ## Documentation Standards
 
