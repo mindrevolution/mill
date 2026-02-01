@@ -45,6 +45,38 @@ const outcomeConfig: Record<string, { color: string; bg: string }> = {
   reverted: { color: 'text-red-400', bg: 'bg-red-400/10' },
 }
 
+// Helper to format elapsed time (mm:ss or h:mm:ss)
+function formatElapsed(startedAt: string): string {
+  const start = new Date(startedAt).getTime()
+  const now = Date.now()
+  const totalSeconds = Math.floor((now - start) / 1000)
+
+  if (totalSeconds < 0) return '0:00'
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+// Component that shows live elapsed time for running jobs
+function ElapsedTime({ startedAt }: { startedAt: string }) {
+  const [elapsed, setElapsed] = useState(formatElapsed(startedAt))
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(formatElapsed(startedAt))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [startedAt])
+
+  return <span className="font-mono tabular-nums">{elapsed}</span>
+}
+
 // Helper to format relative time
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
@@ -135,7 +167,11 @@ function ActiveRuns({
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{job.stage || status.label}</span>
-                    <span>{job.startedAt ? formatRelativeTime(job.startedAt) : 'queued'}</span>
+                    {job.status === 'Running' && job.startedAt ? (
+                      <ElapsedTime startedAt={job.startedAt} />
+                    ) : (
+                      <span>{job.startedAt ? formatRelativeTime(job.startedAt) : 'queued'}</span>
+                    )}
                   </div>
                   {/* Progress bar */}
                   {job.progressPercent != null && (
@@ -192,7 +228,13 @@ function RunDetail({ job, onCancel }: { job?: Job; onCancel: (jobId: string) => 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className={status.color}>{status.label}</span>
           {job.stage && <span>{job.stage}</span>}
-          {job.startedAt && <span>Started {formatRelativeTime(job.startedAt)}</span>}
+          {job.startedAt && (
+            job.status === 'Running' ? (
+              <span>Running for <ElapsedTime startedAt={job.startedAt} /></span>
+            ) : (
+              <span>Started {formatRelativeTime(job.startedAt)}</span>
+            )
+          )}
         </div>
       </div>
 
