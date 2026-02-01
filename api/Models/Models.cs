@@ -190,7 +190,7 @@ public record CreatedFile(string Category, string Id, string Path);
 // LLM Provider
 public record LlmResponse(bool Success, string Output, string? Error);
 
-public record LlmOptions(string? WorkingDir = null, int TimeoutMs = 120000, string? SystemPrompt = null);
+public record LlmOptions(string? WorkingDir = null, int? TimeoutMs = null, string? SystemPrompt = null);
 
 // Draft Validation
 public record DraftValidationRequest(string DraftId);

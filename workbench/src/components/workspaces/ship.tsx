@@ -228,7 +228,7 @@ function RunDetail({ job, onCancel }: { job?: Job; onCancel: (jobId: string) => 
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Result</h4>
               {(() => {
-                const result = job.result as { success?: boolean; prUrl?: string; iterations?: number; abortReason?: string }
+                const result = job.result as { success?: boolean; prUrl?: string; iterations?: number; abortReason?: string; history?: Array<{ number: number; signal: string; summary?: string }> }
                 return (
                   <div className="space-y-2">
                     {result.success ? (
@@ -253,6 +253,27 @@ function RunDetail({ job, onCancel }: { job?: Job; onCancel: (jobId: string) => 
                           <ExternalLink className="h-3 w-3 ml-2" />
                         </a>
                       </Button>
+                    )}
+
+                    {/* Iteration history */}
+                    {result.history && result.history.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <h5 className="text-xs font-medium text-muted-foreground mb-2">Iteration History</h5>
+                        <div className="space-y-1">
+                          {result.history.map((iter) => (
+                            <div key={iter.number} className="flex items-start gap-2 text-xs">
+                              <span className="text-muted-foreground w-4">{iter.number}.</span>
+                              <span className={cn(
+                                iter.signal === 'MILL_DONE' && 'text-green-400',
+                                iter.signal === 'MILL_REJECTED' && 'text-amber-400',
+                                (iter.signal === 'ERROR' || iter.signal === 'UNKNOWN') && 'text-red-400'
+                              )}>
+                                {iter.summary || iter.signal}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )

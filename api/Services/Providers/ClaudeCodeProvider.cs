@@ -75,21 +75,22 @@ public class ClaudeCodeProvider : CliProviderBase, ILlmProvider
             });
 
             var exitTask = process.WaitForExitAsync();
-            var timeoutTask = Task.Delay(options.TimeoutMs);
+            var allTasks = Task.WhenAll(outputTask, errorTask, exitTask);
 
-            var completedTask = await Task.WhenAny(
-                Task.WhenAll(outputTask, errorTask, exitTask),
-                timeoutTask
-            );
-
-            if (completedTask == timeoutTask)
+            if (options.TimeoutMs.HasValue)
             {
-                Logger.LogWarning("Claude CLI timed out after {Timeout}ms", options.TimeoutMs);
-                try { process.Kill(entireProcessTree: true); } catch { }
-                return new LlmResponse(false, "", $"Command timed out after {options.TimeoutMs}ms");
+                var timeoutTask = Task.Delay(options.TimeoutMs.Value);
+                var completedTask = await Task.WhenAny(allTasks, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    Logger.LogWarning("Claude CLI timed out after {Timeout}ms", options.TimeoutMs);
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    return new LlmResponse(false, "", $"Command timed out after {options.TimeoutMs}ms");
+                }
             }
 
-            await Task.WhenAll(outputTask, errorTask);
+            await allTasks;
 
             var output = outputBuilder.ToString().Trim();
             var error = errorBuilder.ToString().Trim();

@@ -81,10 +81,41 @@ public partial class ShipService
         // Read test command from Loop Contract (if present in spec)
         var testCommand = ExtractTestCommand(specContent) ?? "echo 'No test command specified'";
 
+        var runTimeout = TimeSpan.FromMinutes(60);
+
         while (iteration < MaxIterations)
         {
             iteration++;
             ct.ThrowIfCancellationRequested();
+
+            // Check run-level timeout (60 minute safety net)
+            var elapsed = DateTime.UtcNow - startTime;
+            if (elapsed > runTimeout)
+            {
+                _logger.LogWarning("Run exceeded 60 minute timeout at iteration {Iteration}", iteration);
+                history.Add(new ShipRunIteration(iteration, "TIMEOUT", "Run exceeded 60 minute safety limit", DateTime.UtcNow));
+                await WriteHistoryEntry(new HistoryEntry(
+                    Date: DateTime.UtcNow,
+                    Issue: issueNumber,
+                    Pr: null,
+                    Title: issue.Title,
+                    Type: issue.Type,
+                    Persona: issue.Persona,
+                    Intent: ExtractIntent(issue.Body),
+                    Outcome: "timeout",
+                    ContextAdded: null,
+                    Iterations: iteration - 1,
+                    DurationMs: (long)elapsed.TotalMilliseconds,
+                    PrUrl: null
+                ));
+                return new ShipRunResult(
+                    Success: false,
+                    Iterations: iteration - 1,
+                    PrUrl: null,
+                    AbortReason: "Run exceeded 60 minute safety limit",
+                    History: history
+                );
+            }
 
             // ───────────────────────────────────────────────────────────
             // Work iteration
@@ -101,8 +132,8 @@ public partial class ShipService
             );
 
             var workResponse = await llmProvider.Execute(workPrompt, new LlmOptions(
-                WorkingDir: _project.ProjectPath,
-                TimeoutMs: 300000 // 5 minutes per iteration
+                WorkingDir: _project.ProjectPath
+                // No per-iteration timeout; run-level 60min check is the safety net
             ));
 
             if (!workResponse.Success)
@@ -169,22 +200,27 @@ public partial class ShipService
             // Handle MILL_CONTINUE
             if (workSignal.Signal == "MILL_CONTINUE")
             {
-                _logger.LogInformation("Work iteration {Iteration} continues: {NextSlice}", iteration, workSignal.NextSlice);
-                history.Add(new ShipRunIteration(iteration, "MILL_CONTINUE", workSignal.NextSlice, DateTime.UtcNow));
+                var doneSummary = workSignal.Done ?? workSignal.NextSlice ?? "Completed slice";
+                _logger.LogInformation("Work iteration {Iteration} done: {Done}", iteration, doneSummary);
+                history.Add(new ShipRunIteration(iteration, "MILL_CONTINUE", doneSummary, DateTime.UtcNow));
                 rejectionContext = null; // Clear rejection context on successful continue
+
+                // Update progress with what was accomplished
+                onProgress($"Iteration {iteration}/{MaxIterations} - {doneSummary}", iteration * 100 / MaxIterations);
                 continue;
             }
 
             // Handle MILL_VERIFY
             if (workSignal.Signal == "MILL_VERIFY")
             {
-                _logger.LogInformation("Work iteration {Iteration} ready for verification", iteration);
-                history.Add(new ShipRunIteration(iteration, "MILL_VERIFY", workSignal.Summary, DateTime.UtcNow));
+                var doneSummary = workSignal.Done ?? workSignal.Summary ?? "Ready for verification";
+                _logger.LogInformation("Work iteration {Iteration} done: {Done}", iteration, doneSummary);
+                history.Add(new ShipRunIteration(iteration, "MILL_VERIFY", doneSummary, DateTime.UtcNow));
 
                 // ───────────────────────────────────────────────────────
                 // Verification
                 // ───────────────────────────────────────────────────────
-                onProgress($"Iteration {iteration}/{MaxIterations} - Verifying", iteration * 100 / MaxIterations);
+                onProgress($"Iteration {iteration}/{MaxIterations} - Verifying: {doneSummary}", iteration * 100 / MaxIterations);
 
                 var verifyPrompt = await BuildVerifyPrompt(
                     specRef,
@@ -193,8 +229,8 @@ public partial class ShipService
                 );
 
                 var verifyResponse = await llmProvider.Execute(verifyPrompt, new LlmOptions(
-                    WorkingDir: _project.ProjectPath,
-                    TimeoutMs: 180000 // 3 minutes for verification
+                    WorkingDir: _project.ProjectPath
+                    // No per-step timeout; run-level 60min check is the safety net
                 ));
 
                 if (!verifyResponse.Success)
@@ -478,6 +514,7 @@ public partial class ShipService
         string? Branch = null,
         string? Title = null,
         string? Summary = null,
+        string? Done = null,
         string? NextSlice = null,
         string? AbortReason = null,
         List<string>? Blockers = null,
@@ -506,22 +543,63 @@ public partial class ShipService
                 return new ParsedSignal("MILL_ABORT", AbortReason: reason);
             }
 
-            // MILL_CONTINUE with next slice
+            // MILL_CONTINUE with JSON metadata
             if (trimmed == "MILL_CONTINUE")
             {
-                // Look for "Next slice:" in following lines
                 var idx = Array.IndexOf(lines, line);
+                var jsonBuilder = new StringBuilder();
+                var inJson = false;
+                string? done = null;
                 string? nextSlice = null;
-                for (var i = idx + 1; i < lines.Length && i < idx + 5; i++)
+
+                // Try to parse JSON block first
+                for (var i = idx + 1; i < lines.Length; i++)
                 {
-                    var nextLine = lines[i].Trim();
-                    if (nextLine.StartsWith("Next slice:", StringComparison.OrdinalIgnoreCase))
+                    var nextLine = lines[i];
+                    if (nextLine.Trim().StartsWith('{'))
                     {
-                        nextSlice = nextLine["Next slice:".Length..].Trim();
-                        break;
+                        inJson = true;
+                    }
+                    if (inJson)
+                    {
+                        jsonBuilder.AppendLine(nextLine);
+                        if (nextLine.Trim().EndsWith('}'))
+                        {
+                            break;
+                        }
                     }
                 }
-                return new ParsedSignal("MILL_CONTINUE", NextSlice: nextSlice);
+
+                if (jsonBuilder.Length > 0)
+                {
+                    try
+                    {
+                        var json = jsonBuilder.ToString();
+                        var meta = JsonSerializer.Deserialize<ContinueMetadata>(json, JsonOptions);
+                        done = meta?.Done;
+                        nextSlice = meta?.Next;
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning("Failed to parse MILL_CONTINUE metadata: {Error}", ex.Message);
+                    }
+                }
+
+                // Fallback: look for "Next slice:" text format
+                if (string.IsNullOrEmpty(nextSlice))
+                {
+                    for (var i = idx + 1; i < lines.Length && i < idx + 5; i++)
+                    {
+                        var nextLine = lines[i].Trim();
+                        if (nextLine.StartsWith("Next slice:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            nextSlice = nextLine["Next slice:".Length..].Trim();
+                            break;
+                        }
+                    }
+                }
+
+                return new ParsedSignal("MILL_CONTINUE", Done: done, NextSlice: nextSlice);
             }
 
             // MILL_VERIFY with JSON metadata
@@ -558,6 +636,7 @@ public partial class ShipService
                             "MILL_VERIFY",
                             Branch: meta?.Branch,
                             Title: meta?.Title,
+                            Done: meta?.Done,
                             Summary: meta?.Summary
                         );
                     }
@@ -619,7 +698,8 @@ public partial class ShipService
         return new ParsedSignal("UNKNOWN");
     }
 
-    private record VerifyMetadata(string? Branch, string? Title, string? Summary, string? Verification);
+    private record VerifyMetadata(string? Branch, string? Title, string? Done, string? Summary, string? Verification);
+    private record ContinueMetadata(string? Done, string? Next);
     private record RejectedMetadata(List<string>? Blockers, List<string>? Improvements, string? Suggestion);
 
     /// <summary>

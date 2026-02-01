@@ -133,8 +133,10 @@ Write additional memory ONLY if you discover:
 **Not complete (more slices remain):**
 ```
 MILL_CONTINUE
-
-Next slice: <brief description of next slice>
+{
+  "done": "<1-line summary of what this slice accomplished>",
+  "next": "<brief description of next slice>"
+}
 ```
 
 **Ready for verification (final slice complete, all tests pass):**
@@ -143,6 +145,7 @@ MILL_VERIFY
 {
   "branch": "issue-{{ISSUE_NUMBER}}",
   "title": "{{SPEC_REF}}: <brief description>",
+  "done": "<1-line summary of what this final slice accomplished>",
   "summary": "<what changed across all slices>",
   "verification": "<test results and checks performed>"
 }
