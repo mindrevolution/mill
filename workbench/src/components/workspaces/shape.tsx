@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { cn } from '@/lib/utils'
 import { Tile, TileSplit } from '@/components/layout/tile'
 import { Button } from '@/components/ui/button'
@@ -870,11 +870,20 @@ interface InteractiveTerminalProps {
   onClose: () => void
 }
 
-function InteractiveTerminal({ title, draftId, issueNumber, initialPrompt, onClose }: InteractiveTerminalProps) {
+export interface InteractiveTerminalHandle {
+  /** Request to close the terminal. Shows confirmation if session is active. Returns true if closed. */
+  requestClose: () => Promise<boolean>
+}
+
+const InteractiveTerminal = forwardRef<InteractiveTerminalHandle, InteractiveTerminalProps>(
+  ({ title, draftId, issueNumber, initialPrompt, onClose }, ref) => {
   const terminalRef = useRef<TerminalHandle>(null)
   const sessionRef = useRef<InteractiveSession | null>(null)
   const [exited, setExited] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  // Promise resolver for requestClose
+  const closeResolverRef = useRef<((confirmed: boolean) => void) | null>(null)
   // Use ref for synchronous guard (state updates are async and cause race conditions)
   const sessionStartingRef = useRef(false)
   const cleanupRef = useRef<{
@@ -930,6 +939,41 @@ function InteractiveTerminal({ title, draftId, issueNumber, initialPrompt, onClo
     }
   }, [])
 
+  // Check if session needs confirmation before closing
+  const needsConfirmation = useCallback(() => {
+    return sessionRef.current !== null && !exited
+  }, [exited])
+
+  // Perform the actual close
+  const doClose = useCallback(() => {
+    sessionRef.current?.kill()
+    onClose()
+  }, [onClose])
+
+  // Handle close confirmation
+  const handleConfirmClose = useCallback((confirmed: boolean) => {
+    setShowCloseConfirm(false)
+    if (confirmed) {
+      doClose()
+    }
+    closeResolverRef.current?.(confirmed)
+    closeResolverRef.current = null
+  }, [doClose])
+
+  // Expose requestClose via ref
+  useImperativeHandle(ref, () => ({
+    requestClose: () => {
+      if (!needsConfirmation()) {
+        doClose()
+        return Promise.resolve(true)
+      }
+      return new Promise<boolean>((resolve) => {
+        closeResolverRef.current = resolve
+        setShowCloseConfirm(true)
+      })
+    }
+  }), [needsConfirmation, doClose])
+
 
   // Handle user input
   const handleData = useCallback((data: string) => {
@@ -958,9 +1002,12 @@ function InteractiveTerminal({ title, draftId, issueNumber, initialPrompt, onClo
   }, [startSession])
 
   const handleClose = useCallback(() => {
-    sessionRef.current?.kill()
-    onClose()
-  }, [onClose])
+    if (needsConfirmation()) {
+      setShowCloseConfirm(true)
+    } else {
+      doClose()
+    }
+  }, [needsConfirmation, doClose])
 
   return (
     <div className="h-full flex flex-col bg-[#09090b]">
@@ -998,9 +1045,31 @@ function InteractiveTerminal({ title, draftId, issueNumber, initialPrompt, onClo
           className="h-full"
         />
       </div>
+
+      {/* Close confirmation dialog */}
+      <Dialog open={showCloseConfirm} onOpenChange={(open) => !open && handleConfirmClose(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>End this conversation?</DialogTitle>
+            <DialogDescription>
+              You're in the middle of shaping. Closing will lose your progress.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleConfirmClose(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => handleConfirmClose(true)}>
+              End conversation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
-}
+})
+
+InteractiveTerminal.displayName = 'InteractiveTerminal'
 
 export function ShapeWorkspace() {
   const { drafts, issues, loading, error, refetch } = useSpecs()
@@ -1018,6 +1087,7 @@ export function ShapeWorkspace() {
     issueNumber?: number
     initialPrompt?: string
   } | null>(null)
+  const terminalRef = useRef<InteractiveTerminalHandle>(null)
 
   // Watch for job result viewing
   const viewingJobId = useJobsStore((s) => s.viewingJobId)
@@ -1131,13 +1201,18 @@ export function ShapeWorkspace() {
     refetch(true)
   }
 
-  const handleNewSpec = () => {
-    // Clear selection and close any active session to show NewSpecInput
+  const handleNewSpec = async () => {
+    // If there's an active session, use the terminal's confirmation flow
+    if (interactiveSession && terminalRef.current) {
+      const confirmed = await terminalRef.current.requestClose()
+      if (!confirmed) return
+      setInteractiveSession(null)
+    }
+    // Clear selection to show NewSpecInput
     setSelectedDraft(undefined)
     setSelectedId(undefined)
     setDraftDetail(undefined)
     setIssueDetail(undefined)
-    setInteractiveSession(null)
   }
 
   // Refresh draft detail to update hasRelevance flag
@@ -1152,12 +1227,22 @@ export function ShapeWorkspace() {
   }
 
   // Start interactive refinement session
-  const handleRefineInteractively = (title: string, draftId?: string, issueNumber?: number) => {
+  const handleRefineInteractively = async (title: string, draftId?: string, issueNumber?: number) => {
+    // If there's an active session, use the terminal's confirmation flow
+    if (interactiveSession && terminalRef.current) {
+      const confirmed = await terminalRef.current.requestClose()
+      if (!confirmed) return
+    }
     setInteractiveSession({ title, draftId, issueNumber })
   }
 
   // Start new spec with initial prompt
-  const handleStartNewSpec = (initialPrompt: string) => {
+  const handleStartNewSpec = async (initialPrompt: string) => {
+    // If there's an active session, use the terminal's confirmation flow
+    if (interactiveSession && terminalRef.current) {
+      const confirmed = await terminalRef.current.requestClose()
+      if (!confirmed) return
+    }
     setInteractiveSession({ title: 'New Spec', initialPrompt })
   }
 
@@ -1185,6 +1270,7 @@ export function ShapeWorkspace() {
         <Tile>
           {interactiveSession ? (
             <InteractiveTerminal
+              ref={terminalRef}
               title={interactiveSession.title}
               draftId={interactiveSession.draftId}
               issueNumber={interactiveSession.issueNumber}
