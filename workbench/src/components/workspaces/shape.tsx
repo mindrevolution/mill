@@ -297,7 +297,10 @@ function SpecList({
                 <div className="p-2">
                   {/* Drafts */}
               {drafts.length > 0 && (
-                    <CommandGroup heading="Drafts">
+                    <CommandGroup
+                      heading="Drafts"
+                      className="space-y-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-muted-foreground/70"
+                    >
                       {drafts.map((draft) => {
                         const Icon = typeIcons[draft.type] || FileText
                         const color = typeColors[draft.type] || 'text-muted-foreground'
@@ -309,17 +312,27 @@ function SpecList({
                                 onSelect={() => onSelectDraft(draft)}
                                 onMouseDown={() => onSelectDraft(draft)}
                                 className={cn(
-                                  selectedId === draft.id && 'bg-secondary text-foreground'
+                                  'group relative flex-col items-start gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-sm transition-colors hover:bg-muted/40 aria-selected:bg-secondary/70 aria-selected:text-foreground aria-selected:border-primary/30',
+                                  "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-transparent aria-selected:before:bg-[#ffcc00]",
+                                  selectedId === draft.id &&
+                                    "bg-secondary/70 text-foreground border-primary/30 before:bg-[#ffcc00]"
                                 )}
                               >
                                 <div className="flex items-center gap-2 w-full">
-                                  <Icon className={cn('h-3 w-3', color)} />
-                                  <span className="text-sm font-medium truncate flex-1">{draft.title}</span>
+                                  <Icon className={cn('h-3.5 w-3.5', color)} />
+                                  <span className="text-sm font-medium leading-tight tracking-tight truncate flex-1">
+                                    {draft.title}
+                                  </span>
                                   {draft.status === 'ready' && (
-                                    <Badge variant="default" className="text-[10px] px-1 py-0">ready</Badge>
+                                    <Badge
+                                      variant="secondary"
+                                      className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-300"
+                                    >
+                                      ready
+                                    </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 w-full">
+                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground/80 w-full">
                                   <span>{formatDate(draft.updatedAt)}</span>
                                   {draft.persona && <span>· {draft.persona}</span>}
                                 </div>
@@ -350,7 +363,10 @@ function SpecList({
 
                   {/* Issues */}
               {issues.length > 0 && (
-                    <CommandGroup heading="Published Specs">
+                    <CommandGroup
+                      heading="Published Specs"
+                      className="mt-2 space-y-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-muted-foreground/70"
+                    >
                       {issues.map((issue) => {
                         const Icon = typeIcons[issue.type] || FileText
                         const color = typeColors[issue.type] || 'text-muted-foreground'
@@ -360,17 +376,30 @@ function SpecList({
                             value={`${issue.number} ${issue.title}`}
                             onSelect={() => onSelectIssue(issue)}
                             className={cn(
-                              'flex-col items-start gap-1',
-                              selectedId === `issue-${issue.number}` && 'bg-secondary text-foreground'
+                              'group relative flex-col items-start gap-1.5 rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 text-sm transition-colors hover:bg-muted/40 aria-selected:bg-secondary/70 aria-selected:text-foreground aria-selected:border-primary/30',
+                              "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-transparent aria-selected:before:bg-[#ffcc00]",
+                              selectedId === `issue-${issue.number}` &&
+                                "bg-secondary/70 text-foreground border-primary/30 before:bg-[#ffcc00]"
                             )}
                           >
                             <div className="flex items-center gap-2 w-full">
-                              <Icon className={cn('h-3 w-3', color)} />
-                              <span className="text-xs text-muted-foreground">#{issue.number}</span>
-                              <span className="text-sm truncate flex-1">{issue.title}</span>
-                              <Badge variant="secondary" className="text-[10px] px-1 py-0">{issue.status}</Badge>
+                              <span className="text-sm leading-tight tracking-tight truncate flex-1">
+                                {issue.title}
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  <Icon className={cn('h-3 w-3', color)} />
+                                  <span className="font-mono">#{issue.number}</span>
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="rounded-full border border-border/50 bg-background/70 px-2 py-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                                >
+                                  {issue.status}
+                                </Badge>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground w-full">
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground/80 w-full">
                               <span>{formatDate(issue.createdAt)}</span>
                             </div>
                           </CommandItem>
@@ -847,7 +876,8 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
   const sessionRef = useRef<InteractiveSession | null>(null)
   const [exited, setExited] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
-  const [sessionStarted, setSessionStarted] = useState(false)
+  // Use ref for synchronous guard (state updates are async and cause race conditions)
+  const sessionStartingRef = useRef(false)
   const cleanupRef = useRef<{
     unsubOutput?: () => void
     unsubExit?: () => void
@@ -876,8 +906,9 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
 
   // Start session when terminal reports its initial dimensions
   const startSession = useCallback(async (cols: number, rows: number) => {
-    if (sessionStarted || sessionRef.current) return
-    setSessionStarted(true)
+    // Synchronous guard using ref to prevent race conditions
+    if (sessionStartingRef.current || sessionRef.current) return
+    sessionStartingRef.current = true
 
     const { command, args } = buildCommand()
 
@@ -910,7 +941,7 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
       setExited(true)
       setExitCode(-1)
     }
-  }, [buildCommand, sessionStarted])
+  }, [buildCommand])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -926,13 +957,25 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
     sessionRef.current?.write(data)
   }, [])
 
+  // Track last sent dimensions to avoid duplicate resizes
+  const lastDimensionsRef = useRef<{ cols: number; rows: number } | null>(null)
+
   // Handle resize - also triggers initial session start
   const handleResize = useCallback((cols: number, rows: number) => {
+    // Skip if dimensions haven't changed
+    const last = lastDimensionsRef.current
+    if (last && last.cols === cols && last.rows === rows) {
+      return
+    }
+    lastDimensionsRef.current = { cols, rows }
+
+    console.log('[Terminal] Resize event:', { cols, rows, hasSession: !!sessionRef.current })
     if (!sessionRef.current) {
       // First resize callback = terminal is ready, start session
       startSession(cols, rows)
     } else {
       // Subsequent resizes, update PTY
+      console.log('[Terminal] Sending resize to PTY:', cols, rows)
       sessionRef.current.resize(cols, rows)
     }
   }, [startSession])

@@ -68,6 +68,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
         fontSize: 13,
         lineHeight: 1.2,
         scrollback: 10000,
+        // Let xterm.js handle EOL conversion - helps with cursor positioning
         convertEol: true,
         allowProposedApi: true,
         theme: {
@@ -145,6 +146,32 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
       if (termRef.current) {
         const data = writeBufferRef.current.join('')
         writeBufferRef.current = []
+
+        // Debug: log data stats periodically
+        const hasAltScreen = data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')
+        const hasMainScreen = data.includes('\x1b[?1049l') || data.includes('\x1b[?47l')
+        const hasClear = data.includes('\x1b[2J') || data.includes('\x1b[H')
+        const hasSyncStart = data.includes('\x1b[?2026h')
+        const hasSyncEnd = data.includes('\x1b[?2026l')
+
+        // Find any readable text in the data (skip escape sequences)
+        const textOnly = data.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '').trim()
+        const hasText = textOnly.length > 50
+
+        if (hasAltScreen || hasMainScreen || hasClear || hasSyncStart || hasText) {
+          console.log('[Terminal] Write:', {
+            altScreen: hasAltScreen,
+            mainScreen: hasMainScreen,
+            clear: hasClear,
+            syncStart: hasSyncStart,
+            syncEnd: hasSyncEnd,
+            dataLen: data.length,
+            textLen: textOnly.length,
+            // Show text preview if substantial
+            textPreview: hasText ? textOnly.slice(0, 300) : undefined,
+          })
+        }
+
         termRef.current.write(data)
       } else {
         // Terminal not ready yet, retry after a short delay

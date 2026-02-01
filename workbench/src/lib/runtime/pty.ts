@@ -22,6 +22,8 @@ interface Session {
   handlers: Set<(event: RunEvent) => void>
   outputHandlers: Set<(data: string) => void>
   exitHandlers: Set<(exitCode: number) => void>
+  // Buffer for events that arrive before handlers are registered
+  outputBuffer: string[]
 }
 
 // Shared session state (module-level for persistence)
@@ -66,6 +68,7 @@ export function createPtyRuntime(): Runtime {
         handlers: new Set(),
         outputHandlers: new Set(),
         exitHandlers: new Set(),
+        outputBuffer: [],
       }
       sessions.set(sessionId, session)
 
@@ -125,6 +128,7 @@ export function createPtyRuntime(): Runtime {
           handlers: new Set(),
           outputHandlers: new Set(),
           exitHandlers: new Set(),
+          outputBuffer: [],
         }
         sessions.set(runId, session)
       }
@@ -148,6 +152,7 @@ export function createPtyRuntime(): Runtime {
 }
 
 function connectSSE(session: Session) {
+  console.log('[SSE] Connecting to stream for session:', session.id)
   const eventSource = new EventSource(`/api/pty/${session.id}/stream`)
   session.eventSource = eventSource
 
@@ -157,7 +162,12 @@ function connectSSE(session: Session) {
 
       switch (data.type) {
         case 'output':
-          session.outputHandlers.forEach((h) => h(data.data))
+          // Buffer output if no handlers registered yet
+          if (session.outputHandlers.size === 0) {
+            session.outputBuffer.push(data.data)
+          } else {
+            session.outputHandlers.forEach((h) => h(data.data))
+          }
           session.handlers.forEach((h) =>
             h({ type: 'output', runId: session.id, text: data.data })
           )
@@ -249,6 +259,7 @@ export async function startInteractiveSession(options: {
     handlers: new Set(),
     outputHandlers: new Set(),
     exitHandlers: new Set(),
+    outputBuffer: [],
   }
   sessions.set(sessionId, session)
 
@@ -260,6 +271,13 @@ export async function startInteractiveSession(options: {
 
     onOutput(handler) {
       session.outputHandlers.add(handler)
+      // Flush any buffered output that arrived before handler was registered
+      if (session.outputBuffer.length > 0) {
+        console.log('[PTY] Flushing', session.outputBuffer.length, 'buffered events')
+        const buffered = session.outputBuffer.join('')
+        session.outputBuffer = []
+        handler(buffered)
+      }
       return () => session.outputHandlers.delete(handler)
     },
 
