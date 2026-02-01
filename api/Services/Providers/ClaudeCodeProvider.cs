@@ -36,7 +36,8 @@ public class ClaudeCodeProvider : CliProviderBase, ILlmProvider
 
             // Build arguments: claude --print "prompt"
             // Using --print for non-interactive mode
-            psi.Arguments = $"--print \"{EscapeArgument(prompt)}\"";
+            // --strict-mcp-config disables all MCP servers (like playwriter) which cause massive slowdowns
+            psi.Arguments = $"--print --strict-mcp-config \"{EscapeArgument(prompt)}\"";
 
             if (!string.IsNullOrEmpty(options.SystemPrompt))
             {
