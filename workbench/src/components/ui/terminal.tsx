@@ -69,6 +69,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
         lineHeight: 1.2,
         scrollback: 10000,
         convertEol: true,
+        allowProposedApi: true,
         theme: {
           background: '#09090b',
           foreground: '#fafafa',
@@ -93,7 +94,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
           brightCyan: '#22d3ee',
           brightWhite: '#ffffff',
         },
-        allowProposedApi: true,
       })
 
       const fitAddon = new FitAddon()
@@ -127,16 +127,44 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
         term.dispose()
         termRef.current = null
         fitAddonRef.current = null
+        // Clear any pending write buffer
+        if (writeTimeoutRef.current) {
+          clearTimeout(writeTimeoutRef.current)
+        }
       }
     }, [onData, onResize, fit])
+
+    // Buffered write to batch rapid updates (reduces flickering from TUI apps)
+    const writeBufferRef = useRef<string[]>([])
+    const writeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const flushWriteBuffer = useCallback(() => {
+      writeTimeoutRef.current = null
+      if (writeBufferRef.current.length === 0) return
+
+      if (termRef.current) {
+        const data = writeBufferRef.current.join('')
+        writeBufferRef.current = []
+        termRef.current.write(data)
+      } else {
+        // Terminal not ready yet, retry after a short delay
+        writeTimeoutRef.current = setTimeout(flushWriteBuffer, 50)
+      }
+    }, [])
+
+    const bufferedWrite = useCallback((data: string) => {
+      writeBufferRef.current.push(data)
+      // Batch writes within 16ms (~60fps) to reduce flickering
+      if (!writeTimeoutRef.current) {
+        writeTimeoutRef.current = setTimeout(flushWriteBuffer, 16)
+      }
+    }, [flushWriteBuffer])
 
     // Expose imperative methods
     useImperativeHandle(
       ref,
       () => ({
-        write: (data: string) => {
-          termRef.current?.write(data)
-        },
+        write: bufferedWrite,
         clear: () => {
           termRef.current?.clear()
         },
@@ -149,7 +177,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
           rows: termRef.current?.rows ?? 24,
         }),
       }),
-      [fit]
+      [fit, bufferedWrite]
     )
 
     return (

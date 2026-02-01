@@ -14,7 +14,7 @@ public sealed class PtyManager : IDisposable
     /// <summary>
     /// Start a new PTY session.
     /// </summary>
-    public async Task<string> StartSession(string command, string[] args, string? cwd, int cols, int rows)
+    public async Task<string> StartSession(string command, string[] args, string? cwd, int cols, int rows, string? tempFileToCleanup = null)
     {
         var sessionId = $"pty_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Guid.NewGuid():N}".Substring(0, 32);
         cwd ??= Directory.GetCurrentDirectory();
@@ -50,7 +50,7 @@ public sealed class PtyManager : IDisposable
         var pty = await PtyProvider.SpawnAsync(options, CancellationToken.None);
         Console.WriteLine($"[PtyManager] PTY spawned successfully");
 
-        var session = new PtySession(sessionId, pty);
+        var session = new PtySession(sessionId, pty, tempFileToCleanup);
 
         if (!_sessions.TryAdd(sessionId, session))
         {
@@ -178,15 +178,17 @@ internal sealed class PtySession : IDisposable
     private readonly IPtyConnection _pty;
     private readonly Channel<PtyEvent> _outputChannel;
     private readonly CancellationTokenSource _cts = new();
+    private readonly string? _tempFileToCleanup;
     private bool _disposed;
 
     public int ExitCode { get; private set; }
     public ChannelReader<PtyEvent> OutputChannel => _outputChannel.Reader;
 
-    public PtySession(string sessionId, IPtyConnection pty)
+    public PtySession(string sessionId, IPtyConnection pty, string? tempFileToCleanup = null)
     {
         _sessionId = sessionId;
         _pty = pty;
+        _tempFileToCleanup = tempFileToCleanup;
         // Unbounded channel to avoid blocking PTY reads
         _outputChannel = Channel.CreateUnbounded<PtyEvent>(new UnboundedChannelOptions
         {
@@ -212,9 +214,11 @@ internal sealed class PtySession : IDisposable
 
     public void StartReading(Action onExit)
     {
+        Console.WriteLine($"[PtySession] Starting read loop for {_sessionId}");
         Task.Run(async () =>
         {
             var buffer = new byte[4096];
+            var totalBytes = 0;
             try
             {
                 while (!_cts.Token.IsCancellationRequested)
@@ -222,26 +226,28 @@ internal sealed class PtySession : IDisposable
                     var read = await _pty.ReaderStream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
                     if (read == 0)
                     {
-                        // EOF - process exited
+                        Console.WriteLine($"[PtySession] EOF for {_sessionId}, total bytes read: {totalBytes}");
                         break;
                     }
 
+                    totalBytes += read;
                     var data = System.Text.Encoding.UTF8.GetString(buffer, 0, read);
+                    Console.WriteLine($"[PtySession] Output for {_sessionId}: {read} bytes (total: {totalBytes})");
                     await _outputChannel.Writer.WriteAsync(new PtyEvent("output", Data: data), _cts.Token);
                 }
             }
             catch (OperationCanceledException)
             {
-                // Expected on cancel
+                Console.WriteLine($"[PtySession] Cancelled for {_sessionId}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PtySession] Read error: {ex.Message}");
+                Console.WriteLine($"[PtySession] Read error for {_sessionId}: {ex.Message}");
             }
             finally
             {
                 ExitCode = _pty.ExitCode;
-                // Send exit event
+                Console.WriteLine($"[PtySession] Exiting {_sessionId} with code {ExitCode}");
                 _outputChannel.Writer.TryWrite(new PtyEvent("exit", ExitCode: ExitCode));
                 _outputChannel.Writer.Complete();
                 onExit();
@@ -264,6 +270,20 @@ internal sealed class PtySession : IDisposable
         catch
         {
             // Ignore dispose errors
+        }
+
+        // Clean up temp prompt file if one was created
+        if (_tempFileToCleanup != null)
+        {
+            try
+            {
+                File.Delete(_tempFileToCleanup);
+                Console.WriteLine($"[PtySession] Cleaned up temp file: {_tempFileToCleanup}");
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
 
         _cts.Dispose();

@@ -847,91 +847,100 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
   const sessionRef = useRef<InteractiveSession | null>(null)
   const [exited, setExited] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
+  const [sessionStarted, setSessionStarted] = useState(false)
+  const cleanupRef = useRef<{
+    unsubOutput?: () => void
+    unsubExit?: () => void
+  }>({})
 
   // Build Claude Code command based on context
   const buildCommand = useCallback(() => {
     const args: string[] = []
 
-    // Add system prompt for spec refinement
-    // TODO: Load actual prompt path from config
-    if (draftId) {
-      args.push('--system-prompt', 'You are helping refine a spec draft. Be concise and helpful.')
-    } else if (issueNumber) {
-      args.push('--system-prompt', 'You are helping refine an existing spec. Be concise and helpful.')
+    // Use actual mill prompts for spec work
+    // Claude Code will load the prompt file
+    if (issueNumber) {
+      // Refining an existing spec (published issue)
+      args.push('--system-prompt-file', 'shape/prompts/spec-refine.md')
+      args.push('--append-system-prompt', `Issue: #${issueNumber}`)
+    } else {
+      // Creating/refining a new spec draft
+      args.push('--system-prompt-file', 'shape/prompts/spec-draft.md')
+      if (draftId) {
+        args.push('--append-system-prompt', `Resume draft: ${draftId}`)
+      }
     }
 
     return { command: 'claude', args }
   }, [draftId, issueNumber])
 
-  // Start session on mount
-  useEffect(() => {
-    let cancelled = false
-    let unsubOutput: (() => void) | undefined
-    let unsubExit: (() => void) | undefined
+  // Start session when terminal reports its initial dimensions
+  const startSession = useCallback(async (cols: number, rows: number) => {
+    if (sessionStarted || sessionRef.current) return
+    setSessionStarted(true)
 
-    const startSession = async () => {
-      const { cols, rows } = terminalRef.current?.getDimensions() ?? { cols: 80, rows: 24 }
-      const { command, args } = buildCommand()
+    const { command, args } = buildCommand()
 
-      try {
-        const session = await startInteractiveSession({
-          command,
-          args,
-          cols,
-          rows,
-        })
+    try {
+      console.log('[PTY] Starting session with dimensions:', cols, rows)
+      const session = await startInteractiveSession({
+        command,
+        args,
+        cols,
+        rows,
+      })
 
-        if (cancelled) {
-          session.kill()
-          return
-        }
+      sessionRef.current = session
 
-        sessionRef.current = session
+      // Wire up output
+      cleanupRef.current.unsubOutput = session.onOutput((data) => {
+        terminalRef.current?.write(data)
+      })
 
-        // Wire up output
-        unsubOutput = session.onOutput((data) => {
-          terminalRef.current?.write(data)
-        })
-
-        // Wire up exit
-        unsubExit = session.onExit((code) => {
-          setExited(true)
-          setExitCode(code)
-        })
-
-        // Focus terminal
-        terminalRef.current?.focus()
-      } catch (error) {
-        console.error('[PTY] Failed to start session:', error)
+      // Wire up exit
+      cleanupRef.current.unsubExit = session.onExit((code) => {
         setExited(true)
-        setExitCode(-1)
-      }
+        setExitCode(code)
+      })
+
+      // Focus terminal
+      terminalRef.current?.focus()
+    } catch (error) {
+      console.error('[PTY] Failed to start session:', error)
+      setExited(true)
+      setExitCode(-1)
     }
+  }, [buildCommand, sessionStarted])
 
-    startSession()
-
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      cancelled = true
-      unsubOutput?.()
-      unsubExit?.()
+      cleanupRef.current.unsubOutput?.()
+      cleanupRef.current.unsubExit?.()
       sessionRef.current?.kill()
     }
-  }, [buildCommand])
+  }, [])
 
   // Handle user input
   const handleData = useCallback((data: string) => {
     sessionRef.current?.write(data)
   }, [])
 
-  // Handle resize
+  // Handle resize - also triggers initial session start
   const handleResize = useCallback((cols: number, rows: number) => {
-    sessionRef.current?.resize(cols, rows)
-  }, [])
+    if (!sessionRef.current) {
+      // First resize callback = terminal is ready, start session
+      startSession(cols, rows)
+    } else {
+      // Subsequent resizes, update PTY
+      sessionRef.current.resize(cols, rows)
+    }
+  }, [startSession])
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-[#09090b]">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-card/50">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-card">
         <div className="flex items-center gap-2 text-sm">
           <TerminalIcon className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">Interactive Session</span>

@@ -289,6 +289,7 @@ window.RegisterWebMessageReceivedHandler((_, msg) => pty.Write(msg));
 ## Development Notes
 
 - **Cross-platform:** Windows, Linux, macOS (x64/arm64) — use `OperatingSystem.IsWindows()` etc. for platform-specific code
+- **Shell commands:** Use `/bin/sh` on macOS/Linux, `powershell` on Windows. Never use `cmd.exe` — PowerShell has better escaping, command substitution, and is available on all modern Windows.
 - **Do not run `dotnet publish`** after each change — the user will build periodically when needed
 - **Use pnpm** for the workbench (not npm or yarn)
 - **Enum serialization:** Always serialize enums as strings, never as integers. Use `JsonStringEnumConverter` for all JSON serialization.

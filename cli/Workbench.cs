@@ -59,6 +59,10 @@ static class Workbench
         builder.Services.AddCors();
         builder.Services.AddMillApi();
 
+        // Register PtyManager for dev mode
+        var ptyManager = new PtyManager();
+        builder.Services.AddSingleton(ptyManager);
+
         var app = builder.Build();
 
         // Log all API requests
@@ -108,6 +112,9 @@ static class Workbench
 
         app.MapGet("/api/health", () =>
             Results.Json(new HealthResponse("ok", Mill.Version)));
+
+        // PTY endpoints for dev mode
+        app.MapPtyEndpoints(ptyManager);
 
         app.MapMillApi();
 
