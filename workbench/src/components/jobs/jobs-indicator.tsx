@@ -89,7 +89,8 @@ function JobItem({ job, onCancel, onView }: { job: Job; onCancel: () => void; on
   }
 
   const canCancel = job.status === 'Running' || job.status === 'Queued'
-  const canView = job.status === 'Completed' || job.status === 'Failed'
+  // Show View for completed jobs, or for running ShipRun jobs (to navigate to Ship workspace)
+  const canView = job.status === 'Completed' || job.status === 'Failed' || (job.type === 'ShipRun' && job.status === 'Running')
 
   return (
     <div className="px-3 py-2 hover:bg-secondary/50 transition-colors">

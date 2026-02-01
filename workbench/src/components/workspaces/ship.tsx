@@ -444,6 +444,8 @@ function HistoryDetail({ entry }: { entry?: HistoryEntry }) {
 export function ShipWorkspace() {
   const jobs = useJobsStore((s) => s.jobs)
   const cancelJob = useJobsStore((s) => s.cancelJob)
+  const viewingJobId = useJobsStore((s) => s.viewingJobId)
+  const setViewingJob = useJobsStore((s) => s.setViewingJob)
 
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>()
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -454,6 +456,18 @@ export function ShipWorkspace() {
   const shipRunJobs = jobs.filter((j) => j.type === 'ShipRun')
   const activeJobs = shipRunJobs.filter((j) => j.status === 'Running' || j.status === 'Queued')
   const selectedJob = selectedJobId ? shipRunJobs.find((j) => j.id === selectedJobId) : undefined
+
+  // React to viewingJobId from store (navigation from Jobs panel)
+  useEffect(() => {
+    if (viewingJobId) {
+      const job = shipRunJobs.find((j) => j.id === viewingJobId)
+      if (job) {
+        setSelectedJobId(viewingJobId)
+      }
+      // Clear the viewing job after handling
+      setViewingJob(null)
+    }
+  }, [viewingJobId, shipRunJobs, setViewingJob])
 
   // Load history on mount
   useEffect(() => {
