@@ -62,7 +62,6 @@ import {
   Trash2,
   SearchCheck,
   X,
-  Square,
 } from 'lucide-react'
 
 const typeIcons = {
@@ -363,7 +362,7 @@ function SpecList({
                   {/* Issues */}
               {issues.length > 0 && (
                     <CommandGroup
-                      heading="Published Specs"
+                      heading="Active Specs"
                       className="mt-2 space-y-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-muted-foreground/70"
                     >
                       {issues.map((issue) => {
@@ -609,7 +608,7 @@ function SpecPreview({
   issueDetail?: IssueDetail
   loading?: boolean
   onRelevanceChanged?: () => void
-  onRefineInteractively?: (draftId?: string, issueNumber?: number) => void
+  onRefineInteractively?: (title: string, draftId?: string, issueNumber?: number) => void
   onIssueClosed?: (issueNumber: number) => void
   onIssueCloseStart?: (issueNumber: number) => void
   onIssueCloseFailed?: (issueNumber: number) => void
@@ -765,7 +764,7 @@ function SpecPreview({
                 onDelete={() => console.log('TODO: Delete draft', (spec as DraftDetail).id)}
                 onValidate={() => handleValidate((spec as DraftDetail).id)}
                 onViewRelevance={() => handleViewRelevance((spec as DraftDetail).id)}
-                onRefine={() => onRefineInteractively?.((spec as DraftDetail).id)}
+                onRefine={() => onRefineInteractively?.(spec.title, (spec as DraftDetail).id)}
                 validating={validating}
                 hasRelevance={(spec as DraftDetail).hasRelevance}
               />
@@ -773,7 +772,7 @@ function SpecPreview({
               <IssueActionBar
                 issueNumber={(spec as IssueDetail).number}
                 onClose={() => setConfirmCloseIssue(spec as IssueDetail)}
-                onRefine={() => onRefineInteractively?.(undefined, (spec as IssueDetail).number)}
+                onRefine={() => onRefineInteractively?.(spec.title, undefined, (spec as IssueDetail).number)}
               />
             )
           }
@@ -805,7 +804,7 @@ function SpecPreview({
           onOpenChange={setShowValidationDialog}
           result={validationResult}
           onDelete={draftDetail ? () => handleDeleteRelevance(draftDetail.id) : undefined}
-          onRefine={draftDetail ? () => onRefineInteractively?.(draftDetail.id) : undefined}
+          onRefine={draftDetail ? () => onRefineInteractively?.(draftDetail.title, draftDetail.id) : undefined}
         />
 
         <Dialog
@@ -865,13 +864,14 @@ function SpecPreview({
 }
 
 interface InteractiveTerminalProps {
+  title: string
   draftId?: string
   issueNumber?: number
   initialPrompt?: string
   onClose: () => void
 }
 
-function InteractiveTerminal({ draftId, issueNumber, initialPrompt, onClose }: InteractiveTerminalProps) {
+function InteractiveTerminal({ title, draftId, issueNumber, initialPrompt, onClose }: InteractiveTerminalProps) {
   const terminalRef = useRef<TerminalHandle>(null)
   const sessionRef = useRef<InteractiveSession | null>(null)
   const [exited, setExited] = useState(false)
@@ -958,48 +958,36 @@ function InteractiveTerminal({ draftId, issueNumber, initialPrompt, onClose }: I
     }
   }, [startSession])
 
+  const handleClose = useCallback(() => {
+    sessionRef.current?.kill()
+    onClose()
+  }, [onClose])
+
   return (
     <div className="h-full flex flex-col bg-[#09090b]">
       {/* Header bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b bg-card">
-        <div className="flex items-center gap-2 text-sm">
-          <TerminalIcon className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">Interactive Session</span>
-          {draftId && <Badge variant="outline" className="text-xs">Draft</Badge>}
-          {issueNumber && <Badge variant="outline" className="text-xs">#{issueNumber}</Badge>}
-          {!draftId && !issueNumber && <Badge variant="outline" className="text-xs">New Spec</Badge>}
-        </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          <TerminalIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="font-medium truncate">{title}</span>
           {exited && (
             <Badge
               variant={exitCode === 0 ? 'default' : 'destructive'}
-              className="text-xs mr-2"
+              className="text-xs shrink-0"
             >
               Exited ({exitCode})
             </Badge>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0"
-            title="Stop session"
-            onClick={() => {
-              sessionRef.current?.kill()
-              onClose()
-            }}
-          >
-            <Square className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0"
-            title="Close"
-            onClick={onClose}
-          >
-            <X className="h-3 w-3" />
-          </Button>
         </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0 shrink-0"
+          title="Close"
+          onClick={handleClose}
+        >
+          <X className="h-3 w-3" />
+        </Button>
       </div>
 
       {/* Terminal */}
@@ -1026,6 +1014,7 @@ export function ShapeWorkspace() {
 
   // Interactive terminal session state
   const [interactiveSession, setInteractiveSession] = useState<{
+    title: string
     draftId?: string
     issueNumber?: number
     initialPrompt?: string
@@ -1164,13 +1153,13 @@ export function ShapeWorkspace() {
   }
 
   // Start interactive refinement session
-  const handleRefineInteractively = (draftId?: string, issueNumber?: number) => {
-    setInteractiveSession({ draftId, issueNumber })
+  const handleRefineInteractively = (title: string, draftId?: string, issueNumber?: number) => {
+    setInteractiveSession({ title, draftId, issueNumber })
   }
 
   // Start new spec with initial prompt
   const handleStartNewSpec = (initialPrompt: string) => {
-    setInteractiveSession({ initialPrompt })
+    setInteractiveSession({ title: 'New Spec', initialPrompt })
   }
 
   // Close interactive session
@@ -1197,6 +1186,7 @@ export function ShapeWorkspace() {
         <Tile>
           {interactiveSession ? (
             <InteractiveTerminal
+              title={interactiveSession.title}
               draftId={interactiveSession.draftId}
               issueNumber={interactiveSession.issueNumber}
               initialPrompt={interactiveSession.initialPrompt}

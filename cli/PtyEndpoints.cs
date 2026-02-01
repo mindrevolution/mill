@@ -81,20 +81,20 @@ public static class PtyEndpoints
                 var promptTempFile = Path.Combine(Path.GetTempPath(), $"mill-prompt-{Guid.NewGuid():N}.md");
                 await File.WriteAllTextAsync(promptTempFile, fullPrompt);
 
-                // Build command args
-                var userMessage = initialPrompt ?? "";
-
+                // Build command args - only include user message if provided
                 string sessionId;
                 if (OperatingSystem.IsWindows())
                 {
-                    var escapedMessage = userMessage.Replace("'", "''");
-                    var psCommand = $"& claude --system-prompt (Get-Content -Raw '{promptTempFile}') -- '{escapedMessage}'";
+                    var psCommand = string.IsNullOrEmpty(initialPrompt)
+                        ? $"& claude --system-prompt (Get-Content -Raw '{promptTempFile}')"
+                        : $"& claude --system-prompt (Get-Content -Raw '{promptTempFile}') -- '{initialPrompt.Replace("'", "''")}'";
                     sessionId = await ptyManager.StartSession("powershell", new[] { "-NoProfile", "-Command", psCommand }, projectContext.ProjectPath, cols, rows, promptTempFile);
                 }
                 else
                 {
-                    var escapedMessage = userMessage.Replace("'", "'\\''");
-                    var shellCommand = $"claude --system-prompt \"$(cat '{promptTempFile}')\" -- '{escapedMessage}'";
+                    var shellCommand = string.IsNullOrEmpty(initialPrompt)
+                        ? $"claude --system-prompt \"$(cat '{promptTempFile}')\""
+                        : $"claude --system-prompt \"$(cat '{promptTempFile}')\" -- '{initialPrompt.Replace("'", "'\\''")}'";
                     sessionId = await ptyManager.StartSession("/bin/sh", new[] { "-c", shellCommand }, projectContext.ProjectPath, cols, rows, promptTempFile);
                 }
 
