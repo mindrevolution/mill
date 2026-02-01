@@ -174,6 +174,12 @@ public partial class ShipService
                 );
             }
 
+            // Log raw output for debugging signal parsing issues
+            _logger.LogDebug("Work output (last 500 chars): {Output}",
+                workResponse.Output.Length > 500
+                    ? workResponse.Output[^500..]
+                    : workResponse.Output);
+
             var workSignal = ParseSignal(workResponse.Output);
 
             // Handle MILL_ABORT
@@ -405,8 +411,10 @@ public partial class ShipService
                 );
             }
 
-            // Unknown work signal
-            _logger.LogWarning("Unknown work signal: {Signal}", workSignal.Signal);
+            // Unknown work signal - log more context
+            _logger.LogWarning("Unknown work signal: {Signal}. Output ends with: {OutputEnd}",
+                workSignal.Signal,
+                workResponse.Output.Length > 200 ? workResponse.Output[^200..] : workResponse.Output);
             history.Add(new ShipRunIteration(iteration, "UNKNOWN", workSignal.Signal, DateTime.UtcNow));
             await WriteHistoryEntry(new HistoryEntry(
                 Date: DateTime.UtcNow,
