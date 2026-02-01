@@ -44,10 +44,8 @@ import { useSpecs } from '@/hooks/useApi'
 import { api } from '@/lib/api'
 import type { Draft, DraftDetail, Issue, IssueDetail, DraftValidationResponse } from '@/lib/api'
 import { useJobsStore, getValidationResult } from '@/stores/jobs'
-import type { ChatMessage } from '@/types'
 import {
   Plus,
-  Send,
   FileText,
   Bug,
   Shield,
@@ -445,105 +443,38 @@ function SpecList({
   )
 }
 
-function SpecChat({ draft, sessionId }: { draft?: Draft; sessionId?: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: draft
-        ? `I see you're working on "${draft.title}". What would you like to refine?`
-        : 'What would you like to build? Describe the feature, bug, or task.',
-      timestamp: new Date().toISOString(),
-    },
-  ])
+function NewSpecInput({ onStart }: { onStart: (prompt: string) => void }) {
   const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
 
-  const sendMessage = async () => {
-    if (!input.trim() || sending) return
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date().toISOString(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInput('')
-    setSending(true)
-
-    try {
-      const response = await api.spec.message(sessionId || 'new', input)
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: response.content,
-          timestamp: new Date().toISOString(),
-        },
-      ])
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
-          timestamp: new Date().toISOString(),
-        },
-      ])
-    } finally {
-      setSending(false)
-    }
+  const handleStart = () => {
+    if (!input.trim()) return
+    onStart(input.trim())
   }
 
   return (
     <div className="h-full flex flex-col">
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={cn(
-                'flex',
-                msg.role === 'user' ? 'justify-end' : 'justify-start'
-              )}
-            >
-              <div
-                className={cn(
-                  'max-w-[80%] rounded-lg px-3 py-2 text-sm',
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card border'
-                )}
-              >
-                {msg.content}
-              </div>
-            </div>
-          ))}
-          {sending && (
-            <div className="flex justify-start">
-              <div className="bg-card border rounded-lg px-3 py-2">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            </div>
-          )}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center space-y-4 max-w-md">
+          <Orbit className="h-12 w-12 mx-auto text-muted-foreground/50" />
+          <div>
+            <h3 className="text-lg font-medium">New Spec</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Describe what you want to build and start an interactive session to shape your spec.
+            </p>
+          </div>
         </div>
-      </ScrollArea>
+      </div>
       <div className="p-3 border-t">
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleStart()}
             placeholder="Describe what you want to build..."
             className="flex-1"
-            disabled={sending}
           />
-          <Button onClick={sendMessage} size="icon" disabled={sending}>
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <Button onClick={handleStart} size="icon" disabled={!input.trim()} title="Start interactive session">
+            <TerminalIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -936,10 +867,11 @@ function SpecPreview({
 interface InteractiveTerminalProps {
   draftId?: string
   issueNumber?: number
+  initialPrompt?: string
   onClose: () => void
 }
 
-function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTerminalProps) {
+function InteractiveTerminal({ draftId, issueNumber, initialPrompt, onClose }: InteractiveTerminalProps) {
   const terminalRef = useRef<TerminalHandle>(null)
   const sessionRef = useRef<InteractiveSession | null>(null)
   const [exited, setExited] = useState(false)
@@ -969,8 +901,13 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
       }
     }
 
+    // Add initial prompt as the message to Claude
+    if (initialPrompt) {
+      args.push('--', initialPrompt)
+    }
+
     return { command: 'claude', args }
-  }, [draftId, issueNumber])
+  }, [draftId, issueNumber, initialPrompt])
 
   // Start session when terminal reports its initial dimensions
   const startSession = useCallback(async (cols: number, rows: number) => {
@@ -1055,6 +992,7 @@ function InteractiveTerminal({ draftId, issueNumber, onClose }: InteractiveTermi
           <span className="font-medium">Interactive Session</span>
           {draftId && <Badge variant="outline" className="text-xs">Draft</Badge>}
           {issueNumber && <Badge variant="outline" className="text-xs">#{issueNumber}</Badge>}
+          {!draftId && !issueNumber && <Badge variant="outline" className="text-xs">New Spec</Badge>}
         </div>
         <div className="flex items-center gap-1">
           {exited && (
@@ -1106,7 +1044,6 @@ export function ShapeWorkspace() {
   const { drafts, issues, loading, error, refetch } = useSpecs()
   const [selectedDraft, setSelectedDraft] = useState<Draft | undefined>()
   const [selectedId, setSelectedId] = useState<string | undefined>()
-  const [sessionId, setSessionId] = useState<string | undefined>()
   const [draftDetail, setDraftDetail] = useState<DraftDetail | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
   const [loadingSpec, setLoadingSpec] = useState(false)
@@ -1116,6 +1053,7 @@ export function ShapeWorkspace() {
   const [interactiveSession, setInteractiveSession] = useState<{
     draftId?: string
     issueNumber?: number
+    initialPrompt?: string
   } | null>(null)
 
   // Watch for job result viewing
@@ -1230,16 +1168,13 @@ export function ShapeWorkspace() {
     refetch(true)
   }
 
-  const handleNewSpec = async () => {
-    try {
-      const session = await api.spec.start()
-      setSessionId(session.id)
-      setSelectedDraft(undefined)
-      setSelectedId(undefined)
-    } catch {
-      // TODO: Show error toast
-      console.error('Failed to start spec session')
-    }
+  const handleNewSpec = () => {
+    // Clear selection and close any active session to show NewSpecInput
+    setSelectedDraft(undefined)
+    setSelectedId(undefined)
+    setDraftDetail(undefined)
+    setIssueDetail(undefined)
+    setInteractiveSession(null)
   }
 
   // Refresh draft detail to update hasRelevance flag
@@ -1256,6 +1191,11 @@ export function ShapeWorkspace() {
   // Start interactive refinement session
   const handleRefineInteractively = (draftId?: string, issueNumber?: number) => {
     setInteractiveSession({ draftId, issueNumber })
+  }
+
+  // Start new spec with initial prompt
+  const handleStartNewSpec = (initialPrompt: string) => {
+    setInteractiveSession({ initialPrompt })
   }
 
   // Close interactive session
@@ -1284,10 +1224,11 @@ export function ShapeWorkspace() {
             <InteractiveTerminal
               draftId={interactiveSession.draftId}
               issueNumber={interactiveSession.issueNumber}
+              initialPrompt={interactiveSession.initialPrompt}
               onClose={handleCloseInteractiveSession}
             />
           ) : (
-            <SpecChat draft={selectedDraft} sessionId={sessionId} />
+            <NewSpecInput onStart={handleStartNewSpec} />
           )}
         </Tile>
         <Tile>
