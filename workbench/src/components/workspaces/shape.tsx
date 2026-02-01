@@ -452,25 +452,21 @@ function NewSpecInput({ onStart }: { onStart: (prompt: string) => void }) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center space-y-4 max-w-md">
-          <Orbit className="h-12 w-12 mx-auto text-muted-foreground/50" />
-          <div>
-            <h3 className="text-lg font-medium">New Spec</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Describe what you want to build and start an interactive session to shape your spec.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="p-3 border-t">
-        <div className="flex gap-2">
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        {/* Point to spec list */}
+        <p className="text-xs text-muted-foreground mb-8">← Select an existing spec to refine it</p>
+
+        <div className="text-xs text-muted-foreground/50 mb-8">— or —</div>
+
+        {/* New spec input */}
+        <div className="w-full max-w-md flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleStart()}
-            placeholder="Describe what you want to build..."
+            placeholder="What will you shape?"
             className="flex-1"
+            autoFocus
           />
           <Button onClick={handleStart} size="icon" disabled={!input.trim()} title="Start interactive session">
             <TerminalIcon className="h-4 w-4" />
