@@ -7,7 +7,7 @@ Transform user intent into a complete, loop-ready specification.
 ## Context
 Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
 
-**Resume Mode:** If `# Resume Mode` section exists at the end of this prompt, skip to Flow step 0 immediately — the draft is already loaded, no file search needed.
+**Resume Mode:** If `# Resume Mode` section exists at the end of this prompt, go to Flow step 0 immediately — read the specified draft file, no warmup needed.
 **New Session:** User's first message IS their intent. Proceed directly — don't ask "what would you like to build?"
 
 ## Using Personas
@@ -63,10 +63,11 @@ fields_pending: [acceptance_criteria, scope, verification, loop_contract]
 
 **Before doing anything else**, check if a `# Resume Mode` section exists at the end of this prompt.
 
-If `# Resume Mode` exists:
-1. The draft content is already loaded below — do NOT search for drafts
-2. Skip directly to **step 3 (Elicit)** to continue refining
-3. Acknowledge the draft: "resuming draft: {title}" and ask what to refine
+If `# Resume Mode` exists with a file path:
+1. **IMMEDIATELY read that file** using the Read tool — this is your draft
+2. Do NOT search `.mill/shape/drafts/` or warm up context — the draft path is given
+3. After reading, acknowledge: "resuming: {title from draft}" and ask what to refine
+4. Skip to **step 3 (Elicit)** to continue
 
 If no `# Resume Mode` section → proceed to step 1.
 
@@ -139,11 +140,14 @@ Use template from `spec/templates/{type}.md`. Fill ALL fields.
 [ ] each criterion verifiable
 [ ] scope clear (in/out)
 [ ] no placeholders
+[ ] no open questions (resolve before finalizing)
 [ ] Loop Contract present with:
     - test command (or explicit "none: <reason>")
     - success criteria
     - stop conditions
 ```
+
+**Open questions block finalization.** If the spec contains "Open Questions", "Open Topics", or similar unresolved sections, they MUST be resolved before creating a GitHub Issue. Drafts may have open questions; issues may not.
 
 **Loop Contract is required.** Ask: "What command runs the tests?" Common: `npm test`, `dotnet test`, `pytest`, `go test ./...`. If no tests exist, require explicit reason. Stop conditions default to 20 iterations.
 
@@ -200,8 +204,19 @@ validation:
   ✓ {n} testable criteria
   ✓ verification defined
   ✓ scope clear
+  ✓ no open questions
 
 approve and create issue? [y/n]
+```
+
+**If open questions exist**, show validation failure and resolve them first:
+```
+⚠ cannot finalize — open questions remain:
+
+- [question 1]
+- [question 2]
+
+resolve these before creating issue. which should we address first?
 ```
 
 **STOP HERE.** Do not call `gh issue create` or proceed to step 8 until user responds.

@@ -45,6 +45,7 @@ For each reference type, verify against codebase:
 | APIs exist | `Grep` for names | "API renamed/removed" |
 | Pattern used | `Grep`/`Read` | "architecture changed" |
 | Problem exists | `Grep` for symptoms | "issue may be resolved" |
+| No open questions | Check for "Open Questions/Topics" | "unresolved questions block finalization" |
 
 **Type-specific checks:**
 
@@ -86,7 +87,7 @@ Output ONLY valid JSON (no markdown, no explanation):
   "verdict": "<current|review|discard>",
   "findings": [
     {
-      "category": "<implemented|moved|renamed|changed|resolved|obsolete>",
+      "category": "<implemented|moved|renamed|changed|resolved|obsolete|unresolved>",
       "severity": "<info|warning|critical>",
       "reference": "<what was checked>",
       "expected": "<what draft assumed>",
