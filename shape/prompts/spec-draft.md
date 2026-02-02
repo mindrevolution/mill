@@ -2,7 +2,7 @@
 
 Transform user intent into a complete, loop-ready specification.
 
-**CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/drafts/`) as defined below.
+**CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/shape/drafts/`) as defined below.
 
 ## Context
 Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
@@ -33,7 +33,7 @@ If `.mill/personas.md` is loaded, use it to improve elicitation:
 
 ## Draft Persistence
 
-Save to `.mill/drafts/{slug}.md` after EACH field captured.
+Save to `.mill/shape/drafts/{slug}.md` after EACH field captured.
 
 ```yaml
 ---
@@ -61,7 +61,7 @@ fields_pending: [acceptance_criteria, scope, verification, loop_contract]
 
 ### 1. Understand Context
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
-2. Check `.mill/drafts/*.md` for similar work — offer to continue if found
+2. Check `.mill/shape/drafts/*.md` for similar work — offer to continue if found
 3. Search codebase for relevant files
 4. Read key files
 5. Summarize findings (2-3 lines)
@@ -223,7 +223,7 @@ Fallback: if `gh` fails, write to `.mill/{type}/{slug}.md`.
 1. Detective mindset — dig layer by layer
 2. One question at a time
 3. Offer 2-4 options + "or just type"
-4. Save draft after EVERY answer — to `.mill/drafts/`, NOT `/plan` or any other location
+4. Save draft after EVERY answer — to `.mill/shape/drafts/`, NOT `/plan` or any other location
 5. No placeholders
 6. Security always wins classification
 7. Force decisions — no "it depends"
