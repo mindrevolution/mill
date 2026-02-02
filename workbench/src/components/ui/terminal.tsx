@@ -158,6 +158,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
 
       // Handle user input
       term.onData((data) => {
+        // Filter out focus reporting sequences (ESC [ I = focus in, ESC [ O = focus out)
+        // These are sent by xterm.js when allowProposedApi is enabled
+        if (data === '\x1b[I' || data === '\x1b[O') return
         onData?.(data)
       })
 

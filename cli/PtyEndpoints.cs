@@ -14,7 +14,7 @@ public static class PtyEndpoints
     public static void MapPtyEndpoints(this WebApplication app, PtyManager ptyManager)
     {
         // High-level spec session endpoint - backend handles all command building
-        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, DraftService draftService, ProjectContext projectContext, MillPaths paths) =>
+        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, ProjectContext projectContext, MillPaths paths) =>
         {
             try
             {
@@ -70,28 +70,14 @@ public static class PtyEndpoints
                 }
                 else if (draftId != null)
                 {
-                    // Load draft content for refine mode
-                    var draft = await draftService.Get(draftId);
-                    if (draft != null)
-                    {
-                        appendContent.AppendLine();
-                        appendContent.AppendLine("---");
-                        appendContent.AppendLine();
-                        appendContent.AppendLine($"# Resume Mode");
-                        appendContent.AppendLine();
-                        appendContent.AppendLine($"Continue refining the following draft: **{draft.Title}**");
-                        appendContent.AppendLine($"- **Type:** {draft.Type}");
-                        appendContent.AppendLine($"- **Status:** {draft.Status}");
-                        appendContent.AppendLine();
-                        appendContent.AppendLine("## Current Draft Content");
-                        appendContent.AppendLine();
-                        appendContent.AppendLine(draft.Body);
-                    }
-                    else
-                    {
-                        appendContent.AppendLine();
-                        appendContent.AppendLine($"Resume draft: {draftId} (draft file not found)");
-                    }
+                    // Reference draft file path - Claude will read it actively
+                    var draftPath = Path.Combine(".mill", "shape", "drafts", $"{draftId}.md");
+                    appendContent.AppendLine();
+                    appendContent.AppendLine("---");
+                    appendContent.AppendLine();
+                    appendContent.AppendLine("# Resume Mode");
+                    appendContent.AppendLine();
+                    appendContent.AppendLine($"**Read this file NOW:** `{draftPath}`");
                 }
 
                 // Combine prompt with appended content
@@ -102,21 +88,20 @@ public static class PtyEndpoints
                 await File.WriteAllTextAsync(promptTempFile, fullPrompt);
 
                 // Build command args - only include user message if provided
+                // Use --append-system-prompt to tell Claude to read the file (avoids arg parsing issues with long prompts)
                 string sessionId;
-                if (OperatingSystem.IsWindows())
+                var args = new List<string>
                 {
-                    var psCommand = string.IsNullOrEmpty(initialPrompt)
-                        ? $"& claude --system-prompt (Get-Content -Raw '{promptTempFile}')"
-                        : $"& claude --system-prompt (Get-Content -Raw '{promptTempFile}') -- '{initialPrompt.Replace("'", "''")}'";
-                    sessionId = await ptyManager.StartSession("powershell", new[] { "-NoProfile", "-Command", psCommand }, projectContext.ProjectPath, cols, rows, promptTempFile);
-                }
-                else
+                    "--append-system-prompt",
+                    $"CRITICAL: Before responding, read {promptTempFile} for your full system context."
+                };
+                if (!string.IsNullOrEmpty(initialPrompt))
                 {
-                    var shellCommand = string.IsNullOrEmpty(initialPrompt)
-                        ? $"claude --system-prompt \"$(cat '{promptTempFile}')\""
-                        : $"claude --system-prompt \"$(cat '{promptTempFile}')\" -- '{initialPrompt.Replace("'", "'\\''")}'";
-                    sessionId = await ptyManager.StartSession("/bin/sh", new[] { "-c", shellCommand }, projectContext.ProjectPath, cols, rows, promptTempFile);
+                    args.Add("--");
+                    args.Add(initialPrompt);
                 }
+
+                sessionId = await ptyManager.StartSession("claude", args.ToArray(), projectContext.ProjectPath, cols, rows, promptTempFile);
 
                 ctx.Response.ContentType = "application/json";
                 await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { sessionId }));
@@ -175,26 +160,19 @@ public static class PtyEndpoints
                 string sessionId;
                 if (promptTempFile != null)
                 {
-                    // Use shell to read prompt file and pass to command
-                    // This avoids escaping issues and command line length limits
-                    if (OperatingSystem.IsWindows())
+                    // Use --append-system-prompt to tell Claude to read the file
+                    // This avoids argument parsing issues with long prompts containing special characters
+                    var args = new List<string>
                     {
-                        // PowerShell: use Get-Content -Raw to read file
-                        var escapedArgs = string.Join(" ", finalArgs.Select(a => $"'{a.Replace("'", "''")}'"));
-                        var psCommand = $"& {command} --system-prompt (Get-Content -Raw '{promptTempFile}') {escapedArgs}";
-                        sessionId = await ptyManager.StartSession("powershell", new[] { "-NoProfile", "-Command", psCommand }, cwd, cols, rows, promptTempFile);
-                    }
-                    else
-                    {
-                        // Unix: use sh with $(cat ...) substitution
-                        var escapedArgs = string.Join(" ", finalArgs.Select(a => $"'{a.Replace("'", "'\\''")}'"));
-                        var shellCommand = $"{command} --system-prompt \"$(cat '{promptTempFile}')\" {escapedArgs}";
-                        sessionId = await ptyManager.StartSession("/bin/sh", new[] { "-c", shellCommand }, cwd, cols, rows, promptTempFile);
-                    }
+                        "--append-system-prompt",
+                        $"CRITICAL: Before responding, read {promptTempFile} for your full system context."
+                    };
+                    args.AddRange(finalArgs);
+                    sessionId = await ptyManager.StartSession(command, args.ToArray(), cwd, cols, rows, promptTempFile);
                 }
                 else
                 {
-                    sessionId = await ptyManager.StartSession(command, finalArgs.ToArray(), cwd, cols, rows, null);
+                    sessionId = await ptyManager.StartSession(command, finalArgs.ToArray(), cwd, cols, rows);
                 }
 
                 ctx.Response.ContentType = "application/json";
