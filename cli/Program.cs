@@ -1128,7 +1128,7 @@ static partial class Mill
         Out.Blank();
 
         // Run Claude to analyze the codebase
-        var sweepPromptPath = Path.Combine(FindMillHome(), "run/prompts/sweep-analyze.md");
+        var sweepPromptPath = Path.Combine(FindMillHome(), "ship/prompts/sweep-analyze.md");
         if (!File.Exists(sweepPromptPath))
         {
             Out.Error($"sweep prompt not found: {sweepPromptPath}");
@@ -1672,8 +1672,8 @@ static partial class Mill
         var (specContent, specRef, issueNumber, isGhIssue) = specResult.Spec!;
 
         // Validate prompts exist before starting
-        var iterationPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-iterate.md");
-        var criterionPrompt = Path.Combine(FindMillHome(), "run/prompts/loop-verify-criterion.md");
+        var iterationPrompt = Path.Combine(FindMillHome(), "ship/prompts/loop-iterate.md");
+        var criterionPrompt = Path.Combine(FindMillHome(), "ship/prompts/loop-verify-criterion.md");
         if (!File.Exists(iterationPrompt))
         {
             Out.Error($"iteration prompt not found: {iterationPrompt}");
@@ -1986,7 +1986,7 @@ static partial class Mill
         }
 
         // Load and render the prompt
-        var promptPath = Path.Combine(FindMillHome(), "run/prompts/run-autopick.md");
+        var promptPath = Path.Combine(FindMillHome(), "ship/prompts/run-autopick.md");
         if (!File.Exists(promptPath))
         {
             Out.Error($"autopick prompt not found: {promptPath}");
@@ -2611,7 +2611,7 @@ static partial class Mill
     static async Task<(bool AllPassed, List<CriterionResult> Results, string? FailureContext)> RunCriterionVerification(
         string specContent, string specRef, List<AcceptanceCriterion> criteria)
     {
-        var promptPath = Path.Combine(FindMillHome(), "run/prompts/loop-verify-criterion.md");
+        var promptPath = Path.Combine(FindMillHome(), "ship/prompts/loop-verify-criterion.md");
         var template = await File.ReadAllTextAsync(promptPath);
 
         var results = new List<CriterionResult>();
