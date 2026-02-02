@@ -109,6 +109,47 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
       term.open(containerRef.current)
       fitAddon.fit()
 
+      // Enable copy/paste keyboard shortcuts
+      // Use event.code (physical key) instead of event.key (can change with modifiers)
+      term.attachCustomKeyEventHandler((event) => {
+        // Only handle keydown events
+        if (event.type !== 'keydown') return true
+
+        const isMac = navigator.platform.includes('Mac')
+        const mod = isMac ? event.metaKey : event.ctrlKey
+
+        // Ctrl+Shift+C or Cmd+Shift+C: Copy (terminal convention)
+        if (mod && event.shiftKey && event.code === 'KeyC') {
+          const selection = term.getSelection()
+          if (selection) navigator.clipboard.writeText(selection)
+          return false
+        }
+
+        // Ctrl+Shift+V or Cmd+Shift+V: Paste (terminal convention)
+        if (mod && event.shiftKey && event.code === 'KeyV') {
+          navigator.clipboard.readText().then((text) => onData?.(text))
+          return false
+        }
+
+        // Ctrl+C or Cmd+C: Copy if selection exists, otherwise send interrupt
+        if (mod && !event.shiftKey && event.code === 'KeyC') {
+          if (term.hasSelection()) {
+            navigator.clipboard.writeText(term.getSelection())
+            return false
+          }
+          // No selection - let it pass through as SIGINT (^C)
+          return true
+        }
+
+        // Ctrl+V or Cmd+V: Paste
+        if (mod && !event.shiftKey && event.code === 'KeyV') {
+          navigator.clipboard.readText().then((text) => onData?.(text))
+          return false
+        }
+
+        return true
+      })
+
       termRef.current = term
       fitAddonRef.current = fitAddon
 
