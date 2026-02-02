@@ -166,6 +166,56 @@ public class DraftService
         }
     }
 
+    public async Task<DraftPublishResult> Publish(string draftId, IssueService issueService)
+    {
+        // 1. Read draft file
+        var draftPath = Path.Combine(DraftsPath, $"{draftId}.md");
+        if (!File.Exists(draftPath))
+        {
+            return new DraftPublishResult(false, Error: $"Draft not found: {draftId}");
+        }
+
+        var content = await File.ReadAllTextAsync(draftPath);
+
+        // 2. Parse frontmatter for title and type
+        var fm = ParseFrontmatter(content);
+        var title = fm.title ?? MarkdownHelpers.FormatName(draftId);
+        var label = fm.type ?? "task"; // Default to task if no type specified
+
+        // 3. Extract body WITHOUT frontmatter (clean markdown only)
+        var body = MarkdownHelpers.ExtractBody(content);
+
+        // 4. Call IssueService.Create
+        var result = await issueService.Create(title, body, label);
+        if (!result.Success)
+        {
+            _logger.LogError("Failed to publish draft {DraftId}: {Error}", draftId, result.Error);
+            return new DraftPublishResult(false, Error: result.Error);
+        }
+
+        // 5. On success: delete draft file + relevance file
+        try
+        {
+            File.Delete(draftPath);
+            _logger.LogInformation("Deleted draft file {DraftId}", draftId);
+
+            var relevancePath = GetRelevancePath(draftId);
+            if (File.Exists(relevancePath))
+            {
+                File.Delete(relevancePath);
+                _logger.LogInformation("Deleted relevance file for draft {DraftId}", draftId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Issue created but failed to clean up draft files for {DraftId}", draftId);
+            // Issue was created successfully, so still return success
+        }
+
+        _logger.LogInformation("Published draft {DraftId} as issue #{Number}", draftId, result.Number);
+        return new DraftPublishResult(true, Number: result.Number, Url: result.Url);
+    }
+
     private async Task SaveRelevance(string draftId, DraftValidationResponse result)
     {
         var relevancePath = GetRelevancePath(draftId);

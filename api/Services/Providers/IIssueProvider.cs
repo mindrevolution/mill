@@ -30,6 +30,11 @@ public interface IIssueProvider
     Task<IssueCloseResult> CloseIssue(int number, string workingDir);
 
     /// <summary>
+    /// Create a new issue.
+    /// </summary>
+    Task<IssueCreateResult> CreateIssue(string title, string body, string label, string workingDir);
+
+    /// <summary>
     /// Create a pull request that closes the given issue.
     /// </summary>
     Task<PrCreateResult> CreatePullRequest(int issueNumber, string branch, string title, string body, string workingDir);
@@ -46,4 +51,5 @@ public interface IIssueProvider
 }
 
 public record IssueCloseResult(bool Closed, string? Error = null);
+public record IssueCreateResult(bool Success, int? Number = null, string? Url = null, string? Error = null);
 public record PrCreateResult(bool Success, string? Url = null, string? Error = null);

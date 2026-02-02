@@ -193,6 +193,52 @@ public partial class GithubProvider : CliProviderBase, IIssueProvider
         return new IssueCloseResult(true);
     }
 
+    public async Task<IssueCreateResult> CreateIssue(string title, string body, string label, string workingDir)
+    {
+        // Write body to temp file to avoid shell escaping issues
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, body);
+
+            var escapedTitle = title.Replace("\"", "\\\"");
+            var args = $"issue create --title \"{escapedTitle}\" --body-file \"{tempFile}\" --label \"{label}\"";
+
+            var result = await RunCommandWithResult("gh", args, workingDir);
+
+            if (!result.Success)
+            {
+                var error = string.IsNullOrWhiteSpace(result.Error) ? "gh issue create failed" : result.Error.Trim();
+                Logger.LogWarning(
+                    "Failed to create GitHub issue. Exit {ExitCode}. Error: {Error}",
+                    result.ExitCode,
+                    error
+                );
+                return new IssueCreateResult(false, Error: error);
+            }
+
+            // gh outputs the issue URL: https://github.com/owner/repo/issues/123
+            var issueUrl = result.Output?.Trim();
+            int? issueNumber = null;
+
+            if (!string.IsNullOrEmpty(issueUrl))
+            {
+                var lastSlash = issueUrl.LastIndexOf('/');
+                if (lastSlash >= 0 && int.TryParse(issueUrl[(lastSlash + 1)..], out var num))
+                {
+                    issueNumber = num;
+                }
+            }
+
+            Logger.LogInformation("Created GitHub issue #{Number}: {Url}", issueNumber, issueUrl);
+            return new IssueCreateResult(true, Number: issueNumber, Url: issueUrl);
+        }
+        finally
+        {
+            try { File.Delete(tempFile); } catch { }
+        }
+    }
+
     public async Task<PrCreateResult> CreatePullRequest(int issueNumber, string branch, string title, string body, string workingDir)
     {
         // Build PR body with reference to the issue

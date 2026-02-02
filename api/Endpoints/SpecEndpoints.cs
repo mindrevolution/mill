@@ -65,6 +65,16 @@ public static class SpecEndpoints
         .WithName("DeleteDraftRelevance")
         .WithSummary("Delete cached relevance result for a draft");
 
+        group.MapPost("/drafts/{id}/publish", async (string id, DraftService drafts, IssueService issues) =>
+        {
+            var result = await drafts.Publish(id, issues);
+            return result.Success
+                ? Results.Ok(new { number = result.Number, url = result.Url })
+                : Results.Problem(result.Error ?? "Failed to publish draft", statusCode: 500);
+        })
+        .WithName("PublishDraft")
+        .WithSummary("Publish a draft as a GitHub issue");
+
         group.MapGet("/issues", async (IssueService issues, bool refresh = false) =>
         {
             var list = await issues.GetAll(forceRefresh: refresh);

@@ -64,6 +64,24 @@ public class IssueService
         return result;
     }
 
+    public async Task<IssueCreateResult> Create(string title, string body, string label)
+    {
+        var provider = await _providerFactory.GetProvider(_project.ProjectPath);
+        if (provider == null)
+        {
+            _logger.LogWarning("No issue provider available for {WorkingDir}", _project.ProjectPath);
+            return new IssueCreateResult(false, Error: "No issue provider available for this repository.");
+        }
+
+        var result = await provider.CreateIssue(title, body, label, _project.ProjectPath);
+        if (result.Success)
+        {
+            provider.ClearCache();
+        }
+
+        return result;
+    }
+
     public async Task ClearCache()
     {
         var provider = await _providerFactory.GetProvider(_project.ProjectPath);

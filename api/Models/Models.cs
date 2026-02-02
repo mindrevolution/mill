@@ -27,6 +27,8 @@ public record DraftDetail(
     bool HasRelevance = false
 );
 
+public record DraftPublishResult(bool Success, int? Number = null, string? Url = null, string? Error = null);
+
 public record Issue(
     int Number,
     string Title,

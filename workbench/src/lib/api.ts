@@ -316,6 +316,10 @@ export const api = {
     deleteRelevance: (id: string) => request<void>(`/api/spec/drafts/${id}/relevance`, {
       method: 'DELETE',
     }),
+    publishDraft: (id: string) => request<{ number: number; url?: string }>(
+      `/api/spec/drafts/${id}/publish`,
+      { method: 'POST' }
+    ),
     issues: (refresh = false) => request<Issue[]>(`/api/spec/issues${refresh ? '?refresh=true' : ''}`),
     issue: (number: number, refresh = false) => request<IssueDetail>(`/api/spec/issues/${number}${refresh ? '?refresh=true' : ''}`),
     closeIssue: (number: number) => request<void>(`/api/spec/issues/${number}/close`, {

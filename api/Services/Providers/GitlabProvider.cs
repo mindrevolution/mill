@@ -122,6 +122,53 @@ public class GitlabProvider : CliProviderBase, IIssueProvider
         return new IssueCloseResult(true);
     }
 
+    public async Task<IssueCreateResult> CreateIssue(string title, string body, string label, string workingDir)
+    {
+        // Write body to temp file to avoid shell escaping issues
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, body);
+
+            var escapedTitle = title.Replace("\"", "\\\"");
+            // glab uses --label (singular) and can specify multiple times
+            var args = $"issue create --title \"{escapedTitle}\" --description \"$(cat \"{tempFile}\")\" --label \"{label}\" --yes";
+
+            var result = await RunCommandWithResult("glab", args, workingDir);
+
+            if (!result.Success)
+            {
+                var error = string.IsNullOrWhiteSpace(result.Error) ? "glab issue create failed" : result.Error.Trim();
+                Logger.LogWarning(
+                    "Failed to create GitLab issue. Exit {ExitCode}. Error: {Error}",
+                    result.ExitCode,
+                    error
+                );
+                return new IssueCreateResult(false, Error: error);
+            }
+
+            // glab outputs the issue URL: https://gitlab.com/owner/repo/-/issues/123
+            var issueUrl = result.Output?.Trim();
+            int? issueNumber = null;
+
+            if (!string.IsNullOrEmpty(issueUrl))
+            {
+                var lastSlash = issueUrl.LastIndexOf('/');
+                if (lastSlash >= 0 && int.TryParse(issueUrl[(lastSlash + 1)..], out var num))
+                {
+                    issueNumber = num;
+                }
+            }
+
+            Logger.LogInformation("Created GitLab issue #{Number}: {Url}", issueNumber, issueUrl);
+            return new IssueCreateResult(true, Number: issueNumber, Url: issueUrl);
+        }
+        finally
+        {
+            try { File.Delete(tempFile); } catch { }
+        }
+    }
+
     public async Task<PrCreateResult> CreatePullRequest(int issueNumber, string branch, string title, string body, string workingDir)
     {
         // Build MR body with reference to the issue

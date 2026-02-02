@@ -61,6 +61,7 @@ import {
   Archive,
   Trash2,
   SearchCheck,
+  CloudUpload,
   X,
 } from 'lucide-react'
 
@@ -168,14 +169,18 @@ function DraftActionBar({
   onValidate,
   onViewRelevance,
   onRefine,
+  onPublish,
   validating,
+  publishing,
   hasRelevance,
 }: {
   onDelete?: () => void
   onValidate?: () => void
   onViewRelevance?: () => void
   onRefine?: () => void
+  onPublish?: () => void
   validating?: boolean
+  publishing?: boolean
   hasRelevance?: boolean
 }) {
   return (
@@ -201,6 +206,20 @@ function DraftActionBar({
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <SearchCheck className="h-4 w-4" />
+        )}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+        title="Publish to GitHub"
+        onClick={onPublish}
+        disabled={publishing}
+      >
+        {publishing ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <CloudUpload className="h-4 w-4" />
         )}
       </Button>
       <Separator orientation="vertical" className="h-4 mx-1" />
@@ -611,6 +630,7 @@ function SpecPreview({
   onIssueClosed,
   onIssueCloseStart,
   onIssueCloseFailed,
+  onDraftPublished,
 }: {
   draftDetail?: DraftDetail
   issueDetail?: IssueDetail
@@ -620,6 +640,7 @@ function SpecPreview({
   onIssueClosed?: (issueNumber: number) => void
   onIssueCloseStart?: (issueNumber: number) => void
   onIssueCloseFailed?: (issueNumber: number) => void
+  onDraftPublished?: (issueNumber: number) => void
 }) {
   const [validationResult, setValidationResult] = useState<DraftValidationResponse | null>(null)
   const [showValidationDialog, setShowValidationDialog] = useState(false)
@@ -627,6 +648,9 @@ function SpecPreview({
   const [confirmCloseIssue, setConfirmCloseIssue] = useState<IssueDetail | null>(null)
   const [closingIssue, setClosingIssue] = useState(false)
   const [closeIssueError, setCloseIssueError] = useState<string | null>(null)
+  const [confirmPublishDraft, setConfirmPublishDraft] = useState<DraftDetail | null>(null)
+  const [publishingDraft, setPublishingDraft] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
 
   const jobs = useJobsStore((s) => s.jobs)
   const createJob = useJobsStore((s) => s.createJob)
@@ -714,6 +738,23 @@ function SpecPreview({
     }
   }
 
+  const handlePublishDraft = async (draft: DraftDetail) => {
+    setPublishError(null)
+    setPublishingDraft(true)
+    try {
+      const result = await api.spec.publishDraft(draft.id)
+      if (result.number) {
+        onDraftPublished?.(result.number)
+      }
+      setConfirmPublishDraft(null)
+    } catch (e) {
+      console.error('Failed to publish draft:', e)
+      setPublishError('Failed to publish draft. Check permissions and try again.')
+    } finally {
+      setPublishingDraft(false)
+    }
+  }
+
   // Check if there's a running validation job for the current draft
   const currentDraftId = draftDetail?.id
   const validatingJob = jobs.find(
@@ -795,7 +836,9 @@ function SpecPreview({
                 onValidate={() => handleValidate((spec as DraftDetail).id)}
                 onViewRelevance={() => handleViewRelevance((spec as DraftDetail).id)}
                 onRefine={() => onRefineInteractively?.(spec.title, (spec as DraftDetail).id)}
+                onPublish={() => setConfirmPublishDraft(spec as DraftDetail)}
                 validating={validating}
+                publishing={publishingDraft}
                 hasRelevance={(spec as DraftDetail).hasRelevance}
               />
             ) : (
@@ -874,6 +917,60 @@ function SpecPreview({
                   </>
                 ) : (
                   'Close issue'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={confirmPublishDraft !== null}
+          onOpenChange={(open) => !open && !publishingDraft && setConfirmPublishDraft(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Publish to GitHub</DialogTitle>
+              <DialogDescription asChild>
+                <div className="space-y-3">
+                  <p>This will create a GitHub issue and delete the local draft.</p>
+                  <div className="rounded-md border bg-muted/50 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Title:</span>
+                      <span className="font-medium text-foreground">{confirmPublishDraft?.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Type:</span>
+                      <Badge variant="secondary">{confirmPublishDraft?.type}</Badge>
+                    </div>
+                  </div>
+                </div>
+              </DialogDescription>
+              {publishError && (
+                <p className="text-sm text-destructive mt-2">{publishError}</p>
+              )}
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setConfirmPublishDraft(null)}
+                disabled={publishingDraft}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => confirmPublishDraft && handlePublishDraft(confirmPublishDraft)}
+                disabled={publishingDraft}
+              >
+                {publishingDraft ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Publishing…
+                  </>
+                ) : (
+                  <>
+                    <CloudUpload className="h-3 w-3" />
+                    Publish
+                  </>
                 )}
               </Button>
             </DialogFooter>
@@ -1278,6 +1375,29 @@ export function ShapeWorkspace() {
     setInteractiveSession(null)
   }
 
+  // Handle draft published to GitHub issue
+  const handleDraftPublished = async (issueNumber: number) => {
+    // Clear current selection (draft no longer exists)
+    setSelectedId(undefined)
+    setDraftDetail(undefined)
+    setIssueDetail(undefined)
+
+    // Refresh lists to get the new issue
+    await refetch(true)
+
+    // Select the newly created issue
+    setSelectedId(`issue-${issueNumber}`)
+    setLoadingSpec(true)
+    try {
+      const detail = await api.spec.issue(issueNumber)
+      setIssueDetail(detail)
+    } catch (e) {
+      console.error('Failed to fetch new issue details:', e)
+    } finally {
+      setLoadingSpec(false)
+    }
+  }
+
   return (
     <div className="h-full p-1">
       <TileSplit direction="horizontal" sizes={[25, 40, 35]}>
@@ -1317,6 +1437,7 @@ export function ShapeWorkspace() {
             onIssueClosed={handleIssueClosed}
             onIssueCloseStart={handleIssueCloseStart}
             onIssueCloseFailed={handleIssueCloseFailed}
+            onDraftPublished={handleDraftPublished}
             loading={loadingSpec}
           />
         </Tile>
