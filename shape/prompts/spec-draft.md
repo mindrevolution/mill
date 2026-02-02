@@ -7,7 +7,7 @@ Transform user intent into a complete, loop-ready specification.
 ## Context
 Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
 
-**Resume Mode:** If `# Resume Mode` section exists, continue from that draft.
+**Resume Mode:** If `# Resume Mode` section exists at the end of this prompt, skip to Flow step 0 immediately — the draft is already loaded, no file search needed.
 **New Session:** User's first message IS their intent. Proceed directly — don't ask "what would you like to build?"
 
 ## Using Personas
@@ -58,6 +58,17 @@ fields_pending: [acceptance_criteria, scope, verification, loop_contract]
 ```
 
 ## Flow
+
+### 0. Check for Resume Mode (FIRST!)
+
+**Before doing anything else**, check if a `# Resume Mode` section exists at the end of this prompt.
+
+If `# Resume Mode` exists:
+1. The draft content is already loaded below — do NOT search for drafts
+2. Skip directly to **step 3 (Elicit)** to continue refining
+3. Acknowledge the draft: "resuming draft: {title}" and ask what to refine
+
+If no `# Resume Mode` section → proceed to step 1.
 
 ### 1. Understand Context
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
