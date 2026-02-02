@@ -14,7 +14,7 @@ public static class PtyEndpoints
     public static void MapPtyEndpoints(this WebApplication app, PtyManager ptyManager)
     {
         // High-level spec session endpoint - backend handles all command building
-        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, ProjectContext projectContext, MillPaths paths) =>
+        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, DraftService draftService, ProjectContext projectContext, MillPaths paths) =>
         {
             try
             {
@@ -70,8 +70,28 @@ public static class PtyEndpoints
                 }
                 else if (draftId != null)
                 {
-                    appendContent.AppendLine();
-                    appendContent.AppendLine($"Resume draft: {draftId}");
+                    // Load draft content for refine mode
+                    var draft = await draftService.Get(draftId);
+                    if (draft != null)
+                    {
+                        appendContent.AppendLine();
+                        appendContent.AppendLine("---");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine($"# Resume Mode");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine($"Continue refining the following draft: **{draft.Title}**");
+                        appendContent.AppendLine($"- **Type:** {draft.Type}");
+                        appendContent.AppendLine($"- **Status:** {draft.Status}");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine("## Current Draft Content");
+                        appendContent.AppendLine();
+                        appendContent.AppendLine(draft.Body);
+                    }
+                    else
+                    {
+                        appendContent.AppendLine();
+                        appendContent.AppendLine($"Resume draft: {draftId} (draft file not found)");
+                    }
                 }
 
                 // Combine prompt with appended content
