@@ -2817,14 +2817,17 @@ static partial class Mill
         if (Directory.Exists(Path.Combine(dataPath, "shape/prompts")))
             return dataPath;
 
-        // 3. Development mode: prompts in repo relative to binary
-        var exeDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-        var millRoot = Directory.GetParent(exeDir)?.FullName;
-        if (millRoot != null && Directory.Exists(Path.Combine(millRoot, "shape/prompts")))
-            return millRoot;
+        // 3. Development mode: traverse up from binary to find repo root
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir.FullName, "shape/prompts")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
 
         // 4. Fallback to exe directory (will likely fail, but provides useful error)
-        return exeDir;
+        return AppContext.BaseDirectory;
     }
 
     static (int ExitCode, string Output, string Error) Git(params string[] args)
