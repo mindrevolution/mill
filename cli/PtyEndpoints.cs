@@ -14,7 +14,7 @@ public static class PtyEndpoints
     public static void MapPtyEndpoints(this WebApplication app, PtyManager ptyManager)
     {
         // High-level spec session endpoint - backend handles all command building
-        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, ProjectContext projectContext) =>
+        app.MapPost("/api/pty/spec-session", async (HttpContext ctx, IssueService issueService, ProjectContext projectContext, MillPaths paths) =>
         {
             try
             {
@@ -29,13 +29,13 @@ public static class PtyEndpoints
                 var rows = root.TryGetProperty("rows", out var rowsEl) ? rowsEl.GetInt32() : 24;
 
                 // Build the prompt content
-                var promptFile = mode == "refine" ? "shape/prompts/spec-refine.md" : "shape/prompts/spec-draft.md";
-                var fullPromptPath = Path.Combine(Directory.GetCurrentDirectory(), promptFile);
+                var promptFileName = mode == "refine" ? "spec-refine.md" : "spec-draft.md";
+                var fullPromptPath = Path.Combine(paths.ShapePrompts, promptFileName);
 
                 if (!File.Exists(fullPromptPath))
                 {
                     ctx.Response.StatusCode = 400;
-                    await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = $"Prompt file not found: {promptFile}" }));
+                    await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = $"Prompt file not found: {fullPromptPath}" }));
                     return;
                 }
 
@@ -108,7 +108,7 @@ public static class PtyEndpoints
             }
         });
         // Start a new PTY session
-        app.MapPost("/api/pty/start", async (HttpContext ctx) =>
+        app.MapPost("/api/pty/start", async (HttpContext ctx, MillPaths paths) =>
         {
             try
             {
@@ -133,7 +133,7 @@ public static class PtyEndpoints
                     if (argsList[i] == "--system-prompt-file" && i + 1 < argsList.Count)
                     {
                         var promptPath = argsList[i + 1];
-                        var fullPath = Path.Combine(Directory.GetCurrentDirectory(), promptPath);
+                        var fullPath = Path.Combine(paths.Home, promptPath);
                         if (File.Exists(fullPath))
                         {
                             // Copy prompt to temp file (will be cleaned up when session ends)
@@ -142,7 +142,7 @@ public static class PtyEndpoints
                         }
                         else
                         {
-                            Console.WriteLine($"[PTY] Warning: prompt file not found: {fullPath}");
+                            Console.WriteLine($"[PTY] Warning: prompt file not found: {fullPath} (mill home: {paths.Home})");
                         }
                         i++; // Skip the path argument
                     }
