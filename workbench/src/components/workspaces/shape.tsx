@@ -1073,7 +1073,6 @@ InteractiveTerminal.displayName = 'InteractiveTerminal'
 
 export function ShapeWorkspace() {
   const { drafts, issues, loading, error, refetch } = useSpecs()
-  const [selectedDraft, setSelectedDraft] = useState<Draft | undefined>()
   const [selectedId, setSelectedId] = useState<string | undefined>()
   const [draftDetail, setDraftDetail] = useState<DraftDetail | undefined>()
   const [issueDetail, setIssueDetail] = useState<IssueDetail | undefined>()
@@ -1106,7 +1105,6 @@ export function ShapeWorkspace() {
     const draft = drafts.find((d) => d.id === draftId)
     if (draft) {
       // Select the draft (this will load details and show validation result)
-      setSelectedDraft(draft)
       setSelectedId(draft.id)
       setDraftDetail(undefined)
       setIssueDetail(undefined)
@@ -1143,7 +1141,6 @@ export function ShapeWorkspace() {
   )
 
   const handleSelectDraft = async (draft: Draft) => {
-    setSelectedDraft(draft)
     setDraftDetail(undefined)
     setIssueDetail(undefined)
     setSelectedId(draft.id)
@@ -1160,7 +1157,6 @@ export function ShapeWorkspace() {
   }
 
   const handleSelectIssue = async (issue: Issue) => {
-    setSelectedDraft(undefined)
     setDraftDetail(undefined)
     setIssueDetail(undefined)
     setSelectedId(`issue-${issue.number}`)
@@ -1181,7 +1177,6 @@ export function ShapeWorkspace() {
     if (selectedId === `issue-${issueNumber}`) {
       setSelectedId(undefined)
       setIssueDetail(undefined)
-      setSelectedDraft(undefined)
       setDraftDetail(undefined)
       setLoadingSpec(false)
     }
@@ -1209,7 +1204,6 @@ export function ShapeWorkspace() {
       setInteractiveSession(null)
     }
     // Clear selection to show NewSpecInput
-    setSelectedDraft(undefined)
     setSelectedId(undefined)
     setDraftDetail(undefined)
     setIssueDetail(undefined)
