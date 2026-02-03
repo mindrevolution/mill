@@ -450,3 +450,23 @@ export function createJobEventSource(onEvent: (eventType: string, job: Job) => v
 
   return es
 }
+
+// SSE helper for draft file change events
+export function createDraftEventSource(onDraftsChanged: () => void): EventSource {
+  const url = `${API_BASE}/api/spec/drafts/events`
+  const es = new EventSource(url)
+
+  es.addEventListener('drafts-changed', () => {
+    onDraftsChanged()
+  })
+
+  es.addEventListener('connected', () => {
+    console.log('[DraftEvents] Connected')
+  })
+
+  es.onerror = (err) => {
+    console.error('[DraftEvents] Error:', err)
+  }
+
+  return es
+}

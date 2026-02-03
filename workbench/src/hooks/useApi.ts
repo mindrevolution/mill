@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { api } from '@/lib/api'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { api, createDraftEventSource } from '@/lib/api'
 
 interface UseQueryResult<T> {
   data: T | undefined
@@ -48,6 +48,21 @@ export function useIssues() {
 export function useSpecs() {
   const drafts = useDrafts()
   const issues = useIssues()
+  const eventSourceRef = useRef<EventSource | null>(null)
+
+  // Subscribe to draft file change events
+  useEffect(() => {
+    const es = createDraftEventSource(() => {
+      // Refetch drafts when files change
+      drafts.refetch()
+    })
+    eventSourceRef.current = es
+
+    return () => {
+      es.close()
+      eventSourceRef.current = null
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     drafts: drafts.data ?? [],

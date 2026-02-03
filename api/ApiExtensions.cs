@@ -45,6 +45,10 @@ public static class ApiExtensions
         // Job queue
         services.AddSingleton<JobService>();
 
+        // File watchers
+        services.AddSingleton<DraftWatcherService>();
+        services.AddHostedService(sp => sp.GetRequiredService<DraftWatcherService>());
+
         return services;
     }
 

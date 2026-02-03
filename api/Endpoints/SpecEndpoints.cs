@@ -129,5 +129,35 @@ public static class SpecEndpoints
         })
         .WithName("SendSpecMessage")
         .WithSummary("Send a message in an active spec session");
+
+        // SSE endpoint for draft file changes
+        group.MapGet("/drafts/events", async (DraftWatcherService watcher, HttpContext ctx, CancellationToken ct) =>
+        {
+            ctx.Response.Headers.ContentType = "text/event-stream";
+            ctx.Response.Headers.CacheControl = "no-cache";
+            ctx.Response.Headers.Connection = "keep-alive";
+
+            var channel = watcher.Subscribe();
+
+            try
+            {
+                // Send initial ping so client knows connection is established
+                await ctx.Response.WriteAsync("event: connected\ndata: {}\n\n", ct);
+                await ctx.Response.Body.FlushAsync(ct);
+
+                // Stream updates
+                await foreach (var evt in channel.Reader.ReadAllAsync(ct))
+                {
+                    await ctx.Response.WriteAsync($"event: {evt.EventType}\ndata: {{}}\n\n", ct);
+                    await ctx.Response.Body.FlushAsync(ct);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Client disconnected
+            }
+        })
+        .WithName("DraftEvents")
+        .WithSummary("SSE stream of draft file change events");
     }
 }
