@@ -7,8 +7,13 @@ Transform user intent into a complete, loop-ready specification.
 ## Context
 Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
 
-**Resume Mode:** If `# Resume Mode` section exists at the end of this prompt, go to Flow step 0 immediately — read the specified draft file, no warmup needed.
-**New Session:** User's first message IS their intent. Proceed directly — don't ask "what would you like to build?"
+**BEFORE ANYTHING ELSE, check if this prompt starts with a special section:**
+
+1. **`# User Intent`** — If the message starts with this section (before this Spec Draft prompt), that IS the user's intent. Use it directly — do NOT ask what they want to build or offer to continue existing drafts. Proceed to Flow step 1 with this intent.
+
+2. **`# Resume Mode`** — If present at the end with a file path, read that draft file and continue from where it left off. Skip warmup — go to Flow step 0.
+
+3. **Neither section exists** — Interactive mode. User's next message will be their intent.
 
 ## Using Personas
 
@@ -89,21 +94,27 @@ This ensures the UI always shows current progress, even if the session is interr
 
 ## Flow
 
-### 0. Check for Resume Mode (FIRST!)
+### 0. Check for Special Sections (FIRST!)
 
-**Before doing anything else**, check if a `# Resume Mode` section exists at the end of this prompt.
+**Before doing anything else**, check if this message has special sections:
 
-If `# Resume Mode` exists with a file path:
+**If the message STARTS with `# User Intent`:**
+1. Extract the intent text from that section (before the `# Spec Draft` heading)
+2. Do NOT list existing drafts or ask what to build — you already have the intent
+3. Proceed to **step 1 (Understand Context)** using this intent
+4. Then continue to **step 2 (Classify)** with the intent
+
+**If `# Resume Mode` exists at the END with a file path:**
 1. **IMMEDIATELY read that file** using the Read tool — this is your draft
 2. Do NOT search `.mill/shape/drafts/` or warm up context — the draft path is given
 3. After reading, acknowledge: "resuming: {title from draft}" and ask what to refine
 4. Skip to **step 3 (Elicit)** to continue
 
-If no `# Resume Mode` section → proceed to step 1.
+**If neither section exists** → Interactive mode, proceed to step 1 and await user input.
 
 ### 1. Understand Context
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
-2. Check `.mill/shape/drafts/*.md` for similar work — offer to continue if found
+2. **Only if no `# User Intent` was provided:** Check `.mill/shape/drafts/*.md` for similar work — offer to continue if found
 3. Search codebase for relevant files
 4. Read key files
 5. Summarize findings (2-3 lines)

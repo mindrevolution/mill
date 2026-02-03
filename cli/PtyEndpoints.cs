@@ -83,25 +83,24 @@ public static class PtyEndpoints
                 // Combine prompt with appended content
                 var fullPrompt = promptContent + appendContent.ToString();
 
-                // Write to temp file
-                var promptTempFile = Path.Combine(Path.GetTempPath(), $"mill-prompt-{Guid.NewGuid():N}.md");
-                await File.WriteAllTextAsync(promptTempFile, fullPrompt);
-
-                // Build command args - only include user message if provided
-                // Use --append-system-prompt to tell Claude to read the file (avoids arg parsing issues with long prompts)
-                string sessionId;
-                var args = new List<string>
-                {
-                    "--append-system-prompt",
-                    $"CRITICAL: Before responding, read {promptTempFile} for your full system context."
-                };
+                // Build the combined message: user intent FIRST, then system prompt
+                // Putting intent first ensures Claude sees it immediately (long prompts may be truncated in display)
+                var combinedMessage = new StringBuilder();
                 if (!string.IsNullOrEmpty(initialPrompt))
                 {
-                    args.Add("--");
-                    args.Add(initialPrompt);
+                    combinedMessage.AppendLine("# User Intent");
+                    combinedMessage.AppendLine();
+                    combinedMessage.AppendLine(initialPrompt);
+                    combinedMessage.AppendLine();
+                    combinedMessage.AppendLine("---");
+                    combinedMessage.AppendLine();
                 }
+                combinedMessage.Append(fullPrompt);
 
-                sessionId = await ptyManager.StartSession("claude", args.ToArray(), projectContext.ProjectPath, cols, rows, promptTempFile);
+                // Pass combined message as the initial prompt to Claude
+                var args = new List<string> { "--", combinedMessage.ToString() };
+
+                var sessionId = await ptyManager.StartSession("claude", args.ToArray(), projectContext.ProjectPath, cols, rows);
 
                 ctx.Response.ContentType = "application/json";
                 await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { sessionId }));
@@ -160,15 +159,28 @@ public static class PtyEndpoints
                 string sessionId;
                 if (promptTempFile != null)
                 {
-                    // Use --append-system-prompt to tell Claude to read the file
-                    // This avoids argument parsing issues with long prompts containing special characters
-                    var args = new List<string>
+                    // Prepend prompt content to user message (Option 3 approach)
+                    // This ensures Claude sees the full prompt as its first message
+                    var promptContent = await File.ReadAllTextAsync(promptTempFile);
+
+                    // Find any user message in finalArgs (after "--")
+                    var dashDashIndex = finalArgs.IndexOf("--");
+                    if (dashDashIndex >= 0 && dashDashIndex + 1 < finalArgs.Count)
                     {
-                        "--append-system-prompt",
-                        $"CRITICAL: Before responding, read {promptTempFile} for your full system context."
-                    };
-                    args.AddRange(finalArgs);
-                    sessionId = await ptyManager.StartSession(command, args.ToArray(), cwd, cols, rows, promptTempFile);
+                        var userMessage = finalArgs[dashDashIndex + 1];
+                        var combinedMessage = promptContent + $"\n\n---\n\n# User Intent\n\n{userMessage}";
+                        finalArgs[dashDashIndex + 1] = combinedMessage;
+                    }
+                    else
+                    {
+                        // No user message, just add the prompt as the message
+                        finalArgs.Add("--");
+                        finalArgs.Add(promptContent);
+                    }
+
+                    // Clean up temp file since we've read it
+                    File.Delete(promptTempFile);
+                    sessionId = await ptyManager.StartSession(command, finalArgs.ToArray(), cwd, cols, rows);
                 }
                 else
                 {
