@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Default: Exe (works everywhere, console visible for debugging) -->
     <OutputType>Exe</OutputType>
+    <!-- Windows publish: WinExe (hides console for GUI app) -->
+    <OutputType Condition="$(RuntimeIdentifier.StartsWith('win'))">WinExe</OutputType>
+
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Mill</RootNamespace>
     <AssemblyName>mill</AssemblyName>

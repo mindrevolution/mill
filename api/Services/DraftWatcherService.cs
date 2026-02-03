@@ -56,7 +56,6 @@ public class DraftWatcherService : IHostedService, IDisposable
     {
         var channel = Channel.CreateUnbounded<DraftEvent>();
         _subscribers.Add(channel);
-        _logger.LogDebug("DraftWatcher: New subscriber, total: {Count}", _subscribers.Count);
         return channel;
     }
 
@@ -115,13 +114,11 @@ public class DraftWatcherService : IHostedService, IDisposable
 
     private void OnFileChange(object sender, FileSystemEventArgs e)
     {
-        _logger.LogDebug("DraftWatcher: {ChangeType} - {Name}", e.ChangeType, e.Name);
         DebounceBroadcast();
     }
 
     private void OnFileRenamed(object sender, RenamedEventArgs e)
     {
-        _logger.LogDebug("DraftWatcher: Renamed {OldName} -> {Name}", e.OldName, e.Name);
         DebounceBroadcast();
     }
 
@@ -164,7 +161,6 @@ public class DraftWatcherService : IHostedService, IDisposable
 
     private void Broadcast()
     {
-        _logger.LogDebug("DraftWatcher: Broadcasting drafts-changed to {Count} subscribers", _subscribers.Count);
         var evt = new DraftEvent("drafts-changed");
 
         foreach (var subscriber in _subscribers)
