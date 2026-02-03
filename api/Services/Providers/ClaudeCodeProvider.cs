@@ -37,7 +37,8 @@ public class ClaudeCodeProvider : CliProviderBase, ILlmProvider
             // Build arguments: claude --print "prompt"
             // Using --print for non-interactive mode
             // --strict-mcp-config disables all MCP servers (like playwriter) which cause massive slowdowns
-            psi.Arguments = $"--print --strict-mcp-config \"{EscapeArgument(prompt)}\"";
+            // --allowedTools "Read" allows file reads without permission prompts (temp files, repo files, etc.)
+            psi.Arguments = $"--print --strict-mcp-config --allowedTools \"Read\" \"{EscapeArgument(prompt)}\"";
 
             if (!string.IsNullOrEmpty(options.SystemPrompt))
             {
@@ -115,10 +116,11 @@ public class ClaudeCodeProvider : CliProviderBase, ILlmProvider
 
     public Process SpawnInteractive(string prompt, string? workingDir = null)
     {
+        // --allowedTools "Read" allows file reads without permission prompts
         var psi = new ProcessStartInfo
         {
             FileName = CommandName,
-            Arguments = $"\"{EscapeArgument(prompt)}\"",
+            Arguments = $"--allowedTools \"Read\" \"{EscapeArgument(prompt)}\"",
             WorkingDirectory = workingDir ?? Directory.GetCurrentDirectory(),
             UseShellExecute = false,
             CreateNoWindow = false

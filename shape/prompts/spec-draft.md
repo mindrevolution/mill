@@ -31,17 +31,36 @@ If `.mill/personas.md` is loaded, use it to improve elicitation:
    - Does this solve a job-to-be-done?
    - Would this reduce churn risk?
 
-## Draft Persistence
+## Draft Persistence — Live Updates
 
-Save to `.mill/shape/drafts/{slug}.md` after EACH field captured.
+**Create the draft file EARLY and update it CONTINUOUSLY.** The UI watches for file changes and displays the spec as it takes shape. Users should see their spec building in real-time.
+
+### When to Write
+
+| Trigger | Action |
+|---------|--------|
+| After classification (step 2) | CREATE draft with type, title, slug, status |
+| After each user answer | UPDATE with new information |
+| After each field is captured | UPDATE fields_complete/fields_pending |
+| After status changes | UPDATE status field |
+| After any refinement | UPDATE relevant sections |
+
+**Write early, write often.** Don't wait for a complete section — write partial content as you learn it. A draft with "## Problem\n\nUsers can't X when Y..." is better than an empty section.
+
+### File Location
+
+`.mill/shape/drafts/{slug}.md`
+
+### Format
 
 ```yaml
 ---
 type: feature|bug|security|task
 title: Human-readable title
 slug: lowercase-hyphenated
-summary: one-line
+summary: one-line (update as understanding deepens)
 status: classifying|eliciting|reviewing|challenging|complete
+persona: persona-slug (if applicable)
 created: ISO8601
 updated: ISO8601
 fields_complete: [problem, users]
@@ -56,6 +75,17 @@ fields_pending: [acceptance_criteria, scope, verification, loop_contract]
 ## Verification
 ## Loop Contract
 ```
+
+### Update Pattern
+
+After each interaction:
+1. Read current draft (if exists)
+2. Merge new information
+3. Update `updated` timestamp
+4. Update `fields_complete`/`fields_pending`
+5. Write file
+
+This ensures the UI always shows current progress, even if the session is interrupted.
 
 ## Flow
 
@@ -101,6 +131,11 @@ what specifically [is wrong / do you want]?
 or just type what you want
 ```
 
+**CREATE DRAFT NOW.** As soon as you have type and a working title:
+1. Generate slug from title
+2. Write initial draft file with `status: classifying`
+3. Continue elicitation — the draft will update as you learn more
+
 ### 3. Elicit
 
 One question at a time. Layer by layer:
@@ -110,6 +145,12 @@ One question at a time. Layer by layer:
 4. Success criteria
 5. Scope boundaries
 6. Verification
+
+**UPDATE DRAFT AFTER EACH ANSWER.** When the user responds:
+1. Incorporate their answer into the appropriate section
+2. Update `status: eliciting` and `updated` timestamp
+3. Update `fields_complete`/`fields_pending` lists
+4. Write the file — the UI will refresh automatically
 
 **Fields by type:**
 
@@ -249,11 +290,12 @@ Fallback: if `gh` fails, write to `.mill/{type}/{slug}.md`.
 1. Detective mindset — dig layer by layer
 2. One question at a time
 3. Offer 2-4 options + "or just type"
-4. Save draft after EVERY answer — to `.mill/shape/drafts/`, NOT `/plan` or any other location
-5. No placeholders
-6. Security always wins classification
-7. Force decisions — no "it depends"
-8. Scope creep → separate spec
-9. End cleanly — after finalize, stop
-10. Never use built-in plan mode, TodoWrite, or other Claude Code features — only MILL workflow
-11. **NEVER create GitHub issue without explicit user approval** — step 7 confirmation is mandatory
+4. **Save draft EARLY and OFTEN** — create file after classification, update after every user answer
+5. Write to `.mill/shape/drafts/` ONLY — never use `/plan`, TodoWrite, or other locations
+6. No placeholders in final spec (partial content during elicitation is fine)
+7. Security always wins classification
+8. Force decisions — no "it depends"
+9. Scope creep → separate spec
+10. End cleanly — after finalize, stop
+11. Never use built-in plan mode, TodoWrite, or other Claude Code features — only MILL workflow
+12. **NEVER create GitHub issue without explicit user approval** — step 7 confirmation is mandatory
