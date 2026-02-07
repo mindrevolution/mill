@@ -1,13 +1,6 @@
 ---
 description: Execute bounded work loops against specs until verification passes
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash
-model: sonnet
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 argument-hint: "<issue-number> - GitHub issue to implement"
 ---
 

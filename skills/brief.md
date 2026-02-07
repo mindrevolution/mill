@@ -1,10 +1,6 @@
 ---
 description: Capture and develop ideas with 30-day lifecycle
-allowed-tools:
-  - Read
-  - Write
-  - Bash(mill brief*, mill ground list)
-model: sonnet
+allowed-tools: Read, Write, Bash(mill brief*, mill ground list)
 argument-hint: "[title] - start capturing a new idea"
 ---
 

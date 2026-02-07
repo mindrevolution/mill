@@ -1,11 +1,6 @@
 ---
 description: Answer questions about the codebase without making changes
-allowed-tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash(git log*, git show*, git diff*)
-model: sonnet
+allowed-tools: Read, Glob, Grep, Bash(git log*, git show*, git diff*)
 argument-hint: "<question about the codebase>"
 ---
 

@@ -1,12 +1,6 @@
 ---
 description: Manage product knowledge - personas, standards, concepts, design
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
-  - Bash(mill ground*, git *)
-model: sonnet
+allowed-tools: Read, Write, Glob, Grep, Bash(mill ground*, git *)
 argument-hint: "[category] - personas, standards, concepts, or design"
 ---
 

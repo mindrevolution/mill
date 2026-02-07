@@ -1,12 +1,6 @@
 ---
 description: Generate codebase context and write .mill/context.md
-allowed-tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash(git *)
-  - Write
-model: sonnet
+allowed-tools: Read, Glob, Grep, Bash(git *), Write
 argument-hint: "[force] - regenerate even if context exists"
 ---
 
