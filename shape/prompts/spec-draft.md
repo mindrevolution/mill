@@ -119,6 +119,37 @@ This ensures the UI always shows current progress, even if the session is interr
 4. Read key files
 5. Summarize findings (2-3 lines)
 
+### 1b. Explore Codebase
+
+**Purpose:** Ground the elicitation in how the codebase actually works. Better understanding → sharper questions → more realistic specs.
+
+After understanding the user's intent, trace how the codebase currently handles related concerns:
+
+1. **Find similar features** — Search for 2-3 existing features closest to the intent. Trace each: entry point → core logic → data layer. Note the patterns and abstractions they use.
+2. **Map the affected area** — Identify which architectural layers this intent touches (API endpoints, services, UI components, data models). Read the key files at each layer.
+3. **Identify integration points** — What existing code will this interact with? What interfaces, events, or data flows does it need to plug into?
+4. **List key files** — Compile 5-10 files essential for understanding the area. Read them.
+
+Summarize what you found — this context directly feeds the elicitation and challenge phases:
+
+```
+codebase exploration:
+
+similar features:
+  - [feature] at [file:line] — [pattern used]
+  - [feature] at [file:line] — [pattern used]
+
+affected layers:
+  - [layer]: [key file:line] — [what exists there]
+
+integration points:
+  - [component/interface] at [file:line]
+
+key files: [list of 5-10 paths]
+```
+
+**Use this context throughout.** Reference specific files and patterns when asking elicitation questions, defining scope, and challenging assumptions. Grounded questions produce grounded specs.
+
 ### 2. Classify
 
 | Type | Signals | Label |
@@ -220,9 +251,23 @@ Update draft status to `challenging`. Then probe these areas one question at a t
 | **Failure modes** | "If the database/API/service is down, what should happen?" |
 | **Integration** | "How does this interact with [existing feature]? Any conflicts?" |
 | **Rollback** | "If this breaks in production, how do we recover or disable it?" |
+| **Feasibility** | Use codebase exploration from step 1b to probe technical realism (see below) |
+
+#### Technical Feasibility Probes
+
+Use your codebase exploration findings to check that the spec is implementable as written. This is NOT architecture design — it's a reality check against the actual codebase.
+
+Probe when relevant:
+
+- **Pattern fit:** "Similar features use [pattern] at `[file:line]`. This spec doesn't mention how it integrates — should it follow the same pattern, or is there a reason to diverge?"
+- **Scope realism:** "Based on the affected layers ([list from 1b]), this touches [N] distinct concerns. The acceptance criteria cover [M]. Is the gap intentional (out of scope) or missing?"
+- **Interface compatibility:** "This needs to plug into `[interface/component]` at `[file:line]`. The current contract is [X] — does the spec account for that?"
+- **Missing dependencies:** "The area around `[file:line]` relies on [dependency]. The spec doesn't mention it — is that a hidden assumption?"
+
+**Don't design the solution.** Only flag where the spec's *what* conflicts with the codebase's *reality*. If the spec says "add a REST endpoint" but the project uses GraphQL exclusively, that's a feasibility gap. If the user wants REST anyway, that's their call — just make sure it's explicit in scope.
 
 **Flow:**
-1. Identify 2-4 potential gaps from the areas above
+1. Identify 2-4 potential gaps from the areas above (include feasibility when codebase exploration surfaced concerns)
 2. Ask ONE question, wait for response
 3. If answer reveals missing criteria → add to spec, return to step 5 (Validate)
 4. If answer confirms no gap → continue to next question
