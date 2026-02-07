@@ -43,7 +43,7 @@ public static class ContextCommand
         {
             if (human)
             {
-                Console.WriteLine("No context.md found. Run /mill:warmup to generate.");
+                Output.Warn("No context.md found. Run /mill:warmup to generate.");
             }
             else
             {
@@ -101,15 +101,16 @@ public static class ContextCommand
         {
             if (!exists)
             {
-                Console.WriteLine("Context: not generated");
+                Output.Warn("Context not generated");
             }
             else
             {
-                Console.WriteLine($"Context: {ContextPath}");
-                Console.WriteLine($"Updated: {updatedAt:yyyy-MM-dd HH:mm:ss}");
+                Output.Success("Context ready");
+                Output.Field("Path", ContextPath);
+                Output.Field("Updated", updatedAt?.ToString("yyyy-MM-dd HH:mm"));
                 if (commitHash != null)
                 {
-                    Console.WriteLine($"Commit: {commitHash[..8]}");
+                    Output.Field("Commit", commitHash[..8], dim: true);
                 }
             }
         }

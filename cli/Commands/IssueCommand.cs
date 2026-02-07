@@ -74,13 +74,13 @@ public static class IssueCommand
         {
             if (issues.Count == 0)
             {
-                Console.WriteLine("No open issues.");
+                Output.Empty("No open issues.");
             }
             else
             {
                 foreach (var issue in issues)
                 {
-                    Console.WriteLine($"#{issue.Number} [{issue.Type}] {issue.Title}");
+                    Output.NumberedItem(issue.Number, issue.Type, issue.Title);
                 }
             }
         }
@@ -136,14 +136,14 @@ public static class IssueCommand
 
         if (human)
         {
-            Console.WriteLine($"#{issue.Number} {issue.Title}");
-            Console.WriteLine($"Type: {issue.Type} | Status: {issue.Status}");
+            Output.Title($"#{issue.Number} {issue.Title}");
+            Output.Field("Type", issue.Type);
+            Output.Field("Status", issue.Status);
             if (issue.Labels.Count > 0)
             {
-                Console.WriteLine($"Labels: {string.Join(", ", issue.Labels)}");
+                Output.Field("Labels", string.Join(", ", issue.Labels));
             }
-            Console.WriteLine();
-            Console.WriteLine(issue.Body);
+            Output.Body(issue.Body);
         }
         else
         {

@@ -45,18 +45,19 @@ public static class HistoryCommand
         {
             if (history.Count == 0)
             {
-                Console.WriteLine("No run history.");
+                Output.Empty("No run history.");
             }
             else
             {
                 foreach (var entry in history.OrderByDescending(e => e.Date).Take(20))
                 {
-                    var outcome = entry.Outcome == "success" ? "✓" : "✕";
-                    Console.WriteLine($"[{entry.Date:yyyy-MM-dd HH:mm}] {outcome} #{entry.Issue} {entry.Title}");
-                    if (entry.PrUrl != null)
-                    {
-                        Console.WriteLine($"  PR: {entry.PrUrl}");
-                    }
+                    Output.HistoryItem(
+                        entry.Date,
+                        entry.Outcome == "success",
+                        entry.Issue,
+                        entry.Title,
+                        entry.PrUrl
+                    );
                 }
             }
         }
@@ -112,7 +113,7 @@ public static class HistoryCommand
 
         if (human)
         {
-            Console.WriteLine($"Added history entry for issue #{entry.Issue}");
+            Output.Success($"Added history entry for issue #{entry.Issue}");
         }
         else
         {

@@ -47,7 +47,7 @@ public static class DraftCommand
         {
             if (human)
             {
-                Console.WriteLine("No drafts.");
+                Output.Empty("No drafts.");
             }
             else
             {
@@ -81,13 +81,13 @@ public static class DraftCommand
         {
             if (drafts.Count == 0)
             {
-                Console.WriteLine("No drafts.");
+                Output.Empty("No drafts.");
             }
             else
             {
                 foreach (var draft in drafts)
                 {
-                    Console.WriteLine($"[{draft.Type}] {draft.Title} ({draft.Slug})");
+                    Output.ListItem(draft.Type, draft.Title, draft.Slug);
                 }
             }
         }
@@ -143,12 +143,11 @@ public static class DraftCommand
 
         if (human)
         {
-            Console.WriteLine($"# {detail.Title}");
-            Console.WriteLine($"Type: {detail.Type}");
-            Console.WriteLine($"Status: {detail.Status}");
-            if (detail.Persona != null) Console.WriteLine($"Persona: {detail.Persona}");
-            Console.WriteLine();
-            Console.WriteLine(detail.Body);
+            Output.Title(detail.Title);
+            Output.Field("Type", detail.Type);
+            Output.Field("Status", detail.Status);
+            Output.Field("Persona", detail.Persona);
+            Output.Body(detail.Body);
         }
         else
         {
@@ -192,9 +191,9 @@ public static class DraftCommand
                 var result = JsonHelper.Deserialize<DraftValidationResult>(cached);
                 if (result != null)
                 {
-                    Console.WriteLine($"Score: {result.Score}/10 ({result.Verdict})");
-                    Console.WriteLine($"Summary: {result.Summary}");
-                    Console.WriteLine($"Recommendation: {result.Recommendation}");
+                    Output.Score(result.Score, 10, result.Verdict);
+                    Output.Field("Summary", result.Summary);
+                    Output.Field("Recommendation", result.Recommendation);
                 }
             }
             else
@@ -207,7 +206,7 @@ public static class DraftCommand
         // No cached result - skills should run the validation prompt
         if (human)
         {
-            Console.WriteLine("No validation result. Run /mill:shape to validate.");
+            Output.Warn("No validation result. Run /mill:shape to validate.");
         }
         else
         {
@@ -265,8 +264,8 @@ public static class DraftCommand
         {
             if (result.Success)
             {
-                Console.WriteLine($"Published as issue #{result.Number}");
-                Console.WriteLine(result.Url);
+                Output.Success($"Published as issue #{result.Number}");
+                Output.Url(result.Url ?? "");
             }
             else
             {

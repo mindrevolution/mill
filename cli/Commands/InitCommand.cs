@@ -16,7 +16,7 @@ public static class InitCommand
         {
             if (human)
             {
-                Console.WriteLine($"Already initialized: {millFolder}");
+                Output.Info($"Already initialized: {millFolder}");
             }
             else
             {
@@ -63,11 +63,11 @@ public static class InitCommand
 
         if (human)
         {
-            Console.WriteLine($"Initialized mill at: {millFolder}");
-            Console.WriteLine();
-            Console.WriteLine("Next steps:");
-            Console.WriteLine("  1. Run /mill:ground to set up product knowledge");
-            Console.WriteLine("  2. Run /mill:warmup to generate context.md");
+            Output.Success($"Initialized mill at {millFolder}");
+            Output.Blank();
+            Output.Title("Next steps");
+            Output.Bullet("Run /mill:ground to set up product knowledge");
+            Output.Bullet("Run /mill:warmup to generate context.md");
         }
         else
         {

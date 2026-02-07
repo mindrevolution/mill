@@ -49,7 +49,7 @@ public static class BriefCommand
         {
             if (human)
             {
-                Console.WriteLine("No active briefs.");
+                Output.Empty("No active briefs.");
             }
             else
             {
@@ -84,14 +84,13 @@ public static class BriefCommand
         {
             if (briefs.Count == 0)
             {
-                Console.WriteLine("No active briefs.");
+                Output.Empty("No active briefs.");
             }
             else
             {
                 foreach (var brief in briefs)
                 {
-                    Console.WriteLine($"[{brief.Stage}] {brief.Title}");
-                    Console.WriteLine($"  {brief.Intent}");
+                    Output.ListItem(brief.Stage, brief.Title, brief.Intent);
                 }
             }
         }
@@ -146,12 +145,11 @@ public static class BriefCommand
 
         if (human)
         {
-            Console.WriteLine($"# {detail.Title}");
-            Console.WriteLine($"Stage: {detail.Stage}");
-            Console.WriteLine($"Intent: {detail.Intent}");
-            if (detail.Persona != null) Console.WriteLine($"Persona: {detail.Persona}");
-            Console.WriteLine();
-            Console.WriteLine(detail.Content);
+            Output.Title(detail.Title);
+            Output.Field("Stage", detail.Stage);
+            Output.Field("Intent", detail.Intent);
+            Output.Field("Persona", detail.Persona);
+            Output.Body(detail.Content);
         }
         else
         {
@@ -209,7 +207,7 @@ public static class BriefCommand
 
         if (human)
         {
-            Console.WriteLine($"Created brief: {actualSlug}");
+            Output.Success($"Created brief: {actualSlug}");
         }
         else
         {
@@ -264,8 +262,8 @@ public static class BriefCommand
 
         if (human)
         {
-            Console.WriteLine($"Dropped brief: {id}");
-            Console.WriteLine($"Essence: {essence}");
+            Output.Success($"Dropped brief: {id}");
+            Output.Field("Essence", essence);
         }
         else
         {
@@ -283,14 +281,13 @@ public static class BriefCommand
         {
             if (dropped.Count == 0)
             {
-                Console.WriteLine("No dropped briefs.");
+                Output.Empty("No dropped briefs.");
             }
             else
             {
                 foreach (var d in dropped.OrderByDescending(x => x.DroppedAt))
                 {
-                    Console.WriteLine($"[{d.DroppedAt:yyyy-MM-dd}] {d.OriginalTitle}");
-                    Console.WriteLine($"  {d.Essence}");
+                    Output.ListItem(d.DroppedAt.ToString("yyyy-MM-dd"), d.OriginalTitle, d.Essence);
                 }
             }
         }

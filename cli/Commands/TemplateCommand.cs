@@ -56,7 +56,7 @@ public static class TemplateCommand
         {
             if (human)
             {
-                Console.WriteLine($"No {type} templates found.");
+                Output.Empty($"No {type} templates found.");
             }
             else
             {
@@ -86,11 +86,7 @@ public static class TemplateCommand
         {
             foreach (var t in templates)
             {
-                Console.WriteLine($"{t.Id}: {t.Label}");
-                if (!string.IsNullOrEmpty(t.Summary))
-                {
-                    Console.WriteLine($"  {t.Summary}");
-                }
+                Output.ListItem(t.Id, t.Label, t.Summary);
             }
         }
         else
@@ -137,7 +133,8 @@ public static class TemplateCommand
 
         if (human)
         {
-            Console.WriteLine(content);
+            Output.Title($"{type}/{id}");
+            Output.Body(content);
         }
         else
         {

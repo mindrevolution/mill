@@ -82,17 +82,13 @@ public static class GroundCommand
         {
             if (items.Count == 0)
             {
-                Console.WriteLine("No knowledge items found.");
+                Output.Empty("No knowledge items found.");
             }
             else
             {
                 foreach (var item in items.OrderBy(i => i.Category).ThenBy(i => i.Name))
                 {
-                    Console.WriteLine($"[{item.Category}] {item.Name}");
-                    if (!string.IsNullOrEmpty(item.Description))
-                    {
-                        Console.WriteLine($"  {item.Description[..Math.Min(80, item.Description.Length)]}...");
-                    }
+                    Output.ListItem(item.Category, item.Name, item.Description);
                 }
             }
         }
@@ -139,7 +135,9 @@ public static class GroundCommand
 
         if (human)
         {
-            Console.WriteLine(content);
+            Output.Title(MarkdownHelpers.FormatName(id));
+            Output.Field("Category", category);
+            Output.Body(content);
         }
         else
         {
@@ -182,7 +180,7 @@ public static class GroundCommand
 
         if (human)
         {
-            Console.WriteLine($"Created: {category}/{id}");
+            Output.Success($"Created {category}/{id}");
         }
         else
         {
