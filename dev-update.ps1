@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 $publishDir = "$root\cli\bin\Release\net10.0\win-x64\publish"
 $skillsSource = "$root\skills"
-$skillsDest = "$env:USERPROFILE\.claude\skills\mill"
+$skillsDest = "$env:USERPROFILE\.claude\commands\mill"
 
 Write-Host "mill dev-update" -ForegroundColor Yellow
 Write-Host ""
