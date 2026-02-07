@@ -4,6 +4,36 @@ Transform user intent into a complete, loop-ready specification.
 
 **CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/shape/drafts/`) as defined below.
 
+## Structured Questions
+
+Use the `AskUserQuestion` tool for multiple-choice questions. This provides cleaner UX with keyboard navigation and built-in "Other" option.
+
+**When to use AskUserQuestion:**
+- Classification (feature/bug/security/task)
+- Scope narrowing (which of these options?)
+- Challenge phase (how to handle edge case?)
+- Persona selection (if multiple personas exist)
+
+**When NOT to use AskUserQuestion:**
+- Open-ended elicitation ("describe the problem")
+- Yes/no confirmations (use regular conversation)
+- Follow-up clarifications
+
+**Format:**
+```typescript
+AskUserQuestion({
+  questions: [{
+    header: "Type",           // Short label (max 12 chars)
+    question: "What kind of change is this?",
+    options: [
+      { label: "Feature", description: "New capability" },
+      { label: "Bug", description: "Something broken" }
+    ],
+    multiSelect: false        // true only when choices aren't mutually exclusive
+  }]
+})
+```
+
 ## Context
 Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
 
@@ -89,17 +119,37 @@ If no `# Resume Mode` section → proceed to step 1.
 
 Task validation: no user-facing change, nothing broken, no security implication.
 
-Offer numbered options based on code analysis:
-```
-this sounds like a [Type]. correct?
+Use `AskUserQuestion` to confirm type and narrow scope:
 
-what specifically [is wrong / do you want]?
-1. [option from code]
-2. [option]
-3. [option]
-
-or just type what you want
+```typescript
+AskUserQuestion({
+  questions: [
+    {
+      header: "Type",
+      question: "This sounds like a feature. Is that correct?",
+      options: [
+        { label: "Yes, feature", description: "New capability or behavior" },
+        { label: "Bug", description: "Something existing is broken" },
+        { label: "Security", description: "Risk or vulnerability" },
+        { label: "Task", description: "Technical work, no user impact" }
+      ],
+      multiSelect: false
+    },
+    {
+      header: "Scope",
+      question: "What specifically do you want?",
+      options: [
+        { label: "[option from code]", description: "Based on codebase analysis" },
+        { label: "[option 2]", description: "Alternative approach" },
+        { label: "[option 3]", description: "Another possibility" }
+      ],
+      multiSelect: false
+    }
+  ]
+})
 ```
+
+Populate options based on codebase analysis. User can always select "Other" for custom input.
 
 ### 3. Elicit
 
@@ -171,19 +221,26 @@ Update draft status to `challenging`. Then probe these areas one question at a t
 
 **Flow:**
 1. Identify 2-4 potential gaps from the areas above
-2. Ask ONE question, wait for response
+2. Ask ONE question using `AskUserQuestion`, wait for response
 3. If answer reveals missing criteria → add to spec, return to step 5 (Validate)
 4. If answer confirms no gap → continue to next question
 5. After all gaps addressed → proceed to Confirm
 
-```
-challenging spec for gaps...
+Use `AskUserQuestion` for each challenge:
 
-[area]: [specific question about this spec]
-
-1. [option if applicable]
-2. [option]
-3. not a concern because [user explains]
+```typescript
+AskUserQuestion({
+  questions: [{
+    header: "Edge case",
+    question: "What happens if the database is unavailable during sync?",
+    options: [
+      { label: "Queue and retry", description: "Buffer locally, sync when available" },
+      { label: "Fail fast", description: "Show error immediately" },
+      { label: "Not a concern", description: "Availability is guaranteed" }
+    ],
+    multiSelect: false
+  }]
+})
 ```
 
 **Do not invent problems.** If the spec is solid, acknowledge it and move on. Challenge is not a gate to add scope — it surfaces genuine risks.
@@ -248,7 +305,7 @@ Fallback: if `gh` fails, write to `.mill/{type}/{slug}.md`.
 ## Rules
 1. Detective mindset — dig layer by layer
 2. One question at a time
-3. Offer 2-4 options + "or just type"
+3. Use `AskUserQuestion` for multiple-choice; conversation for open-ended
 4. Save draft after EVERY answer — to `.mill/shape/drafts/`, NOT `/plan` or any other location
 5. No placeholders
 6. Security always wins classification
