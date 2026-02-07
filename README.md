@@ -1,16 +1,44 @@
 # mill
 
-**Knowledge-first AI delivery.** mill turns product knowledge into an active delivery system — so AI output stays coherent as products evolve.
+Turning intent into verified deliverables, continuously.
 
-![mill workbench](docs/workbench.png)
+mill is a specification-first delivery system that integrates with Claude Code. It provides structure and intelligence for the entire delivery workflow — from capturing ideas to shipping verified code.
 
-## Why mill?
+## Quick Start
 
-Instead of starting with prompts or code, mill builds and maintains project ground — personas, standards, constraints, and concepts — and uses that shared understanding to continuously shape well-verified specs and execute them in bounded, test-driven loops.
+### Install
 
-mill is not a code generator or orchestrator — it's the product layer. The specs mill produces can feed any AI dev tool, or you can run them directly in mill's bounded, verification-driven loops. mill focuses on the "what" and "why" so execution stays aligned.
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh | bash
+
+# Windows
+irm https://raw.githubusercontent.com/mindrevolution/mill/main/install.ps1 | iex
+```
+
+### Initialize
+
+```bash
+cd your-project
+mill init
+```
+
+### Use in Claude Code
+
+```
+/mill:warmup              # Generate project context
+/mill:shape               # Draft a specification
+/mill:ship 42             # Implement issue #42
+```
 
 ## How It Works
+
+mill has two components:
+
+1. **CLI** — Data operations and GitHub integration
+2. **Skills** — LLM-powered workflows for Claude Code
+
+### Workflow
 
 ```mermaid
 flowchart LR
@@ -27,91 +55,45 @@ flowchart LR
     G -.->|guides| X
 
     X -.->|learnings| G
-
-    B -->|dropped| D[(Dropped)]
-    X -->|shipped| PR[Pull Request]
 ```
 
 | | |
 |-|-|
-| **Ground** | Build product knowledge — personas, standards, concepts; review AI observations |
-| **Brief** | Capture ideas with intent — what and why; validate against Ground; 30-day time-box |
-| **Shape** | Refine into verified specs — chat-to-spec elicitation; publish to GitHub Issues |
-| **Ship** | Execute in bounded loops — until tests pass; review PRs |
+| **Ground** | Build product knowledge — personas, standards, concepts |
+| **Brief** | Capture ideas with intent — 30-day time-box |
+| **Shape** | Refine into verified specs — publish to GitHub Issues |
+| **Ship** | Execute bounded loops — until tests pass |
 
-## The Brief Lifecycle
+### Skills
 
-Briefs have a 30-day window to mature or get dropped. No endless backlog.
+| Skill | Purpose |
+|-------|---------|
+| `/mill:ground` | Manage product knowledge |
+| `/mill:brief` | Capture and develop ideas |
+| `/mill:shape` | Draft specifications → GitHub Issues |
+| `/mill:ship` | Implement specs with verification |
+| `/mill:warmup` | Generate codebase context |
+| `/mill:question` | Answer questions (no changes) |
 
-```mermaid
-flowchart LR
-    subgraph Brief Journey
-        A[Spark] -->|add context| B[Grounded]
-        B -->|challenge & validate| C[Ready]
-        C -->|promote| D[Shape]
-    end
+### CLI Commands
 
-    A -.->|neglected| F[Fades]
-    B -.->|neglected| F
-    F -->|30 days| X[Dropped]
-
-    X -->|essence preserved| E[(Learnings)]
+```bash
+mill init                    # Initialize .mill/
+mill ground list --human     # List knowledge items
+mill draft list --human      # List spec drafts
+mill issue list --human      # List GitHub issues
+mill history --human         # View run history
 ```
-
-**Visual decay:** Fresh briefs appear solid; aging briefs fade in opacity. No alarm colors — just natural fading like paper yellowing. The absence of vibrancy signals age.
-
-**Dropped ideas** get condensed to a single sentence — a searchable log of "whys that didn't survive," not a backlog to manage.
-
-## Loop Contract
-
-Every spec includes a verifiable contract:
-
-```markdown
-## Loop Contract
-- Success Criteria: <machine-checkable>
-- Test Command: <must pass before PR>
-- Stop Conditions: <max iterations>
-```
-
-The contract decides completion, not the agent.
-
-## Spec Types
-
-| Type | When | Verified By |
-|------|------|-------------|
-| **Feature** | New capability | Acceptance criteria |
-| **Bug** | Broken behavior | Regression test |
-| **Security** | Vulnerability | Threat mitigated |
-| **Task** | Technical work | Criteria pass |
-
-## Who It's For
-
-- Solo builders who want leverage without losing control
-- Small teams (2–10) shipping real products under time pressure
-- Founders and PM-engineers who own product intent end-to-end
-- AI-forward developers using multiple models across tools
-
-Not built for enterprise. Low ceremony, high velocity. For teams who spend their energy on customers, not on managing themselves.
-
-## Collaboration
-
-mill uses your git repository as the sync layer — no separate backend, no accounts.
-
-- **Product knowledge** syncs via git
-- **Specs** publish to GitHub Issues
-- **PRs** come from Ship when tests pass
-- **History** shows what you achieved
-
-Personal work-in-progress (active briefs, draft specs) stays local until ready to share.
 
 ## Requirements
 
-- [Claude Code](https://claude.ai/code)
-- Git repository on GitHub
+- Claude Code
 - `gh` CLI (authenticated)
-- Windows, Linux or macOS
+- Git repository on GitHub
 
-OpenCode and GitLab support are next — ironing out the core first.
+## Documentation
+
+See [AGENTS.md](AGENTS.md) for full documentation.
 
 ## License
 

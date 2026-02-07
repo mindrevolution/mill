@@ -1,17 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Default: Exe (works everywhere, console visible for debugging) -->
     <OutputType>Exe</OutputType>
-    <!-- Windows publish: WinExe (hides console for GUI app) -->
-    <OutputType Condition="$(RuntimeIdentifier.StartsWith('win'))">WinExe</OutputType>
-
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Mill</RootNamespace>
     <AssemblyName>mill</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.3.0-alpha</Version>
+    <Version>0.4.0-alpha</Version>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
@@ -19,33 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Photino.NET" Version="3.2.3" />
-    <PackageReference Include="Markdig" Version="0.44.0" />
-    <PackageReference Include="PTY" Version="1.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="mill.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\api\Mill.Api.csproj" />
-  </ItemGroup>
-
-  <!-- ASP.NET Core for embedded web server -->
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-
-  <!-- Copy native Photino libraries after publish -->
-  <Target Name="CopyPhotinoNative" AfterTargets="Publish">
-    <ItemGroup>
-      <PhotinoNativeFiles Include="$(NuGetPackageRoot)photino.native\3.2.3\runtimes\win-x64\native\*.*" Condition="$(RuntimeIdentifier.StartsWith('win'))" />
-      <PhotinoNativeFiles Include="$(NuGetPackageRoot)photino.native\3.2.3\runtimes\linux-x64\native\*.*" Condition="$(RuntimeIdentifier.StartsWith('linux'))" />
-      <PhotinoNativeFiles Include="$(NuGetPackageRoot)photino.native\3.2.3\runtimes\osx-x64\native\*.*" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
-    </ItemGroup>
-    <Copy SourceFiles="@(PhotinoNativeFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
-  </Target>
 
 </Project>
