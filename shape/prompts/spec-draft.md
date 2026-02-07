@@ -65,6 +65,8 @@ If `.mill/personas.md` is loaded, use it to improve elicitation:
 
 Save to `.mill/shape/drafts/{slug}.md` after EACH field captured.
 
+**Use Edit tool for incremental updates** — append or update individual sections rather than rewriting the full file. This minimizes token usage while maintaining crash safety.
+
 ```yaml
 ---
 type: feature|bug|security|task
