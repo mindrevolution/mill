@@ -13,10 +13,10 @@ Use the `AskUserQuestion` tool for multiple-choice questions. This provides clea
 - Scope narrowing (which of these options?)
 - Challenge phase (how to handle edge case?)
 - Persona selection (if multiple personas exist)
+- Final approval (approve/revise)
 
 **When NOT to use AskUserQuestion:**
 - Open-ended elicitation ("describe the problem")
-- Yes/no confirmations (use regular conversation)
 - Follow-up clarifications
 
 **Format:**
@@ -249,7 +249,7 @@ AskUserQuestion({
 
 **MANDATORY GATE — DO NOT PROCEED WITHOUT EXPLICIT USER APPROVAL**
 
-Present the spec and STOP. Wait for user response.
+Present the spec with validation summary, then use `AskUserQuestion` for approval:
 
 ```
 spec ready for review:
@@ -262,8 +262,20 @@ validation:
   ✓ verification defined
   ✓ scope clear
   ✓ no open questions
+```
 
-approve and create issue? [y/n]
+```typescript
+AskUserQuestion({
+  questions: [{
+    header: "Confirm",
+    question: "Spec is ready. Create GitHub issue?",
+    options: [
+      { label: "Approve", description: "Create issue and finalize" },
+      { label: "Revise", description: "Make changes, show again" }
+    ],
+    multiSelect: false
+  }]
+})
 ```
 
 **If open questions exist**, show validation failure and resolve them first:
@@ -276,11 +288,10 @@ approve and create issue? [y/n]
 resolve these before creating issue. which should we address first?
 ```
 
-**STOP HERE.** Do not call `gh issue create` or proceed to step 8 until user responds.
+**STOP HERE.** Do not call `gh issue create` or proceed to step 8 until user explicitly approves.
 
-- If user says `y`, `yes`, or `approve` → proceed to step 8
-- If user says `n`, `no`, or provides feedback → incorporate changes and repeat step 7
-- If user adds new information → update spec, repeat step 7
+- If user selects "Approve" → proceed to step 8
+- If user selects "Revise" or "Other" with feedback → incorporate changes and repeat step 7
 
 ### 8. Finalize
 
