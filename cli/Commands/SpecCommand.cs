@@ -1,15 +1,17 @@
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Mill.Services;
 
 namespace Mill.Commands;
 
 /// <summary>
-/// Issue commands - wraps gh CLI for GitHub issues.
+/// Spec commands - lists published specs from GitHub issues.
+/// Only returns issues with spec type labels (feature, bug, security, task).
 /// </summary>
-public static class IssueCommand
+public static class SpecCommand
 {
+    private static readonly string[] SpecTypes = ["feature", "bug", "security", "task"];
+
     public static async Task<int> Run(string[] args, bool human)
     {
         if (args.Length == 0)
@@ -28,24 +30,24 @@ public static class IssueCommand
     private static int ShowHelp()
     {
         Console.Error.WriteLine("""
-            usage: mill issue <command> [options]
+            usage: mill spec <command> [options]
 
             commands:
-              list                  list open issues
-              get <number>          get issue details
+              list                  list open specs
+              get <number>          get spec details
             """);
         return 1;
     }
 
     private static async Task<int> List(bool human)
     {
-        var result = await RunGh("issue list --state open --json number,title,labels,createdAt --limit 50");
+        var result = await RunGh("issue list --state open --json number,title,labels,createdAt --limit 100");
 
         if (!result.Success)
         {
             if (human)
             {
-                Console.Error.WriteLine($"Failed to list issues: {result.Error}");
+                Console.Error.WriteLine($"Failed to list specs: {result.Error}");
             }
             else
             {
@@ -57,36 +59,40 @@ public static class IssueCommand
         var ghIssues = JsonSerializer.Deserialize<List<GhIssueListItem>>(result.Output, JsonOptions);
         if (ghIssues == null)
         {
-            Console.WriteLine(JsonHelper.Serialize(new List<Issue>()));
+            Console.WriteLine(JsonHelper.Serialize(new List<Spec>()));
             return 0;
         }
 
-        var issues = ghIssues.Select(i => new Issue(
-            Number: i.Number,
-            Title: i.Title,
-            Type: ExtractType(i.Labels),
-            Status: "open",
-            Persona: ExtractPersona(i.Labels),
-            CreatedAt: i.CreatedAt
-        )).ToList();
+        // Filter to only include issues with spec type labels
+        var specs = ghIssues
+            .Where(i => HasSpecTypeLabel(i.Labels))
+            .Select(i => new Spec(
+                Number: i.Number,
+                Title: i.Title,
+                Type: ExtractType(i.Labels),
+                Status: "open",
+                Persona: ExtractPersona(i.Labels),
+                CreatedAt: i.CreatedAt
+            ))
+            .ToList();
 
         if (human)
         {
-            if (issues.Count == 0)
+            if (specs.Count == 0)
             {
-                Output.Empty("No open issues.");
+                Output.Empty("No open specs.");
             }
             else
             {
-                foreach (var issue in issues)
+                foreach (var spec in specs)
                 {
-                    Output.NumberedItem(issue.Number, issue.Type, issue.Title);
+                    Output.NumberedItem(spec.Number, spec.Type, spec.Title);
                 }
             }
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(issues));
+            Console.WriteLine(JsonHelper.Serialize(specs));
         }
 
         return 0;
@@ -96,7 +102,7 @@ public static class IssueCommand
     {
         if (args.Length < 1)
         {
-            Console.Error.WriteLine("usage: mill issue get <number>");
+            Console.Error.WriteLine("usage: mill spec get <number>");
             return 1;
         }
 
@@ -107,7 +113,7 @@ public static class IssueCommand
         {
             if (human)
             {
-                Console.Error.WriteLine($"Failed to get issue: {result.Error}");
+                Console.Error.WriteLine($"Failed to get spec: {result.Error}");
             }
             else
             {
@@ -123,7 +129,16 @@ public static class IssueCommand
             return 1;
         }
 
-        var issue = new IssueDetail(
+        // Warn if not a spec type
+        if (!HasSpecTypeLabel(ghIssue.Labels))
+        {
+            if (human)
+            {
+                Output.Warn($"#{number} is not a spec (missing type label)");
+            }
+        }
+
+        var spec = new SpecDetail(
             Number: ghIssue.Number,
             Title: ghIssue.Title,
             Body: ghIssue.Body ?? "",
@@ -136,18 +151,15 @@ public static class IssueCommand
 
         if (human)
         {
-            Output.Title($"#{issue.Number} {issue.Title}");
-            Output.Field("Type", issue.Type);
-            Output.Field("Status", issue.Status);
-            if (issue.Labels.Count > 0)
-            {
-                Output.Field("Labels", string.Join(", ", issue.Labels));
-            }
-            Output.Body(issue.Body);
+            Output.Title($"#{spec.Number} {spec.Title}");
+            Output.Field("Type", spec.Type);
+            Output.Field("Status", spec.Status);
+            Output.Field("Persona", spec.Persona);
+            Output.Body(spec.Body);
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(issue));
+            Console.WriteLine(JsonHelper.Serialize(spec));
         }
 
         return 0;
@@ -186,11 +198,16 @@ public static class IssueCommand
         }
     }
 
+    private static bool HasSpecTypeLabel(List<GhLabel>? labels)
+    {
+        if (labels == null) return false;
+        return labels.Any(l => SpecTypes.Contains(l.Name.ToLowerInvariant()));
+    }
+
     private static string ExtractType(List<GhLabel>? labels)
     {
         if (labels == null) return "task";
-        var typeLabels = new[] { "feature", "bug", "security", "task" };
-        var label = labels.FirstOrDefault(l => typeLabels.Contains(l.Name.ToLowerInvariant()));
+        var label = labels.FirstOrDefault(l => SpecTypes.Contains(l.Name.ToLowerInvariant()));
         return label?.Name.ToLowerInvariant() ?? "task";
     }
 

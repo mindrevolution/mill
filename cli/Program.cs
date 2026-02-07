@@ -25,7 +25,7 @@ return args switch
     ["ground", .. var rest] => await GroundCommand.Run(rest, human),
     ["brief", .. var rest] => await BriefCommand.Run(rest, human),
     ["draft", .. var rest] => await DraftCommand.Run(rest, human),
-    ["issue", .. var rest] => await IssueCommand.Run(rest, human),
+    ["spec", .. var rest] => await SpecCommand.Run(rest, human),
     ["history", .. var rest] => await HistoryCommand.Run(rest, human),
     ["context", .. var rest] => await ContextCommand.Run(rest, human),
     ["template", .. var rest] => await TemplateCommand.Run(rest, human),
@@ -64,8 +64,8 @@ int ShowHelp()
           draft validate <slug>   get validation result
           draft publish <slug>    publish draft to GitHub issue
 
-          issue list              list open GitHub issues
-          issue get <number>      get issue details
+          spec list               list open specs
+          spec get <number>       get spec details
 
           history                 list run history
           history add <json>      add a history entry

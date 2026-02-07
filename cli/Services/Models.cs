@@ -101,10 +101,10 @@ public record ValidationFinding(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Issue
+// Spec (published specs from GitHub issues)
 // ─────────────────────────────────────────────────────────────────────────────
 
-public record Issue(
+public record Spec(
     int Number,
     string Title,
     string Type,
@@ -113,7 +113,7 @@ public record Issue(
     DateTime CreatedAt
 );
 
-public record IssueDetail(
+public record SpecDetail(
     int Number,
     string Title,
     string Body,
