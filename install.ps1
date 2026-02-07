@@ -5,9 +5,8 @@ $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture 
 $asset = "mill-win-$arch.exe"
 $installDir = "$env:LOCALAPPDATA\Programs\mill"
 $target = "$installDir\mill.exe"
-$skillsDir = "$env:USERPROFILE\.claude\skills\mill"
 
-Write-Host "■ mill installer" -ForegroundColor Yellow
+Write-Host "mill installer" -ForegroundColor Yellow
 Write-Host ""
 
 # Download binary
@@ -24,25 +23,7 @@ Write-Host "  > downloading $asset..."
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 Invoke-WebRequest -Uri $url -OutFile $target
 
-Write-Host "  ✓ installed to $target" -ForegroundColor Green
-
-# Install skills for Claude Code
-Write-Host ""
-Write-Host "  > installing skills..."
-New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
-
-$skillsUrl = $release.assets | Where-Object { $_.name -eq "skills.zip" } | Select-Object -ExpandProperty browser_download_url
-
-if ($skillsUrl) {
-    $tempZip = "$env:TEMP\mill-skills.zip"
-    Invoke-WebRequest -Uri $skillsUrl -OutFile $tempZip
-    Expand-Archive -Path $tempZip -DestinationPath $skillsDir -Force
-    Remove-Item $tempZip
-    Write-Host "  ✓ skills installed to $skillsDir" -ForegroundColor Green
-} else {
-    Write-Host "  ! skills archive not in release, skipping" -ForegroundColor Yellow
-    Write-Host "    clone repo and copy skills/ manually"
-}
+Write-Host "  + installed to $target" -ForegroundColor Green
 
 # Check PATH
 Write-Host ""
@@ -52,12 +33,10 @@ if ($paths -notcontains $installDir) {
     Write-Host "  run once to add:"
     Write-Host "    [Environment]::SetEnvironmentVariable('PATH', `$env:PATH + ';$installDir', 'User')"
 } else {
-    Write-Host "  ✓ mill is in PATH" -ForegroundColor Green
+    Write-Host "  + mill is in PATH" -ForegroundColor Green
 }
 
 Write-Host ""
-Write-Host "Usage:"
-Write-Host "  mill --help           CLI commands"
-Write-Host "  /mill:warmup          Generate project context"
-Write-Host "  /mill:shape           Draft specifications"
-Write-Host "  /mill:ship            Execute work loops"
+Write-Host "CLI installed. For Claude Code integration:" -ForegroundColor Green
+Write-Host "  /plugin marketplace add mindrevolution/mill-plugin"
+Write-Host "  /plugin install mill@mindrevolution-mill-plugin"

@@ -1,0 +1,73 @@
+name: Sync Plugin
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Manual trigger for testing
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare plugin distribution
+        run: |
+          mkdir -p plugin-dist/.claude-plugin
+          mkdir -p plugin-dist/skills
+          mkdir -p plugin-dist/plugin
+
+          # Copy plugin manifest and marketplace
+          cp .claude-plugin/plugin.json plugin-dist/.claude-plugin/
+          cp .claude-plugin/marketplace.json plugin-dist/.claude-plugin/
+
+          # Copy MCP config
+          cp .mcp.json plugin-dist/
+
+          # Copy skills (commands)
+          cp -r skills/* plugin-dist/skills/
+
+          # Copy MCP installer
+          cp -r plugin/* plugin-dist/plugin/
+
+          # Create README
+          cat > plugin-dist/README.md << 'EOF'
+          # mill Plugin
+
+          Claude Code plugin for [mill](https://github.com/mindrevolution/mill) - specification-first delivery system.
+
+          ## Installation
+
+          ```
+          /plugin marketplace add mindrevolution/mill-plugin
+          /plugin install mill@mindrevolution-mill-plugin
+          ```
+
+          ## Commands
+
+          - `/mill:warmup` - Generate codebase context
+          - `/mill:shape` - Draft specifications
+          - `/mill:ship` - Execute bounded work loops
+          - `/mill:ground` - Manage product knowledge
+          - `/mill:brief` - Capture ideas
+          - `/mill:question` - Answer codebase questions
+
+          ## Requirements
+
+          - Claude Code 1.0.33+
+          - Node.js (for CLI auto-installer)
+          - `gh` CLI (GitHub CLI) - authenticated
+
+          The mill CLI is automatically installed when you first use the plugin.
+          EOF
+
+      - name: Push to mill-plugin
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.MILL_PLUGIN_DEPLOY_KEY }}
+        with:
+          source-directory: 'plugin-dist'
+          destination-github-username: 'mindrevolution'
+          destination-repository-name: 'mill-plugin'
+          target-branch: main
+          commit-message: "Sync from mill ${{ github.ref_name }}"

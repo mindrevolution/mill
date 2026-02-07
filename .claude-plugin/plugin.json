@@ -1,0 +1,10 @@
+{
+  "name": "mill",
+  "version": "1.0.0",
+  "description": "Specification-first delivery system - turn intent into verified deliverables",
+  "author": {
+    "name": "mindrevolution"
+  },
+  "homepage": "https://github.com/mindrevolution/mill",
+  "repository": "https://github.com/mindrevolution/mill-plugin"
+}

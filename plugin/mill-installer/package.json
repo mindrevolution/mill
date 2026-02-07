@@ -1,0 +1,7 @@
+{
+  "name": "mill-installer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Auto-installs mill CLI when plugin is enabled",
+  "main": "index.mjs"
+}

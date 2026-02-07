@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 $publishDir = "$root\cli\bin\Release\net10.0\win-x64\publish"
 $skillsSource = "$root\skills"
-$skillsDest = "$env:USERPROFILE\.claude\commands\mill"
+$commandsDest = "$env:USERPROFILE\.claude\commands\mill"
 
 Write-Host "mill dev-update" -ForegroundColor Yellow
 Write-Host ""
@@ -27,14 +27,14 @@ if ($paths -notcontains $publishDir) {
     Write-Host "  + PATH ok" -ForegroundColor Green
 }
 
-# Copy skills
-Write-Host "  > installing skills..."
-if (Test-Path $skillsDest) {
-    Remove-Item -Recurse -Force $skillsDest
+# Copy commands
+Write-Host "  > installing commands..."
+if (Test-Path $commandsDest) {
+    Remove-Item -Recurse -Force $commandsDest
 }
-New-Item -ItemType Directory -Force -Path $skillsDest | Out-Null
-Copy-Item "$skillsSource\*.md" $skillsDest
-Write-Host "  + skills installed" -ForegroundColor Green
+New-Item -ItemType Directory -Force -Path $commandsDest | Out-Null
+Copy-Item "$skillsSource\*.md" $commandsDest
+Write-Host "  + commands installed" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Ready:" -ForegroundColor Green

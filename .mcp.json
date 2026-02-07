@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mill-installer": {
+      "command": "node",
+      "args": ["plugin/mill-installer/index.mjs"],
+      "env": {}
+    }
+  }
+}
