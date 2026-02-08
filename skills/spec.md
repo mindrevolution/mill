@@ -27,6 +27,30 @@ AskUserQuestion:
 
 Never output raw numbered lists and ask "pick one" — use the tool.
 
+## Principles
+
+A specification that requires clarifying questions is a draft, not a specification.
+
+| Principle | Definition |
+|-----------|------------|
+| **Self-Containment** | ∀ statement σ ∈ spec: an implementer unfamiliar with the system can execute σ without querying the author. Test: "Could someone unfamiliar execute this without asking me anything?" |
+| **Language Independence** | Specs describe WHAT and WHY at an abstraction level invariant under language transformation. Implementation hints are explicitly marked as language-specific. |
+| **Decision Completeness** | Every parameter bound to a concrete value. No TBD. For conditionals: `default UNLESS predicate → alternative`. |
+| **Explicit Non-Applicability** | Silent omission conflates "rejected" with "overlooked." When N/A, state: `N/A: {reason}`. |
+| **Binary State** | Document is either **draft** (requires clarification) or **ready** (self-contained). No intermediate states. |
+
+### Clarifying Question Failures
+
+If a reader asks any of these, the spec has failed:
+
+| ❌ Fails | ✅ Passes |
+|----------|-----------|
+| "Configure the stream endpoint" | "Set `RTMP_INGEST=rtmp://ingest.example.com:1935/live` in `encoder/.env`" |
+| "Use the appropriate codec" | "Encode with H.264 Main Profile, 1080p@30fps, 4500kbps CBR" |
+| "The API returns video metadata" | "The API returns `{streamId, resolution, bitrate, codec, status, viewerCount}`" |
+| "Handle transcoding errors" | "On transcode failure: retry 3×, then emit `stream.failed` event with `{streamId, error, timestamp}`" |
+| "Update the content status" | "Set `content.status = 'published'` and `content.publishedAt = NOW()` in `cms_entries` table" |
+
 ## Overview
 
 Spec takes an idea and produces a GitHub Issue with:
@@ -179,14 +203,21 @@ All `core` and `must-have` requirements need both approach parts and criteria.
 
 ### 5. Validate
 
-Check before publishing:
+**Principles check:**
+- [ ] Self-Containment — no statement requires clarification to execute
+- [ ] Language Independence — describes WHAT/WHY, not language-specific HOW
+- [ ] Decision Completeness — no TBD, no "it depends," all values concrete
+- [ ] Explicit Non-Applicability — omitted sections marked `N/A: {reason}`
+
+**Structure check:**
 - [ ] All core/must-have requirements have approach parts (no ❌)
 - [ ] All core/must-have requirements have criteria (no —)
 - [ ] No ⚠️ flags remain in approach
 - [ ] All criteria are testable conditions
 - [ ] Scope clear (in/out)
-- [ ] No placeholders or open questions
 - [ ] Loop Contract present
+
+**Status:** Set `status: ready` only when all checks pass. Otherwise remains `status: draft`.
 
 ### 6. Challenge (for complex specs)
 
@@ -298,11 +329,18 @@ For selected items, write observation files. For unselected, ignore.
 
 ## Rules
 
+**Process:**
 1. One question at a time
 2. Create draft early, update often
-3. No placeholders in final spec
-4. Security always wins classification
-5. Scope creep → separate spec
-6. Never publish without explicit approval
-7. GitHub is source of truth — no local spec files after publish
-8. Write observations for ground truth gaps — don't interrupt flow
+3. Security always wins classification
+4. Scope creep → separate spec
+5. Never publish without explicit approval
+6. GitHub is source of truth — no local spec files after publish
+7. Write observations for ground truth gaps — don't interrupt flow
+
+**Quality (non-negotiable):**
+8. Self-Containment — if reader must ask, spec has failed
+9. Language Independence — WHAT/WHY universal, HOW marked as language-specific
+10. Decision Completeness — no TBD, no placeholders, all values concrete
+11. Explicit Non-Applicability — state `N/A: {reason}`, never silently omit
+12. Binary State — `status: draft` until all principles pass, then `status: ready`
