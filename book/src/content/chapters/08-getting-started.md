@@ -33,10 +33,10 @@ The CLI can run independently — without the Claude Code plugin. This is useful
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh | bash
+curl -fsSL https://mill.mindrevolution.com/install.sh | bash
 
 # Windows
-irm https://raw.githubusercontent.com/mindrevolution/mill/main/install.ps1 | iex
+irm https://mill.mindrevolution.com/install.ps1 | iex
 ```
 
 You get the execution engine (`mill ship`, `mill ground`, `mill history`, etc.) but not the conversational skills (`/mill:spec`, `/mill:idea`, `/mill:ground`) that help you author specs and manage knowledge interactively.
