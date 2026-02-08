@@ -69,20 +69,24 @@ When the spec passes validation, it publishes as a GitHub Issue. That issue beco
 
 ## Ship — The Execution
 
-Ship takes a GitHub Issue and implements it through bounded iterations.
+Ship takes a GitHub Issue and implements it through a CLI-orchestrated work loop. One command runs the full pipeline:
+
+```bash
+mill ship 47
+```
 
 **The process:**
 
-1. **Load the spec** — read the issue, understand the contract
-2. **Load context** — your project's knowledge, domain guidance, patterns
-3. **Plan slices** — break the work into model, logic, interface, tests
-4. **Execute slices** — one per iteration, tested after each
-5. **Verify** — run the full verification suite against criteria
-6. **Ship** — create a Pull Request with full traceability
+1. **Isolate** — create a worktree on a dedicated branch (your main branch stays untouched)
+2. **Load context** — the spec, your project's knowledge, domain guidance
+3. **Iterate** — implement one slice at a time, test after each, signal progress
+4. **Verify independently** — a separate Claude instance checks the work (work can't grade its own homework)
+5. **Ship** — create a Pull Request with full traceability
+6. **Clean up** — remove the worktree, record history
 
 Ship is mostly autonomous. The spec should be complete enough that implementation doesn't need constant human input. But when genuine ambiguity arises, mill asks rather than guesses.
 
-After shipping, mill records the run in history — the issue, the PR, the number of iterations, the outcome. And it writes observations about what it discovered during implementation.
+After shipping, the CLI records the run in history and the implementation writes observations about what it discovered.
 
 ## The Learning Loop
 
@@ -121,8 +125,8 @@ Here's a real example of the full cycle:
 3. You develop the idea over a few days, answering open questions
 4. `/mill:spec` transforms it into a spec with 4 requirements, 6 approach parts, and 8 criteria
 5. The spec publishes as GitHub Issue #47
-6. `/mill:ship 47` implements it in 5 slices across model, logic, and interface
-7. Verification passes — PR #48 is created
+6. `mill ship 47` creates a worktree and implements it in 5 slices across model, logic, and interface
+7. Independent verification passes — PR #48 is created, worktree cleaned up
 8. During implementation, mill observed that "PDF export" isn't in the vocabulary. It also noticed the `ReportService` has no unit tests.
 9. `/mill:ground` reviews these observations. You add "PDF export" to vocabulary and create a new idea for test coverage.
 10. Next cycle starts sharper.

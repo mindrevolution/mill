@@ -123,11 +123,11 @@ The result: a GitHub Issue with a complete, self-contained specification.
 
 Point ship at the issue:
 
-```
-/mill:ship 42
+```bash
+mill ship 42
 ```
 
-mill loads the spec, plans slices, implements them one by one, verifies against criteria, and creates a PR.
+The CLI takes over — it creates an isolated worktree, iterates through slices, runs independent verification, and creates a PR. One command, full pipeline. You can also start from the skill (`/mill:ship 42`) which handles pre-flight checks before delegating to the CLI.
 
 ## The Daily Rhythm
 
@@ -156,10 +156,11 @@ Once mill is set up, here's what a typical workflow looks like:
 → Published as GitHub Issue #55
 ```
 
-```
-/mill:ship 55
-→ Implemented in 4 slices
-→ PR #56 created, verified and ready for review
+```bash
+mill ship 55
+→ Worktree created, 4 slices implemented
+→ Independent verification passed
+→ PR #56 created, ready for review
 ```
 
 ### Weekly

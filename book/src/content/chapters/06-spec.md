@@ -105,7 +105,7 @@ Specs include a domain that shapes execution guidance:
 | **platform** | Infrastructure-as-code, containers, observability |
 | **fullstack** | All of the above |
 
-Domain guidance isn't just decorative. When `/mill:ship` implements a backend spec, it follows backend patterns. When it implements a website spec, it optimizes for Web Vitals and visual fidelity.
+Domain guidance isn't just decorative. When `mill ship` implements a backend spec, it follows backend patterns. When it implements a website spec, it optimizes for Web Vitals and visual fidelity.
 
 ## Observations During Drafting
 
