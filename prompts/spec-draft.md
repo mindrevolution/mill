@@ -85,20 +85,55 @@ title: Human-readable title
 slug: lowercase-hyphenated
 summary: one-line (update as understanding deepens)
 status: classifying|eliciting|reviewing|challenging|complete
+approach: A (selected approach, once decided)
 persona: persona-slug (if applicable)
 created: ISO8601
 updated: ISO8601
-fields_complete: [problem, users]
-fields_pending: [acceptance_criteria, scope, verification, loop_contract]
 ---
 
-## Problem/Opportunity
-## Target Users
-## User Stories
+## Problem
+{Why this matters, what pain exists}
+
+## Requirements
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R1 | {what the solution must achieve} | core |
+| R2 | {constraint or capability needed} | must-have |
+| R3 | {optional enhancement} | nice-to-have |
+
+Status: `core` (primary goal), `must-have`, `nice-to-have`, `out`
+
+## Approach A: {short title}
+| Part | Mechanism | Flag |
+|------|-----------|:----:|
+| A1 | {what we build/change} | |
+| A2 | {another mechanism} | ⚠️ |
+
+Flag: empty = understood, ⚠️ = unknown (needs investigation)
+
+## Coverage (R × A)
+| Req | A |
+|-----|---|
+| R1 | ✅ |
+| R2 | ✅ |
+| R3 | ❌ |
+
+Notes: {explain any ❌}
+
 ## Acceptance Criteria
+- [ ] {testable condition for R1}
+- [ ] {testable condition for R2}
+
 ## Scope
+**In:** {what's included}
+**Out:** {what's explicitly excluded}
+
 ## Verification
+{how to verify — commands, manual checks}
+
 ## Loop Contract
+**Test command:** {command}
+**Stop conditions:** {max iterations, success criteria}
 ```
 
 ### Update Pattern
@@ -233,63 +268,126 @@ AskUserQuestion:
 2. Write initial draft file with `status: classifying`, include `domain` field
 3. Continue elicitation — the draft will update as you learn more
 
-### 3. Elicit
+### 3. Elicit Requirements
 
-One question at a time. Layer by layer:
-1. Surface problem
-2. Impact/motivation
-3. Desired state
-4. Success criteria
-5. Scope boundaries
-6. Verification
+Capture **Requirements (R)** — what the solution must achieve. One question at a time.
 
-**UPDATE DRAFT AFTER EACH ANSWER.** When the user responds:
-1. Incorporate their answer into the appropriate section
-2. Update `status: eliciting` and `updated` timestamp
-3. Update `fields_complete`/`fields_pending` lists
-4. Write the file — the UI will refresh automatically
+**Layer by layer:**
+1. Problem — what pain exists?
+2. Core goal — what must this solve?
+3. Constraints — what rules apply?
+4. Nice-to-haves — what would be bonus?
+5. Scope boundaries — what's explicitly out?
 
-**Fields by type:**
+**As requirements emerge, add them to the table:**
 
-| Feature | Bug | Security | Task |
-|---------|-----|----------|------|
-| Problem | Expected vs actual | Threat | What changes |
-| Users | Reproduction | STRIDE | Why now |
-| User story | Environment | Attack vector | Scope |
-| Acceptance | Regression test | Mitigation | Acceptance |
-| Scope | Verification | Verification | Guardrails |
-| Loop Contract | Loop Contract | Loop Contract | Loop Contract |
+```markdown
+## Requirements
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R1 | Users can search by content | core |
+| R2 | Results appear within 200ms | must-have |
+| R3 | Search history saved | nice-to-have |
+```
 
-**If personas exist:** When eliciting "Users" and "User story", reference loaded personas to ground the conversation. Write user stories that reflect persona jobs and pain points, but don't name personas in the output.
+**Status values:**
+- `core` — primary goal, spec fails without it
+- `must-have` — required for success
+- `nice-to-have` — valuable if achievable
+- `out` — explicitly excluded
 
-Reject vague criteria:
-- "faster" → "< Xms"
-- "looks better" → "matches design spec"
-- "works correctly" → "test passes"
+**UPDATE DRAFT AFTER EACH ANSWER.** Write file after every response.
 
-Push back on scope creep: "separate spec, finish this first."
+**Reject vague requirements:**
+- "faster" → "response time < Xms"
+- "looks better" → "matches design spec at [link]"
+- "works correctly" → "passes test X"
 
-### 4. Generate
-Use template from `spec/templates/{type}.md`. Fill ALL fields.
+**Push back on scope creep:** "That sounds like a separate spec. Let's finish this one first."
+
+### 3b. Define Approach
+
+Once requirements are clear, define **Approach (A)** — how we'll build it.
+
+**Each part is a mechanism — what we build or change:**
+
+```markdown
+## Approach A: Client-side search
+| Part | Mechanism | Flag |
+|------|-----------|:----:|
+| A1 | Search input with 90ms debounce | |
+| A2 | Query param sync (?q=) | |
+| A3 | Typesense rawSearch() integration | ⚠️ |
+```
+
+**Flag column:**
+- Empty = understood, we know how to build it
+- ⚠️ = unknown, needs investigation before committing
+
+**Parts must be mechanisms, not intentions:**
+- ✅ "Route letters to typesenseService.rawSearch()" (mechanism)
+- ❌ "Search should work" (intention — belongs in R)
+
+**If ⚠️ flags exist:** Investigate before proceeding. Read code, check feasibility. Remove flag when understood, or note why it's blocked.
+
+**Multiple approaches:** If alternatives exist, define A, B, C with different trade-offs. Coverage check will help decide.
+
+### 4. Coverage Check
+
+Before validating details, verify the approach covers all requirements.
+
+**Build the coverage table:**
+
+```markdown
+## Coverage (R × A)
+| Req | A |
+|-----|---|
+| R1 | ✅ |
+| R2 | ✅ |
+| R3 | ❌ |
+
+Notes:
+- R3 ❌: Search history deferred to v2
+```
+
+**Rules:**
+- Binary only: ✅ (covered) or ❌ (not covered)
+- Every requirement must appear
+- Explain each ❌ — is it out of scope, or missing from approach?
+
+**Coverage failures:**
+- If core/must-have requirement is ❌ → add parts to approach or mark requirement `out`
+- If ⚠️ flags remain in approach → investigate before claiming ✅
+- If requirement feels unsatisfied but shows ✅ → missing requirement, add it
+
+**Multiple approaches:** If comparing A vs B, show both columns:
+
+```markdown
+| Req | A | B |
+|-----|---|---|
+| R1 | ✅ | ✅ |
+| R2 | ❌ | ✅ |
+```
 
 ### 5. Validate
+
 ```
-[ ] success criteria testable
-[ ] each criterion verifiable
+[ ] all core/must-have requirements covered (✅ in coverage)
+[ ] no ⚠️ flags remain in approach
+[ ] acceptance criteria testable
 [ ] scope clear (in/out)
 [ ] no placeholders
-[ ] no open questions (resolve before finalizing)
+[ ] no open questions
 [ ] Loop Contract present with:
     - test command (or explicit "none: <reason>")
-    - success criteria
     - stop conditions
 ```
 
-**Open questions block finalization.** If the spec contains "Open Questions", "Open Topics", or similar unresolved sections, they MUST be resolved before creating a GitHub Issue. Drafts may have open questions; issues may not.
+**Open questions block finalization.** Drafts may have open questions; GitHub Issues may not.
 
 **Loop Contract is required.** Ask: "What command runs the tests?" Common: `npm test`, `dotnet test`, `pytest`, `go test ./...`. If no tests exist, require explicit reason. Stop conditions default to 20 iterations.
 
-If any fail, elicit missing info.
+If any fail, return to elicitation.
 
 ### 6. Challenge
 

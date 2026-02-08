@@ -65,10 +65,24 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 |-------|---------|
 | `/mill:ground` | Build product knowledge — personas, standards, concepts, design |
 | `/mill:brief` | Capture ideas with 30-day lifecycle |
-| `/mill:shape` | Transform intent into verified specs → GitHub Issues |
+| `/mill:shape` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
 | `/mill:ship` | Execute bounded work loops until verification passes |
 | `/mill:warmup` | Generate `.mill/context.md` from codebase |
 | `/mill:question` | Answer questions without making changes |
+
+## Spec Structure
+
+Specs separate **what** from **how**:
+
+```
+Requirements (R)     → what the solution must achieve
+        ↓ satisfied by
+Approach (A)         → how we'll build it (parts + mechanisms)
+        ↓ verified by
+Acceptance Criteria  → testable conditions
+```
+
+**Coverage check (R × A)** proves the approach addresses all requirements before implementation.
 
 ## Workflow
 

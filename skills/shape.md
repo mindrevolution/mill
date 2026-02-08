@@ -30,10 +30,11 @@ Never output raw numbered lists and ask "pick one" — use the tool.
 ## Overview
 
 Shape takes an idea and produces a GitHub Issue with:
-- Clear acceptance criteria
-- Defined scope (in/out)
-- Verification steps
-- Loop contract (test command, stop conditions)
+- **Requirements (R)** — what the solution must achieve
+- **Approach (A)** — how we'll build it (with parts)
+- **Coverage** — proof that approach satisfies requirements
+- **Acceptance Criteria** — testable verification conditions
+- **Loop Contract** — test command, stop conditions
 
 ## Commands
 
@@ -109,62 +110,79 @@ title: Human Readable Title
 type: feature
 domain: application
 status: draft
-persona: primary-user
+approach: A
 ---
 
 ## Problem
+{What pain exists, why this matters}
 
-{What problem does this solve?}
+## Requirements
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R1 | {core goal} | core |
+| R2 | {must-have constraint} | must-have |
 
-## User Stories
+## Approach A: {short title}
+| Part | Mechanism | Flag |
+|------|-----------|:----:|
+| A1 | {what we build/change} | |
+| A2 | {another mechanism} | ⚠️ |
 
-As a [persona], I want [capability] so that [benefit].
+## Coverage (R × A)
+| Req | A |
+|-----|---|
+| R1 | ✅ |
+| R2 | ✅ |
 
 ## Acceptance Criteria
-
-- [ ] Criterion 1 (testable, specific)
-- [ ] Criterion 2
-- [ ] Criterion 3
+- [ ] {testable condition for R1}
+- [ ] {testable condition for R2}
 
 ## Scope
-
-**In scope:**
-- Item 1
-- Item 2
-
-**Out of scope:**
-- Item 3
+**In:** {included}
+**Out:** {excluded}
 
 ## Verification
-
-{How to verify this works}
+{commands, manual checks}
 
 ## Loop Contract
-
-**Test command:** `npm test` (or appropriate command)
+**Test command:** `npm test`
 **Stop conditions:** 20 iterations max
 ```
 
-### 4. Elicit Details
+### 4. Elicit Requirements
 
 **Use AskUserQuestion** for each layer. One question at a time:
-1. Surface problem
-2. Impact/motivation
-3. Desired state
-4. Success criteria
-5. Scope boundaries
-6. Verification approach
+1. Problem — what pain exists?
+2. Core goal — what must this solve?
+3. Constraints — what rules apply?
+4. Nice-to-haves — what's bonus?
 
-Update draft after each answer.
+Add each requirement to the table with status (`core`, `must-have`, `nice-to-have`, `out`).
+
+### 4b. Define Approach
+
+Once requirements are clear, define approach:
+1. Each part = mechanism (what we build/change)
+2. Flag unknowns with ⚠️
+3. Investigate ⚠️ before proceeding
+
+### 4c. Coverage Check
+
+Build coverage table (R × A):
+- ✅ = covered
+- ❌ = not covered (explain why)
+
+All `core` and `must-have` requirements need ✅.
 
 ### 5. Validate
 
 Check before publishing:
-- [ ] Success criteria testable
-- [ ] Each criterion verifiable
+- [ ] All core/must-have requirements covered (✅)
+- [ ] No ⚠️ flags remain in approach
+- [ ] Acceptance criteria testable
 - [ ] Scope clear (in/out)
-- [ ] No placeholders
-- [ ] No open questions
+- [ ] No placeholders or open questions
 - [ ] Loop Contract present
 
 ### 6. Challenge (for complex specs)
