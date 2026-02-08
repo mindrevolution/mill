@@ -16,24 +16,18 @@ mill is a specification-first delivery system that integrates with Claude Code a
 ## Architecture
 
 ```
-~/.claude/skills/mill/          # Installed skills
-├── ground.md                   # /mill:ground - knowledge management
-├── brief.md                    # /mill:brief - idea capture
-├── shape.md                    # /mill:shape - spec drafting
-├── ship.md                     # /mill:ship - bounded work loops
-├── warmup.md                   # /mill:warmup - codebase context
-└── question.md                 # /mill:question - answer questions
-
-mill/                           # Repository
+mill/                           # Main repository (source of truth)
 ├── cli/                        # .NET CLI
-│   ├── Commands/               # Command implementations
-│   └── Services/               # Shared logic
-├── skills/                     # Skill source files
-├── templates/                  # All templates
-│   ├── specs/                  # Spec templates (feature, bug, security, task)
-│   ├── archetypes/             # Product archetypes (saas, marketplace, etc.)
-│   └── stacks/                 # Tech stack profiles
-└── prompts/                    # LLM prompts (used by skills)
+├── skills/                     # Skill source files → synced to mill-plugin
+├── plugin/                     # MCP installer → synced to mill-plugin
+├── templates/                  # Spec/archetype/stack templates
+└── prompts/                    # LLM prompts
+
+mill-plugin/                    # Distribution repository (auto-synced)
+├── .claude-plugin/             # Plugin manifest + marketplace
+├── .mcp.json                   # MCP server config
+├── skills/                     # Commands for Claude Code
+└── plugin/mill-installer/      # Auto-installs CLI on plugin enable
 ```
 
 ## CLI Commands
@@ -105,29 +99,40 @@ flowchart TD
 
 ## Requirements
 
-- Claude Code CLI
+- Claude Code 1.0.33+
 - `gh` CLI (GitHub CLI) — authenticated
+- Node.js (for MCP installer)
 - Git repository
-- .NET 10 runtime (for CLI)
 
 ## Installation
 
-### macOS / Linux
+Install via Claude Code plugin (recommended):
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh | bash
+```
+/plugin marketplace add mindrevolution/mill-plugin
+/plugin install mill@mindrevolution-mill-plugin
 ```
 
-### Windows
+The CLI is auto-installed when the plugin is first enabled.
 
-```powershell
+### CLI Only (without plugin)
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh | bash
+
+# Windows
 irm https://raw.githubusercontent.com/mindrevolution/mill/main/install.ps1 | iex
 ```
 
-### Manual
+## Plugin Sync
 
-1. Download CLI binary from releases
-2. Copy `skills/` to `~/.claude/skills/mill/`
+The `mill-plugin` repo is auto-synced from `mill` on each release:
+
+1. Release published on `mill` repo
+2. GitHub Action (`sync-plugin.yml`) triggers
+3. Copies `skills/`, `plugin/`, `.claude-plugin/`, `.mcp.json` to `mill-plugin`
+4. Users get updates via plugin auto-update
 
 ## Development
 
