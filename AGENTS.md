@@ -35,7 +35,7 @@ mill-plugin/                    # Distribution repository (auto-synced)
 ```bash
 mill init                           # Initialize .mill/ in current repo
 mill ground list|get|create         # Knowledge CRUD
-mill brief list|get|create|drop     # Brief lifecycle
+mill idea list|get|create|drop      # Idea lifecycle
 mill draft list|get|validate|publish # Draft management + GitHub publish
 mill issue list|get                 # Wraps gh CLI
 mill history [add]                  # Ship run history
@@ -64,7 +64,7 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 | Skill | Purpose |
 |-------|---------|
 | `/mill:ground` | Build product knowledge — personas, standards, concepts, design |
-| `/mill:brief` | Capture ideas with 30-day lifecycle |
+| `/mill:idea` | Capture ideas with 30-day lifecycle |
 | `/mill:spec` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
 | `/mill:ship` | Execute bounded work loops until verification passes |
 | `/mill:warmup` | Generate `.mill/context.md` from codebase |
@@ -112,7 +112,7 @@ flowchart TD
 │   ├── concepts/                   # Domain vocabulary
 │   └── design/                     # Visual language
 
-├── brief/
+├── idea/
 │   └── active/                     # Live briefs [gitignored]
 
 ├── spec/

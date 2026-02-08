@@ -1,12 +1,12 @@
 ---
 description: Capture and develop ideas with 30-day lifecycle
-allowed-tools: Read, Write, Bash(mill brief*, mill ground list)
+allowed-tools: Read, Write, Bash(mill idea*, mill ground list)
 argument-hint: "[title] - start capturing a new idea"
 ---
 
-# Brief
+# Idea
 
-Capture ideas with intent. Briefs have a 30-day lifecycle — develop them into specs or drop them with learned essence.
+Capture ideas with intent. Ideas have a 30-day lifecycle — develop them into specs or drop them with learned essence.
 
 ## Interaction Pattern
 
@@ -41,20 +41,20 @@ spark → developing → ready → [promote to draft | drop with essence]
 ## Commands
 
 ```bash
-# List active briefs
-mill brief list --human
+# List active ideas
+mill idea list --human
 
-# Get brief details
-mill brief get my-idea --human
+# Get idea details
+mill idea get my-idea --human
 
-# Create new brief
-mill brief create "My Idea" "Enable users to X so they can Y" --human
+# Create new idea
+mill idea create "My Idea" "Enable users to X so they can Y" --human
 
 # Drop with learned essence
-mill brief drop my-idea "Users don't actually need X because Z" --human
+mill idea drop my-idea "Users don't actually need X because Z" --human
 
-# View dropped briefs (learnings)
-mill brief dropped --human
+# View dropped ideas (learnings)
+mill idea dropped --human
 ```
 
 ## Workflow
@@ -81,10 +81,10 @@ Options based on loaded personas (if available):
 
 After gathering responses:
 ```bash
-mill brief create "Feature Name" "Intent statement"
+mill idea create "Feature Name" "Intent statement"
 ```
 
-### 2. Develop the Brief
+### 2. Develop the Idea
 
 **Use AskUserQuestion** to flesh out the idea layer by layer:
 
@@ -110,7 +110,7 @@ Options (multiSelect: true):
   - "Full production-ready"
 ```
 
-Update the brief file at `.mill/brief/active/{slug}.md`:
+Update the idea file at `.mill/idea/active/{slug}.md`:
 
 ```markdown
 ---
@@ -134,14 +134,14 @@ concepts:
 
 ### 3. Ready to Promote
 
-When the brief is ready to become a spec:
+When the idea is ready to become a spec:
 - All open questions resolved
 - Intent is clear
 - Scope is defined
 
 Promote to draft:
 1. Move content to `.mill/spec/drafts/{slug}.md`
-2. Delete the brief
+2. Delete the idea
 3. Continue with `/mill:spec` to complete the spec
 
 ### 4. Or Drop with Essence
@@ -151,20 +151,20 @@ If the idea isn't worth pursuing:
 - The essence goes into `dropped.json` for team knowledge
 
 ```bash
-mill brief drop my-idea "Learned that users prefer Y instead"
+mill idea drop my-idea "Learned that users prefer Y instead"
 ```
 
 ## Integration
 
-- Briefs reference **personas** from ground
-- Briefs use **concepts** from ground
-- Ready briefs become **drafts** in spec
+- Ideas reference **personas** from ground
+- Ideas use **concepts** from ground
+- Ready ideas become **drafts** in spec
 - Dropped essences inform future decisions
 
 ## Rules
 
-1. One idea per brief
+1. One idea per file
 2. Intent is mandatory — why does this matter?
 3. 30-day soft limit — develop or drop
-4. Dropped briefs capture learning, not just deletion
-5. Briefs are local (gitignored) — they're personal WIP
+4. Dropped ideas capture learning, not just deletion
+5. Ideas are local (gitignored) — they're personal WIP

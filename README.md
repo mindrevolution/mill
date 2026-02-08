@@ -47,10 +47,10 @@ flowchart LR
     end
 
     subgraph Delivery
-        B[Brief] --> S[Spec] --> X[Ship]
+        I[Idea] --> S[Spec] --> X[Ship]
     end
 
-    G -.->|informs| B
+    G -.->|informs| I
     G -.->|validates| S
     G -.->|guides| X
 
@@ -60,7 +60,7 @@ flowchart LR
 | | |
 |-|-|
 | **Ground** | Build product knowledge — personas, standards, concepts |
-| **Brief** | Capture ideas with intent — 30-day time-box |
+| **Idea** | Capture ideas with intent — 30-day time-box |
 | **Spec** | Refine into verified specs — publish to GitHub Issues |
 | **Ship** | Execute bounded loops — until tests pass |
 
@@ -69,7 +69,7 @@ flowchart LR
 | Skill | Purpose |
 |-------|---------|
 | `/mill:ground` | Manage product knowledge |
-| `/mill:brief` | Capture and develop ideas |
+| `/mill:idea` | Capture and develop ideas |
 | `/mill:spec` | Draft specifications → GitHub Issues |
 | `/mill:ship` | Implement specs with verification |
 | `/mill:warmup` | Generate codebase context |

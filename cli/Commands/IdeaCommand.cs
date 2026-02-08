@@ -3,9 +3,9 @@ using Mill.Services;
 namespace Mill.Commands;
 
 /// <summary>
-/// Brief workspace commands for idea capture.
+/// Idea workspace commands for idea capture.
 /// </summary>
-public static class BriefCommand
+public static class IdeaCommand
 {
     public static async Task<int> Run(string[] args, bool human)
     {
@@ -28,20 +28,20 @@ public static class BriefCommand
     private static int ShowHelp()
     {
         Console.Error.WriteLine("""
-            usage: mill brief <command> [options]
+            usage: mill idea <command> [options]
 
             commands:
-              list                  list active briefs
-              get <id>              get brief details
-              create <title> <intent>  create a new brief
-              drop <id> <essence>   drop a brief with learned essence
-              dropped               list dropped briefs
+              list                  list active ideas
+              get <id>              get idea details
+              create <title> <intent>  create a new idea
+              drop <id> <essence>   drop an idea with learned essence
+              dropped               list dropped ideas
             """);
         return 1;
     }
 
-    private static string ActivePath => Path.Combine(ProjectContext.MillFolder, "brief", "active");
-    private static string DroppedPath => Path.Combine(ProjectContext.MillFolder, "brief", "dropped.json");
+    private static string ActivePath => Path.Combine(ProjectContext.MillFolder, "idea", "active");
+    private static string DroppedPath => Path.Combine(ProjectContext.MillFolder, "idea", "dropped.json");
 
     private static async Task<int> List(bool human)
     {
@@ -49,24 +49,24 @@ public static class BriefCommand
         {
             if (human)
             {
-                Output.Empty("No active briefs.");
+                Output.Empty("No active ideas.");
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new List<Brief>()));
+                Console.WriteLine(JsonHelper.Serialize(new List<Idea>()));
             }
             return 0;
         }
 
-        var briefs = new List<Brief>();
+        var ideas = new List<Idea>();
         foreach (var file in Directory.GetFiles(ActivePath, "*.md"))
         {
             var info = new FileInfo(file);
             var id = Path.GetFileNameWithoutExtension(file);
             var content = await File.ReadAllTextAsync(file);
-            var fm = ParseBriefFrontmatter(content);
+            var fm = ParseIdeaFrontmatter(content);
 
-            briefs.Add(new Brief(
+            ideas.Add(new Idea(
                 Id: id,
                 Title: fm.title ?? MarkdownHelpers.FormatName(id),
                 Stage: fm.stage ?? "spark",
@@ -78,25 +78,25 @@ public static class BriefCommand
             ));
         }
 
-        briefs = briefs.OrderByDescending(b => b.UpdatedAt).ToList();
+        ideas = ideas.OrderByDescending(b => b.UpdatedAt).ToList();
 
         if (human)
         {
-            if (briefs.Count == 0)
+            if (ideas.Count == 0)
             {
-                Output.Empty("No active briefs.");
+                Output.Empty("No active ideas.");
             }
             else
             {
-                foreach (var brief in briefs)
+                foreach (var idea in ideas)
                 {
-                    Output.ListItem(brief.Stage, brief.Title, brief.Intent);
+                    Output.ListItem(idea.Stage, idea.Title, idea.Intent);
                 }
             }
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(briefs));
+            Console.WriteLine(JsonHelper.Serialize(ideas));
         }
 
         return 0;
@@ -106,7 +106,7 @@ public static class BriefCommand
     {
         if (args.Length < 1)
         {
-            Console.Error.WriteLine("usage: mill brief get <id>");
+            Console.Error.WriteLine("usage: mill idea get <id>");
             return 1;
         }
 
@@ -117,7 +117,7 @@ public static class BriefCommand
         {
             if (human)
             {
-                Console.Error.WriteLine($"Brief not found: {id}");
+                Console.Error.WriteLine($"Idea not found: {id}");
             }
             else
             {
@@ -128,10 +128,10 @@ public static class BriefCommand
 
         var info = new FileInfo(filePath);
         var content = await File.ReadAllTextAsync(filePath);
-        var fm = ParseBriefFrontmatter(content);
+        var fm = ParseIdeaFrontmatter(content);
         var bodyContent = MarkdownHelpers.ExtractBodyContent(content);
 
-        var detail = new BriefDetail(
+        var detail = new IdeaDetail(
             Id: id,
             Title: fm.title ?? MarkdownHelpers.FormatName(id),
             Stage: fm.stage ?? "spark",
@@ -163,7 +163,7 @@ public static class BriefCommand
     {
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: mill brief create <title> <intent>");
+            Console.Error.WriteLine("usage: mill idea create <title> <intent>");
             return 1;
         }
 
@@ -194,7 +194,7 @@ public static class BriefCommand
         await File.WriteAllTextAsync(filePath, content);
 
         var info = new FileInfo(filePath);
-        var brief = new Brief(
+        var idea = new Idea(
             Id: actualSlug,
             Title: title,
             Stage: "spark",
@@ -207,11 +207,11 @@ public static class BriefCommand
 
         if (human)
         {
-            Output.Success($"Created brief: {actualSlug}");
+            Output.Success($"Created idea: {actualSlug}");
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(brief));
+            Console.WriteLine(JsonHelper.Serialize(idea));
         }
 
         return 0;
@@ -221,7 +221,7 @@ public static class BriefCommand
     {
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: mill brief drop <id> <essence>");
+            Console.Error.WriteLine("usage: mill idea drop <id> <essence>");
             return 1;
         }
 
@@ -233,7 +233,7 @@ public static class BriefCommand
         {
             if (human)
             {
-                Console.Error.WriteLine($"Brief not found: {id}");
+                Console.Error.WriteLine($"Idea not found: {id}");
             }
             else
             {
@@ -243,9 +243,9 @@ public static class BriefCommand
         }
 
         var content = await File.ReadAllTextAsync(filePath);
-        var fm = ParseBriefFrontmatter(content);
+        var fm = ParseIdeaFrontmatter(content);
 
-        var dropped = new DroppedBrief(
+        var dropped = new DroppedIdea(
             Id: id,
             Essence: essence,
             DroppedAt: DateTime.UtcNow,
@@ -262,7 +262,7 @@ public static class BriefCommand
 
         if (human)
         {
-            Output.Success($"Dropped brief: {id}");
+            Output.Success($"Dropped idea: {id}");
             Output.Field("Essence", essence);
         }
         else
@@ -281,7 +281,7 @@ public static class BriefCommand
         {
             if (dropped.Count == 0)
             {
-                Output.Empty("No dropped briefs.");
+                Output.Empty("No dropped ideas.");
             }
             else
             {
@@ -299,7 +299,7 @@ public static class BriefCommand
         return 0;
     }
 
-    private static async Task<List<DroppedBrief>> LoadDropped()
+    private static async Task<List<DroppedIdea>> LoadDropped()
     {
         if (!File.Exists(DroppedPath))
             return [];
@@ -307,7 +307,7 @@ public static class BriefCommand
         try
         {
             var json = await File.ReadAllTextAsync(DroppedPath);
-            var data = JsonHelper.Deserialize<DroppedBriefsFile>(json);
+            var data = JsonHelper.Deserialize<DroppedIdeasFile>(json);
             return data?.Dropped ?? [];
         }
         catch
@@ -316,15 +316,15 @@ public static class BriefCommand
         }
     }
 
-    private static async Task SaveDropped(List<DroppedBrief> briefs)
+    private static async Task SaveDropped(List<DroppedIdea> ideas)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(DroppedPath)!);
-        var data = new DroppedBriefsFile(briefs);
+        var data = new DroppedIdeasFile(ideas);
         var json = JsonHelper.Serialize(data, indented: true);
         await File.WriteAllTextAsync(DroppedPath, json);
     }
 
-    private static (string? title, string? stage, string? intent, string? persona, List<string>? concepts) ParseBriefFrontmatter(string content)
+    private static (string? title, string? stage, string? intent, string? persona, List<string>? concepts) ParseIdeaFrontmatter(string content)
     {
         string? title = null, stage = null, intent = null, persona = null;
         List<string>? concepts = null;

@@ -17,10 +17,10 @@ public record KnowledgeItem(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Brief
+// Idea
 // ─────────────────────────────────────────────────────────────────────────────
 
-public record Brief(
+public record Idea(
     string Id,
     string Title,
     string Stage,
@@ -31,7 +31,7 @@ public record Brief(
     List<string>? Concepts
 );
 
-public record BriefDetail(
+public record IdeaDetail(
     string Id,
     string Title,
     string Stage,
@@ -43,7 +43,7 @@ public record BriefDetail(
     List<string>? Concepts
 );
 
-public record DroppedBrief(
+public record DroppedIdea(
     string Id,
     string Essence,
     DateTime DroppedAt,
@@ -183,5 +183,5 @@ public record ContextConfig
 // JSON file wrappers
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal record DroppedBriefsFile(List<DroppedBrief> Dropped);
+internal record DroppedIdeasFile(List<DroppedIdea> Dropped);
 internal record HistoryFile(List<HistoryEntry> Runs);

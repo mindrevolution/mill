@@ -23,7 +23,7 @@ return args switch
     ["init", ..] => InitCommand.Run(human),
 
     ["ground", .. var rest] => await GroundCommand.Run(rest, human),
-    ["brief", .. var rest] => await BriefCommand.Run(rest, human),
+    ["idea", .. var rest] => await IdeaCommand.Run(rest, human),
     ["draft", .. var rest] => await DraftCommand.Run(rest, human),
     ["spec", .. var rest] => await SpecCommand.Run(rest, human),
     ["history", .. var rest] => await HistoryCommand.Run(rest, human),
@@ -53,11 +53,11 @@ int ShowHelp()
           ground get <cat> <id>   get knowledge item content
           ground create <cat> <id> <content>  create knowledge item
 
-          brief list              list active briefs
-          brief get <id>          get brief details
-          brief create <title> <intent>  create a new brief
-          brief drop <id> <essence>  drop a brief with learned essence
-          brief dropped           list dropped briefs
+          idea list               list active ideas
+          idea get <id>           get idea details
+          idea create <title> <intent>  create a new idea
+          idea drop <id> <essence>  drop an idea with learned essence
+          idea dropped            list dropped ideas
 
           draft list              list spec drafts
           draft get <slug>        get draft content
@@ -82,7 +82,7 @@ int ShowHelp()
 
         Use with Claude Code skills:
           /mill:ground            knowledge management
-          /mill:brief             idea capture
+          /mill:idea              idea capture
           /mill:spec              spec drafting
           /mill:ship              bounded work loops
           /mill:warmup            generate context.md
