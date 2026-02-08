@@ -54,7 +54,7 @@ flowchart LR
 | `/mill:ground` | Your project's knowledge base — personas, conventions, architecture |
 | `/mill:idea` | Capture a rough thought — 30 days to develop or drop |
 | `/mill:spec` | Think through your intent → GitHub Issue |
-| `/mill:ship` | Implement and verify → Pull Request |
+| `/mill:ship` | Pre-flight → `mill ship` → Pull Request |
 | `/mill:warmup` | Orient mill to your codebase |
 
 Every cycle feeds learnings back — patterns found, decisions made, gaps noticed. You review. The next cycle starts smarter.
@@ -65,7 +65,8 @@ Every cycle feeds learnings back — patterns found, decisions made, gaps notice
 mill init                    # Initialize .mill/
 mill ground list --human     # Project knowledge
 mill draft list --human      # Spec drafts
-mill issue list --human      # GitHub issues
+mill spec list --human       # Published specs (GitHub issues)
+mill ship 42 --human         # Implement spec #42 (worktree + iterations + PR)
 mill history --human         # Ship history
 ```
 
