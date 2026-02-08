@@ -12,11 +12,11 @@ Before you begin, make sure you have:
 - **Claude Code** — mill is a Claude Code skill pack
 - **GitHub CLI (`gh`)** — authenticated with your GitHub account
 - **Git** — your project must be a Git repository on GitHub
-- **Node.js** — required for the MCP installer
+- **Node.js** — only needed for the plugin installer (auto-installs the CLI binary)
 
 ## Install
 
-### Full Experience (Claude Code Plugin)
+### Skills + CLI (Claude Code Plugin)
 
 The complete package — skills, CLI, and MCP integration. Open Claude Code and run:
 
