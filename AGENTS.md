@@ -165,6 +165,10 @@ flowchart TD
 - Node.js (for MCP installer)
 - Git repository
 
+## First Run
+
+When you first use mill skills in a project, Claude Code will prompt for permission to run `mill` and `git` commands. Select **"Yes, and don't ask again"** to approve these commands permanently for the project. After this one-time approval, skills run smoothly without interruption.
+
 ## Installation
 
 Install via Claude Code plugin (recommended):
