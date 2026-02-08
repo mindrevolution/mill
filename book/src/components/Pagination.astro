@@ -1,0 +1,48 @@
+---
+interface ChapterLink {
+  slug: string;
+  title: string;
+  chapter: number;
+}
+
+interface Props {
+  prev?: ChapterLink | null;
+  next?: ChapterLink | null;
+}
+
+const { prev, next } = Astro.props;
+---
+
+<nav class="mt-20 pt-8 border-t border-stone-200 dark:border-stone-800" aria-label="Chapter navigation">
+  <div class="flex justify-between items-start gap-8">
+    {prev ? (
+      <a
+        href={`/${prev.slug}`}
+        class="group flex flex-col items-start gap-1 max-w-[45%]"
+      >
+        <span class="text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-stone-600 group-hover:text-copper-600 dark:group-hover:text-copper-400 transition-colors">
+          &larr; Previous
+        </span>
+        <span class="font-display text-lg text-stone-700 dark:text-stone-300 group-hover:text-copper-700 dark:group-hover:text-copper-400 transition-colors">
+          <span class="text-stone-400 dark:text-stone-600 mr-1">{String(prev.chapter).padStart(2, '0')}</span>
+          {prev.title}
+        </span>
+      </a>
+    ) : <div />}
+
+    {next ? (
+      <a
+        href={`/${next.slug}`}
+        class="group flex flex-col items-end gap-1 max-w-[45%] text-right ml-auto"
+      >
+        <span class="text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-stone-600 group-hover:text-copper-600 dark:group-hover:text-copper-400 transition-colors">
+          Next &rarr;
+        </span>
+        <span class="font-display text-lg text-stone-700 dark:text-stone-300 group-hover:text-copper-700 dark:group-hover:text-copper-400 transition-colors">
+          <span class="text-stone-400 dark:text-stone-600 mr-1">{String(next.chapter).padStart(2, '0')}</span>
+          {next.title}
+        </span>
+      </a>
+    ) : <div />}
+  </div>
+</nav>
