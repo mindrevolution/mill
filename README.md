@@ -26,7 +26,6 @@ mill init
 ### Use in Claude Code
 
 ```
-/mill:warmup              # Let mill learn your codebase
 /mill:spec               # Think through what to build
 /mill:ship 42             # Implement and verify issue #42
 ```
