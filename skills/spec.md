@@ -229,6 +229,73 @@ mill template list specs --human
 mill template get specs feature --human
 ```
 
+## Observations
+
+During drafting, notice gaps in ground truth using LLM judgment:
+- Unknown personas mentioned (e.g., "finance admin" not in ground/personas/)
+- New domain terms used (not in ground/vocabulary/)
+- Requirements conflicting with ground/rules/
+- Features implying new entities (not in ground/schema/)
+
+### High-confidence gaps (auto-write)
+
+When clearly a gap (e.g., "As a finance admin..." with no matching persona):
+
+1. Write observation immediately using the Write tool:
+   - Path: `.mill/observations/spec-{slug}-{gap}.md`
+   - Include frontmatter with source, type, created
+   - Describe what was discovered
+
+2. Continue drafting without interruption
+
+Example observation:
+
+```markdown
+---
+source: spec
+type: discovery
+created: 2025-02-08
+---
+
+# Unknown Persona: "Finance Admin"
+
+User referenced "finance admin" during spec drafting.
+
+## Context
+
+- Spec: Export Monthly Reports
+- Quote: "The finance admin should be able to export monthly reports"
+
+## Current Personas
+
+- developer
+- admin
+- operator
+
+## Suggested Action
+
+Add persona to ground/personas/ or clarify if alias for existing.
+```
+
+### Uncertain gaps (collect and ask)
+
+When unsure if it's a gap, collect during drafting and ask at the end:
+
+```yaml
+# At end of spec drafting, before final confirmation:
+AskUserQuestion:
+  question: "Found potential gaps in ground truth. Note any for review?"
+  header: "Observations"
+  multiSelect: true
+  options:
+    - label: "'Finance Admin' — possible persona"
+      description: "Not found in ground/personas/"
+    - label: "'Invoice' — domain term"
+      description: "Not defined in ground/vocabulary/"
+```
+
+For selected items, write observation files. For unselected, ignore.
+
 ## Rules
 
 1. One question at a time
@@ -238,3 +305,4 @@ mill template get specs feature --human
 5. Scope creep → separate spec
 6. Never publish without explicit approval
 7. GitHub is source of truth — no local spec files after publish
+8. Write observations for ground truth gaps — don't interrupt flow

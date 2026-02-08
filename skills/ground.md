@@ -1,40 +1,146 @@
 ---
 description: Manage product knowledge - personas, standards, concepts, design
-allowed-tools: Read, Write, Glob, Grep, Bash(mill ground*, git *)
-argument-hint: "[category] - personas, standards, concepts, or design"
+allowed-tools: Read, Write, Glob, Grep, Bash(mill ground*, mill observations*, git *, rm *)
+argument-hint: "[category] - personas, rules, decisions, vocabulary, or review"
 ---
 
 # Ground
 
-Build and manage product knowledge in `.mill/ground/`.
+Build and manage product knowledge in `.mill/ground/`. Review observations from the learning inbox.
 
 ## Interaction Pattern
 
 **Always use the AskUserQuestion tool** for gathering knowledge. Present 2-4 options plus free text. One question at a time.
 
+## Entry Point
+
 ```yaml
 AskUserQuestion:
-  question: "What category do you want to work on?"
-  header: "Category"
+  question: "What do you want to work on?"
+  header: "Ground"
   options:
-    - label: "Personas"
-      description: "Who you build for"
-    - label: "Standards"
-      description: "How you build"
-    - label: "Concepts"
-      description: "Domain vocabulary"
-    - label: "Design"
-      description: "Visual language"
+    - label: "Review observations"
+      description: "{N} observations to review"
+    - label: "Create knowledge"
+      description: "Add personas, rules, decisions"
+    - label: "Sync codebase"
+      description: "Extract changes from code"
 ```
+
+Check observations first:
+```bash
+mill observations list --human
+```
+
+If observations exist, show count in "Review observations" option.
+
+---
+
+## Observation Review Flow
+
+### 1. List Observations
+
+```bash
+mill observations list --human
+```
+
+### 2. For Each Observation
+
+Read the full observation:
+```bash
+mill observations get {id} --human
+```
+
+Then present action options:
+
+```yaml
+AskUserQuestion:
+  question: "{id}: {title}"
+  header: "Action"
+  options:
+    - label: "Curate to ground"
+      description: "Add to ground truth"
+    - label: "Create spec"
+      description: "Write to idea/active/"
+    - label: "Add to debt"
+      description: "Track in ground/debt/"
+    - label: "Dismiss"
+      description: "Delete, not actionable"
+```
+
+### 3. Handle Each Action
+
+**Curate to ground:**
+1. Infer target folder from observation content:
+   - `type: discovery` + mentions persona → `ground/personas/`
+   - `type: discovery` + mentions term → `ground/vocabulary/`
+   - `type: extraction` + about deps → `ground/stack/`
+   - `type: concern` → often `ground/debt/`
+   - `type: discovery` + about decisions → `ground/decisions/`
+
+2. Ask clarifying question to gather details:
+   ```yaml
+   AskUserQuestion:
+     question: "What does '{term}' mean?"
+     header: "Define"
+     options:
+       - label: "{option1}"
+       - label: "{option2}"
+       - label: "{option3}"
+   ```
+
+3. Write to appropriate ground folder:
+   ```bash
+   mill ground create {category} {id} -
+   ```
+
+4. Delete observation file:
+   ```bash
+   rm .mill/observations/{id}.md
+   ```
+
+**Create spec:**
+1. Transform observation into idea:
+   ```bash
+   mill idea create "{title}" "{intent from observation}"
+   ```
+2. Delete observation file
+
+**Add to debt:**
+1. Append to `ground/debt/{topic}.md`
+2. Delete observation file
+
+**Dismiss:**
+1. Delete observation file:
+   ```bash
+   rm .mill/observations/{id}.md
+   ```
+
+### 4. Continue
+
+After processing, check for more observations:
+```bash
+mill observations list --human
+```
+
+If more exist, continue. Otherwise, exit or offer other actions.
+
+---
 
 ## Categories
 
 | Category | Purpose | Examples |
 |----------|---------|----------|
+| **strategic** | Vision, mission, goals | Product direction, business objectives |
 | **personas** | Who you build for | Primary user, admin, operator |
-| **standards** | How you build | Tech stack, quality bars, conventions |
-| **concepts** | Domain vocabulary | Key terms, business entities |
+| **rules** | Constraints and conventions | Tech policies, quality bars |
+| **decisions** | Architectural decisions | Why we chose X over Y |
+| **vocabulary** | Domain terminology | Key terms, business entities |
+| **stack** | Technology stack | Languages, frameworks, dependencies |
+| **schema** | Data structures | Entities, relationships, types |
 | **design** | Visual language | Colors, typography, components |
+| **patterns** | Code patterns | Common solutions, idioms |
+| **debt** | Technical debt | Known issues, future work |
 
 ## Commands
 
@@ -46,23 +152,42 @@ mill ground list --human
 mill ground list personas --human
 
 # Get item content
-mill ground get standards tech-stack --human
+mill ground get rules tech-stack --human
 
 # Create item (content from stdin)
 echo "content" | mill ground create personas primary-user -
+
+# List observations
+mill observations list --human
+
+# Get observation
+mill observations get ship-42-test-gaps --human
 ```
 
-## Workflow
+## Create Knowledge Flow
 
-### 1. Check Current State
+When creating new knowledge (not from observation):
 
-```bash
-mill ground list --human
+### 1. Ask Category
+
+```yaml
+AskUserQuestion:
+  question: "What category of knowledge?"
+  header: "Category"
+  options:
+    - label: "Personas"
+      description: "Who you build for"
+    - label: "Rules"
+      description: "Constraints and conventions"
+    - label: "Decisions"
+      description: "Architectural decisions"
+    - label: "Vocabulary"
+      description: "Domain terminology"
 ```
 
-### 2. Create or Update Items
+### 2. Elicit Details
 
-For each category, **use AskUserQuestion** to gather knowledge:
+For each category, ask appropriate questions:
 
 **Personas** — Ask about users:
 ```yaml
@@ -80,23 +205,35 @@ AskUserQuestion:
 
 Then elicit: job-to-be-done, pain points, triggers.
 
-**Standards** — Ask about conventions:
+**Rules** — Ask about constraints:
 ```yaml
 AskUserQuestion:
-  question: "What kind of standard?"
-  header: "Standard"
+  question: "What kind of rule?"
+  header: "Rule"
   options:
-    - label: "Tech stack"
+    - label: "Tech policy"
       description: "Languages, frameworks, tools"
     - label: "Quality bar"
       description: "Testing, coverage, performance"
-    - label: "Conventions"
+    - label: "Convention"
       description: "Naming, structure, patterns"
 ```
 
-**Concepts** — Ask about domain vocabulary.
+**Decisions** — Ask about choices made:
+```yaml
+AskUserQuestion:
+  question: "What decision are you documenting?"
+  header: "Decision"
+  options:
+    - label: "Technology choice"
+      description: "Why we chose X over Y"
+    - label: "Architecture pattern"
+      description: "How we structure X"
+    - label: "Process decision"
+      description: "How we do X"
+```
 
-**Design** — Ask about visual language.
+**Vocabulary** — Ask about domain terms.
 
 ### 3. Write Knowledge Files
 
@@ -132,8 +269,8 @@ mill ground list --human
 
 Knowledge items inform spec drafting:
 - Personas → user stories reference real users
-- Standards → acceptance criteria align with quality bars
-- Concepts → specs use consistent terminology
+- Rules → acceptance criteria align with quality bars
+- Vocabulary → specs use consistent terminology
 - Design → UI specs reference design tokens
 
 ## Kickstart (New Projects)

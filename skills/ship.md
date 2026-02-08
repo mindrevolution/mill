@@ -188,6 +188,49 @@ If limit reached without completion → signal for human review
 - Standards from `.mill/ground/standards/`
 - History tracked in `.mill/ship/history.json`
 
+## Observations
+
+During implementation, note discoveries for later review:
+- Missing test coverage discovered
+- Undocumented APIs used
+- Code patterns not in ground/patterns/
+- Dependencies not in ground/stack/
+
+### Writing Observations
+
+Write observation files during implementation without interrupting flow:
+
+- Path: `.mill/observations/ship-{issue}-{slug}.md`
+- Frontmatter: source: ship, type: concern, issue: {number}
+- Describe what was discovered
+
+Example observation:
+
+```markdown
+---
+source: ship
+type: concern
+issue: 42
+created: 2025-02-08
+---
+
+# Missing Test Coverage
+
+During ship run for #42, discovered that `UserService.CreateUser()` has no unit tests.
+
+## Details
+
+- File: `src/Services/UserService.cs`
+- Method: `CreateUser()`
+- Risk: High — handles user registration logic
+
+## Suggested Action
+
+Create spec for adding test coverage to UserService.
+```
+
+Don't interrupt the ship flow — observations are reviewed later via /mill:ground.
+
 ## Rules
 
 1. Honor the spec — don't add unrequested features
@@ -197,3 +240,4 @@ If limit reached without completion → signal for human review
 5. One slice per iteration
 6. Don't create PR yourself — signal for verification
 7. MILL_ABORT for impossible specs, not for difficulties
+8. Write observations for discoveries — don't interrupt flow

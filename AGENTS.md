@@ -34,7 +34,8 @@ mill-plugin/                    # Distribution repository (auto-synced)
 
 ```bash
 mill init                           # Initialize .mill/ in current repo
-mill ground list|get|create         # Knowledge CRUD
+mill ground list|get|create         # Knowledge CRUD (10 categories)
+mill observations list|get          # Learning inbox (written by skills)
 mill idea list|get|create|drop      # Idea lifecycle
 mill draft list|get|validate|publish # Draft management + GitHub publish
 mill issue list|get                 # Wraps gh CLI
@@ -68,6 +69,29 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 | `/mill:spec` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
 | `/mill:ship` | Execute bounded work loops until verification passes |
 | `/mill:warmup` | Generate `.mill/context.md` from codebase |
+
+## Observations
+
+Observations is the **learning inbox** for mill. Skills write observations during execution. `/mill:ground` reviews and curates them into ground truth.
+
+```
+Skills (spec, ship, warmup, ground)
+        │
+        ▼ write .md files directly (no CLI)
+.mill/observations/*.md
+        │
+        ▼ review via /mill:ground (AskUserQuestion)
+.mill/ground/* (curated truth)
+```
+
+| Observation Type | Meaning |
+|------------------|---------|
+| `extraction` | Auto-extracted from code (dependencies, entities) |
+| `discovery` | New information found (unknown persona, new term) |
+| `concern` | Potential problem (missing tests, code smell) |
+| `suggestion` | Improvement idea (refactoring opportunity) |
+
+This continuous feedback loop is what sets mill apart — the system learns as you ship.
 
 ## Spec Structure
 
@@ -105,11 +129,20 @@ flowchart TD
 ├── project.json                    # Global config
 ├── context.md                      # Auto-generated project context
 
-├── ground/                         # Shared product knowledge
+├── observations/                   # Learning inbox [gitignored]
+│   └── *.md                        # Written by skills during execution
+
+├── ground/                         # Shared product knowledge (10 categories)
+│   ├── strategic/                  # Vision, mission, goals
 │   ├── personas/                   # Who you build for
-│   ├── standards/                  # How you build
-│   ├── concepts/                   # Domain vocabulary
-│   └── design/                     # Visual language
+│   ├── rules/                      # Constraints and conventions
+│   ├── decisions/                  # Architectural decisions
+│   ├── vocabulary/                 # Domain terminology
+│   ├── stack/                      # Technology stack
+│   ├── schema/                     # Data structures
+│   ├── design/                     # Visual language
+│   ├── patterns/                   # Code patterns
+│   └── debt/                       # Technical debt
 
 ├── idea/
 │   └── active/                     # Live briefs [gitignored]

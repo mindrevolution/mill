@@ -99,6 +99,47 @@ Write to `.mill/context.md`:
 
 First line MUST be the HTML comment with git hash (for staleness detection).
 
+## Observations
+
+During context generation, note discoveries for later review:
+- New modules not in context
+- Architecture changes detected
+- Stale documentation found
+
+### Writing Observations
+
+Write observation files when discovering significant changes:
+
+- Path: `.mill/observations/warmup-{date}-{slug}.md`
+- Frontmatter: source: warmup, type: discovery
+- Describe what was discovered
+
+Example observation:
+
+```markdown
+---
+source: warmup
+type: discovery
+created: 2025-02-08
+---
+
+# New Module: Notifications
+
+Found new `src/Notifications/` module not covered in previous context.
+
+## Details
+
+- Location: `src/Notifications/`
+- Files: 12 new files
+- Purpose: Appears to handle push notifications
+
+## Suggested Action
+
+Review module structure and update ground/ if needed.
+```
+
+Don't interrupt the warmup flow — observations are reviewed later via /mill:ground.
+
 ## Report
 
 Confirm `.mill/context.md` written with commit hash.

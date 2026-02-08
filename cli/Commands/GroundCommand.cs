@@ -1,3 +1,4 @@
+using Mill.Models;
 using Mill.Services;
 
 namespace Mill.Commands;
@@ -7,7 +8,10 @@ namespace Mill.Commands;
 /// </summary>
 public static class GroundCommand
 {
-    private static readonly string[] Categories = ["personas", "standards", "concepts", "design"];
+    private static readonly string[] Categories = [
+        "strategic", "personas", "rules", "decisions", "vocabulary",
+        "stack", "schema", "design", "patterns", "debt"
+    ];
 
     public static async Task<int> Run(string[] args, bool human)
     {
@@ -35,7 +39,8 @@ public static class GroundCommand
               get <category> <id> get content of a knowledge item
               create <category> <id> <content>  create a knowledge item
 
-            categories: personas, standards, concepts, design
+            categories: strategic, personas, rules, decisions, vocabulary,
+                        stack, schema, design, patterns, debt
             """);
         return 1;
     }

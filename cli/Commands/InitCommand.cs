@@ -1,3 +1,4 @@
+using Mill.Models;
 using Mill.Services;
 
 namespace Mill.Commands;
@@ -29,10 +30,20 @@ public static class InitCommand
         var folders = new[]
         {
             millFolder,
+            // Observations (learning inbox)
+            Path.Combine(millFolder, "observations"),
+            // Ground - expanded (10 categories)
+            Path.Combine(millFolder, "ground", "strategic"),
             Path.Combine(millFolder, "ground", "personas"),
-            Path.Combine(millFolder, "ground", "standards"),
-            Path.Combine(millFolder, "ground", "concepts"),
+            Path.Combine(millFolder, "ground", "rules"),
+            Path.Combine(millFolder, "ground", "decisions"),
+            Path.Combine(millFolder, "ground", "vocabulary"),
+            Path.Combine(millFolder, "ground", "stack"),
+            Path.Combine(millFolder, "ground", "schema"),
             Path.Combine(millFolder, "ground", "design"),
+            Path.Combine(millFolder, "ground", "patterns"),
+            Path.Combine(millFolder, "ground", "debt"),
+            // Rest unchanged
             Path.Combine(millFolder, "idea", "active"),
             Path.Combine(millFolder, "spec", "drafts"),
             Path.Combine(millFolder, "ship", "work"),
@@ -51,6 +62,7 @@ public static class InitCommand
         // Create .gitignore for ephemeral folders
         var gitignore = """
             # mill gitignore - ephemeral local data
+            observations/
             idea/active/
             spec/drafts/
             ship/work/

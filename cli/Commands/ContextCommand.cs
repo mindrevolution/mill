@@ -1,3 +1,4 @@
+using Mill.Models;
 using Mill.Services;
 
 namespace Mill.Commands;

@@ -23,6 +23,7 @@ return args switch
     ["init", ..] => InitCommand.Run(human),
 
     ["ground", .. var rest] => await GroundCommand.Run(rest, human),
+    ["observations", .. var rest] => await ObservationsCommand.Run(rest, human),
     ["idea", .. var rest] => await IdeaCommand.Run(rest, human),
     ["draft", .. var rest] => await DraftCommand.Run(rest, human),
     ["spec", .. var rest] => await SpecCommand.Run(rest, human),
@@ -52,6 +53,11 @@ int ShowHelp()
           ground list [category]  list knowledge items
           ground get <cat> <id>   get knowledge item content
           ground create <cat> <id> <content>  create knowledge item
+            categories: strategic, personas, rules, decisions, vocabulary,
+                        stack, schema, design, patterns, debt
+
+          observations list [--source X]  list observations (learning inbox)
+          observations get <id>   get observation content
 
           idea list               list active ideas
           idea get <id>           get idea details
@@ -81,7 +87,7 @@ int ShowHelp()
           --version, -v           show version
 
         Use with Claude Code skills:
-          /mill:ground            knowledge management
+          /mill:ground            knowledge management + observation review
           /mill:idea              idea capture
           /mill:spec              spec drafting
           /mill:ship              bounded work loops

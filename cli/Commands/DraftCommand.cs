@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Mill.Models;
 using Mill.Services;
 
 namespace Mill.Commands;
