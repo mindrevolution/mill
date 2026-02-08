@@ -1,8 +1,8 @@
 # mill
 
-Turning intent into verified deliverables, continuously.
+Think it through. Ship it right. Sharper every cycle.
 
-mill is a specification-first delivery system that integrates with Claude Code. It provides structure and intelligence for the entire delivery workflow — from capturing ideas to shipping verified code.
+mill works with Claude Code to help you think through what you want to build — asking the right questions before anyone writes code. Then it implements in verified steps. With every cycle, mill learns about your project: your conventions, your architecture, your domain. The more you ship, the sharper it gets.
 
 ## Quick Start
 
@@ -26,17 +26,14 @@ mill init
 ### Use in Claude Code
 
 ```
-/mill:warmup              # Generate project context
-/mill:spec               # Draft a specification
-/mill:ship 42             # Implement issue #42
+/mill:warmup              # Let mill learn your codebase
+/mill:spec               # Think through what to build
+/mill:ship 42             # Implement and verify issue #42
 ```
 
 ## How It Works
 
-mill has two components:
-
-1. **CLI** — Data operations and GitHub integration
-2. **Skills** — LLM-powered workflows for Claude Code
+mill adds a thinking and learning layer to Claude Code through **skills** (interactive workflows) and a **CLI** (data operations and GitHub integration).
 
 ### Workflow
 
@@ -59,29 +56,31 @@ flowchart LR
 
 | | |
 |-|-|
-| **Ground** | Build product knowledge — personas, standards, concepts |
-| **Idea** | Capture ideas with intent — 30-day time-box |
-| **Spec** | Refine into verified specs — publish to GitHub Issues |
-| **Ship** | Execute bounded loops — until tests pass |
+| **Ground** | What mill knows about your project — personas, conventions, architecture |
+| **Idea** | A rough thought with a 30-day time-box — develop it or drop it |
+| **Spec** | Your intent, refined into clear requirements and testable criteria |
+| **Ship** | Verified implementation — bounded loops until criteria pass |
+
+The arrow from Ship back to Ground is the learning loop. Observations from each cycle feed into your project's knowledge base, making the next cycle better.
 
 ### Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `/mill:ground` | Manage product knowledge |
-| `/mill:idea` | Capture and develop ideas |
-| `/mill:spec` | Draft specifications → GitHub Issues |
-| `/mill:ship` | Implement specs with verification |
-| `/mill:warmup` | Generate codebase context |
+| `/mill:ground` | Build and review project knowledge |
+| `/mill:idea` | Capture a rough idea (30-day lifecycle) |
+| `/mill:spec` | Think through your intent → GitHub Issue |
+| `/mill:ship` | Implement with verification → Pull Request |
+| `/mill:warmup` | Orient mill to your codebase |
 
-### CLI Commands
+### CLI
 
 ```bash
 mill init                    # Initialize .mill/
-mill ground list --human     # List knowledge items
+mill ground list --human     # List project knowledge
 mill draft list --human      # List spec drafts
 mill issue list --human      # List GitHub issues
-mill history --human         # View run history
+mill history --human         # View ship history
 ```
 
 ## Requirements
