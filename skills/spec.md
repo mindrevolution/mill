@@ -10,7 +10,7 @@ Transform user intent into a complete, loop-ready specification.
 
 ## Interaction Pattern
 
-**Always use the AskUserQuestion tool** for elicitation. Present 2-4 options plus free text ("Other"). One question at a time.
+**Always use the AskUserQuestion tool** — never ask questions as raw text. Present 2-4 options plus free text ("Other"). One question per tool call.
 
 ```yaml
 AskUserQuestion:
@@ -330,7 +330,7 @@ For selected items, write observation files. For unselected, ignore.
 ## Rules
 
 **Process:**
-1. One question at a time
+1. One question at a time — always use AskUserQuestion tool, never raw text prompts
 2. Create draft early, update often
 3. Security always wins classification
 4. Scope creep → separate spec
