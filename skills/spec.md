@@ -78,13 +78,37 @@ mill draft publish my-feature --human
 
 ## Workflow
 
+### 0. Check Existing Drafts
+
+```bash
+mill draft list --human
+```
+
+If drafts exist, offer to resume:
+
+```yaml
+AskUserQuestion:
+  question: "Continue an existing draft or start new?"
+  header: "Drafts"
+  options:
+    - label: "relive-master-playlist-fallback"
+      description: "Last updated 2h ago"
+    - label: "forwarding-service-interface"
+      description: "Last updated 5d ago"
+    - label: "Start new spec"
+      description: "Create a fresh specification"
+```
+
+If user selects a draft → load it with `mill draft get {slug}` and continue from where it left off.
+If user selects "Start new" or no drafts exist → proceed to step 1.
+
 ### 1. Ensure Context
 
 ```bash
 mill context status
 ```
 
-If missing or stale (JSON shows `fresh: false`), run `/mill:warmup` first.
+If missing or stale (JSON shows `freshness: "stale"`), run `/mill:warmup` first.
 
 Then load ground knowledge:
 ```bash
