@@ -39,11 +39,13 @@ mill idea list|get|create|drop      # Idea lifecycle
 mill draft list|get|validate|publish # Draft management + GitHub publish
 mill issue list|get                 # Wraps gh CLI
 mill history [add]                  # Ship run history
-mill context [show]                 # View context.md
+mill context [show|status]          # View context.md or check freshness
 mill template list|get              # Archetypes/stacks/specs/domains
 ```
 
 Output: JSON by default, `--human` for readable output.
+
+**Important:** Run `mill` and `git` commands directly without `cd` prefix. Claude Code already runs in the project directory. Commands with `cd /path &&` prefix won't match allowed-tools patterns.
 
 ## Domains
 
