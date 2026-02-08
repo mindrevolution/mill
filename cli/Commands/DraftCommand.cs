@@ -119,7 +119,7 @@ public static class DraftCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = "not_found", slug }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse("not_found", Slug: slug)));
             }
             return 1;
         }
@@ -177,7 +177,7 @@ public static class DraftCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = "not_found", slug }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse("not_found", Slug: slug)));
             }
             return 1;
         }
@@ -211,7 +211,7 @@ public static class DraftCommand
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(new { hasValidation = false, slug }));
+            Console.WriteLine(JsonHelper.Serialize(new DraftNoValidationResponse(false, slug)));
         }
 
         return 0;

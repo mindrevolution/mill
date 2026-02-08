@@ -131,7 +131,7 @@ public static class GroundCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = "not_found", category, id }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse("not_found", Category: category, Id: id)));
             }
             return 1;
         }
@@ -146,7 +146,7 @@ public static class GroundCommand
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(new { category, id, content }));
+            Console.WriteLine(JsonHelper.Serialize(new GroundGetResponse(category, id, content)));
         }
 
         return 0;
@@ -189,7 +189,7 @@ public static class GroundCommand
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(new { created = true, category, id, path = filePath }));
+            Console.WriteLine(JsonHelper.Serialize(new GroundCreateResponse(true, category, id, filePath)));
         }
 
         return 0;

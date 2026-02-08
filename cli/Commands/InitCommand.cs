@@ -21,7 +21,7 @@ public static class InitCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { initialized = true, path = millFolder }));
+                Console.WriteLine(JsonHelper.Serialize(new InitResponse(true, millFolder)));
             }
             return 0;
         }
@@ -83,12 +83,7 @@ public static class InitCommand
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(new
-            {
-                initialized = true,
-                path = millFolder,
-                created = folders
-            }));
+            Console.WriteLine(JsonHelper.Serialize(new InitResponse(true, millFolder, folders)));
         }
 
         return 0;

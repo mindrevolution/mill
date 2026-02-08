@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # extract version from csproj
-version=$(grep -oP '(?<=<Version>)[^<]+' cli/mill-cli.csproj)
+version=$(grep -oP '(?<=<Version>)[^<]+' cli/mill.csproj)
 tag="v$version"
 
 echo "  • preparing release $tag"

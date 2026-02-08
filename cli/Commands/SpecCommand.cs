@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Mill.Models;
 using Mill.Services;
 
@@ -52,12 +51,12 @@ public static class SpecCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = result.Error }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse(result.Error)));
             }
             return 1;
         }
 
-        var ghIssues = JsonSerializer.Deserialize<List<GhIssueListItem>>(result.Output, JsonOptions);
+        var ghIssues = JsonHelper.Deserialize<List<GhIssueListItem>>(result.Output);
         if (ghIssues == null)
         {
             Console.WriteLine(JsonHelper.Serialize(new List<Spec>()));
@@ -118,15 +117,15 @@ public static class SpecCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = result.Error }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse(result.Error)));
             }
             return 1;
         }
 
-        var ghIssue = JsonSerializer.Deserialize<GhIssueViewItem>(result.Output, JsonOptions);
+        var ghIssue = JsonHelper.Deserialize<GhIssueViewItem>(result.Output);
         if (ghIssue == null)
         {
-            Console.WriteLine(JsonHelper.Serialize(new { error = "parse_error" }));
+            Console.WriteLine(JsonHelper.Serialize(new ErrorResponse("parse_error")));
             return 1;
         }
 
@@ -219,26 +218,4 @@ public static class SpecCommand
         return personaLabel?.Name.Split(':').ElementAtOrDefault(1)?.Trim();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
-    private record GhIssueListItem(
-        int Number,
-        string Title,
-        List<GhLabel>? Labels,
-        DateTime CreatedAt
-    );
-
-    private record GhIssueViewItem(
-        int Number,
-        string Title,
-        string? Body,
-        string State,
-        List<GhLabel>? Labels,
-        DateTime CreatedAt
-    );
-
-    private record GhLabel(string Name);
 }

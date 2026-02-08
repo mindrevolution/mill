@@ -52,7 +52,7 @@ jobs:
           pnpm build
 
       - name: publish cli
-        run: dotnet publish cli/mill-cli.csproj -c Release -r ${{ matrix.rid }} -o out
+        run: dotnet publish cli/mill.csproj -c Release -r ${{ matrix.rid }} -o out
 
       - name: copy wwwroot
         shell: bash

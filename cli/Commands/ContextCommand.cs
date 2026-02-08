@@ -48,7 +48,7 @@ public static class ContextCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { exists = false }));
+                Console.WriteLine(JsonHelper.Serialize(new ContextShowResponse(false)));
             }
             return 0;
         }
@@ -62,13 +62,7 @@ public static class ContextCommand
         else
         {
             var info = new FileInfo(ContextPath);
-            Console.WriteLine(JsonHelper.Serialize(new
-            {
-                exists = true,
-                path = ContextPath,
-                content,
-                updatedAt = info.LastWriteTimeUtc
-            }));
+            Console.WriteLine(JsonHelper.Serialize(new ContextShowResponse(true, ContextPath, content, info.LastWriteTimeUtc)));
         }
 
         return 0;
@@ -194,16 +188,7 @@ public static class ContextCommand
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(new
-            {
-                exists,
-                freshness,
-                commitsBehind,
-                path = exists ? ContextPath : null,
-                updatedAt,
-                commitHash,
-                currentHash
-            }));
+            Console.WriteLine(JsonHelper.Serialize(new ContextStatusResponse(exists, freshness, commitsBehind, exists ? ContextPath : null, updatedAt, commitHash, currentHash)));
         }
 
         return 0;

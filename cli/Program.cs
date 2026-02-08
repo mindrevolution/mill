@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text;
 using Mill.Commands;
 
@@ -8,10 +7,8 @@ Console.OutputEncoding = Encoding.UTF8;
 var human = args.Contains("--human") || args.Contains("-h");
 args = args.Where(a => a != "--human" && a != "-h").ToArray();
 
-// Version
-var version = Assembly.GetExecutingAssembly()
-    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-    ?.InformationalVersion?.Split('+')[0] ?? "unknown";
+// Version (compile-time constant from csproj)
+var version = ThisAssembly.Version;
 
 // Route commands
 return args switch

@@ -19,3 +19,8 @@ public record SpecDetail(
     List<string> Labels,
     DateTime CreatedAt
 );
+
+// GitHub CLI JSON models (used by SpecCommand for gh output deserialization)
+internal record GhIssueListItem(int Number, string Title, List<GhLabel>? Labels, DateTime CreatedAt);
+internal record GhIssueViewItem(int Number, string Title, string? Body, string State, List<GhLabel>? Labels, DateTime CreatedAt);
+internal record GhLabel(string Name);

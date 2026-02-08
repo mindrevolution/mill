@@ -3,7 +3,7 @@ Push-Location "$PSScriptRoot/.."
 
 try {
     # extract version from csproj
-    $csproj = Get-Content "cli/mill-cli.csproj" -Raw
+    $csproj = Get-Content "cli/mill.csproj" -Raw
     $version = [regex]::Match($csproj, '<Version>([^<]+)</Version>').Groups[1].Value
     $tag = "v$version"
 

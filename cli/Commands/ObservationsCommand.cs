@@ -143,7 +143,7 @@ public static class ObservationsCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = "not_found", id }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse("not_found", Id: id)));
             }
             return 1;
         }

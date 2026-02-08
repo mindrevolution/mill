@@ -125,7 +125,7 @@ public static class TemplateCommand
             }
             else
             {
-                Console.WriteLine(JsonHelper.Serialize(new { error = "not_found", type, id }));
+                Console.WriteLine(JsonHelper.Serialize(new ErrorResponse("not_found", Type: type, Id: id)));
             }
             return 1;
         }

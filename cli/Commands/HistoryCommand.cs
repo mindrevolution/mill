@@ -118,7 +118,7 @@ public static class HistoryCommand
         }
         else
         {
-            Console.WriteLine(JsonHelper.Serialize(new { added = true, entry }));
+            Console.WriteLine(JsonHelper.Serialize(new HistoryAddResponse(true, entry)));
         }
 
         return 0;

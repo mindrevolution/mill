@@ -4,7 +4,7 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cli", "cli", "{342A349A-D343-8551-4064-2E2800C39E13}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mill-cli", "cli\mill-cli.csproj", "{28487B12-06A5-9DDE-C85A-4A010A6E203D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mill", "cli\mill.csproj", "{28487B12-06A5-9DDE-C85A-4A010A6E203D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
