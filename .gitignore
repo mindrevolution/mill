@@ -29,3 +29,13 @@ CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 # MILL ephemeral
 .mill/.prompt
 .mill/memory/issue-*-plan.md
+
+# Book site (Astro)
+book/node_modules/
+book/.astro/
+book/dist/
+
+# Temp files
+tmp/
+nul
+bash.exe.stackdump
