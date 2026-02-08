@@ -1,6 +1,6 @@
 ---
 description: "Define who you build for and how • https://mill.mindrevolution.com/ground"
-allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *, rm *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*mill *, *git *, *rm *)
 argument-hint: "[category] - personas, rules, decisions, vocabulary, or review"
 ---
 

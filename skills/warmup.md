@@ -1,6 +1,6 @@
 ---
 description: "Orient Claude to your codebase • https://mill.mindrevolution.com/warmup"
-allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*mill *, *git *)
 ---
 
 # Warmup
