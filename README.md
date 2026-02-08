@@ -33,10 +33,6 @@ mill init
 
 ## How It Works
 
-mill adds a thinking and learning layer to Claude Code through **skills** (interactive workflows) and a **CLI** (data operations and GitHub integration).
-
-### Workflow
-
 ```mermaid
 flowchart LR
     subgraph Knowledge
@@ -54,33 +50,24 @@ flowchart LR
     X -.->|learnings| G
 ```
 
-| | |
-|-|-|
-| **Ground** | What mill knows about your project — personas, conventions, architecture |
-| **Idea** | A rough thought with a 30-day time-box — develop it or drop it |
-| **Spec** | Your intent, refined into clear requirements and testable criteria |
-| **Ship** | Verified implementation — bounded loops until criteria pass |
-
-The arrow from Ship back to Ground is the learning loop. Observations from each cycle feed into your project's knowledge base, making the next cycle better.
-
-### Skills
-
-| Skill | Purpose |
-|-------|---------|
-| `/mill:ground` | Build and review project knowledge |
-| `/mill:idea` | Capture a rough idea (30-day lifecycle) |
+| Skill | What you get |
+|-------|-------------|
+| `/mill:ground` | Your project's knowledge base — personas, conventions, architecture |
+| `/mill:idea` | Capture a rough thought — 30 days to develop or drop |
 | `/mill:spec` | Think through your intent → GitHub Issue |
-| `/mill:ship` | Implement with verification → Pull Request |
+| `/mill:ship` | Implement and verify → Pull Request |
 | `/mill:warmup` | Orient mill to your codebase |
+
+Every cycle feeds learnings back — patterns found, decisions made, gaps noticed. You review. The next cycle starts smarter.
 
 ### CLI
 
 ```bash
 mill init                    # Initialize .mill/
-mill ground list --human     # List project knowledge
-mill draft list --human      # List spec drafts
-mill issue list --human      # List GitHub issues
-mill history --human         # View ship history
+mill ground list --human     # Project knowledge
+mill draft list --human      # Spec drafts
+mill issue list --human      # GitHub issues
+mill history --human         # Ship history
 ```
 
 ## Requirements
