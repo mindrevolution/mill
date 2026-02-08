@@ -33,9 +33,9 @@ const { Content, headings } = await chapter.render();
 const { title, number, subtitle, accent } = chapter.data;
 
 const accentColors: Record<string, { gradient: string; glow: string; text: string; badge: string }> = {
-  flame:    { gradient: 'from-accent-flame to-accent-ember', glow: 'rgba(255,107,53,0.15)', text: 'text-accent-flame', badge: 'bg-accent-flame/10 text-accent-flame' },
-  ember:    { gradient: 'from-accent-ember to-accent-gold', glow: 'rgba(255,140,66,0.15)', text: 'text-accent-ember', badge: 'bg-accent-ember/10 text-accent-ember' },
-  gold:     { gradient: 'from-accent-gold to-accent-ember', glow: 'rgba(255,209,102,0.15)', text: 'text-accent-gold', badge: 'bg-accent-gold/10 text-accent-gold' },
+  flame:    { gradient: 'from-accent-flame to-accent-ember', glow: 'rgba(255,204,0,0.15)', text: 'text-accent-flame', badge: 'bg-accent-flame/10 text-accent-flame' },
+  ember:    { gradient: 'from-accent-ember to-accent-gold', glow: 'rgba(230,184,0,0.15)', text: 'text-accent-ember', badge: 'bg-accent-ember/10 text-accent-ember' },
+  gold:     { gradient: 'from-accent-gold to-accent-ember', glow: 'rgba(255,224,102,0.15)', text: 'text-accent-gold', badge: 'bg-accent-gold/10 text-accent-gold' },
   electric: { gradient: 'from-accent-electric to-accent-cyan', glow: 'rgba(6,214,160,0.15)', text: 'text-accent-electric', badge: 'bg-accent-electric/10 text-accent-electric' },
   cyan:     { gradient: 'from-accent-cyan to-accent-electric', glow: 'rgba(17,138,178,0.15)', text: 'text-accent-cyan', badge: 'bg-accent-cyan/10 text-accent-cyan' },
   violet:   { gradient: 'from-accent-violet to-accent-flame', glow: 'rgba(123,47,247,0.15)', text: 'text-accent-violet', badge: 'bg-accent-violet/10 text-accent-violet' },

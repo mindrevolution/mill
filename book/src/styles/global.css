@@ -30,7 +30,7 @@
   }
 
   ::selection {
-    background: #ff6b35;
+    background: #ffcc00;
     color: #0a0a0a;
   }
 
@@ -69,11 +69,11 @@
 
 /* ─── Glow Effects ─── */
 .glow-flame {
-  box-shadow: 0 0 60px rgba(255, 107, 53, 0.15), 0 0 120px rgba(255, 107, 53, 0.05);
+  box-shadow: 0 0 60px rgba(255, 204, 0, 0.15), 0 0 120px rgba(255, 204, 0, 0.05);
 }
 
 .glow-text {
-  text-shadow: 0 0 40px rgba(255, 107, 53, 0.3), 0 0 80px rgba(255, 107, 53, 0.1);
+  text-shadow: 0 0 40px rgba(255, 204, 0, 0.3), 0 0 80px rgba(255, 204, 0, 0.1);
 }
 
 /* ─── Scroll-triggered animations ─── */
@@ -127,7 +127,7 @@
   top: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, #ff6b35, #ffd166);
+  background: linear-gradient(90deg, #ffcc00, #ffe066);
   z-index: 100;
   transition: width 0.1s linear;
 }
@@ -241,7 +241,7 @@
   left: 0;
   width: 0;
   height: 1px;
-  background: #ff6b35;
+  background: #ffcc00;
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -257,7 +257,7 @@
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 60px rgba(255, 107, 53, 0.08), 0 0 0 1px rgba(255, 107, 53, 0.1);
+  box-shadow: 0 20px 60px rgba(255, 204, 0, 0.08), 0 0 0 1px rgba(255, 204, 0, 0.1);
 }
 
 /* ─── Number Badge ─── */

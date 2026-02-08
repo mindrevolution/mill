@@ -46,14 +46,14 @@ const workflowSteps = [
 
       <!-- Grid pattern -->
       <div class="absolute inset-0 opacity-[0.03]"
-           style="background-image: linear-gradient(rgba(255,107,53,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,107,53,0.3) 1px, transparent 1px); background-size: 60px 60px;"></div>
+           style="background-image: linear-gradient(rgba(255,204,0,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,204,0,0.3) 1px, transparent 1px); background-size: 60px 60px;">
     </div>
 
     <div class="relative max-w-7xl mx-auto px-6 lg:px-8 py-32 lg:py-40">
       <div class="max-w-5xl">
         <!-- Eyebrow -->
         <div class="flex items-center gap-3 mb-8 animate-fade-in">
-          <div class="w-8 h-8 rounded-sm bg-gradient-to-br from-accent-flame to-accent-ember shadow-[0_0_30px_rgba(255,107,53,0.3)]"></div>
+          <div class="w-8 h-8 rounded-sm bg-gradient-to-br from-accent-flame to-accent-ember shadow-[0_0_30px_rgba(255,204,0,0.3)]"></div>
           <span class="font-mono text-sm text-mill-silver tracking-wide">v0.5 alpha</span>
         </div>
 
@@ -61,7 +61,7 @@ const workflowSteps = [
         <h1 class="font-display font-bold text-display-xl text-mill-white mb-8">
           <span class="animate-fade-up inline-block">Think it through.</span>
           <br />
-          <span class="animate-fade-up inline-block" style="animation-delay: 0.15s;">Ship it right.</span>
+          <span class="animate-fade-up inline-block" style="animation-delay: 0.15s;">Ship what you meant.</span>
           <br />
           <span class="bg-gradient-to-r from-accent-flame via-accent-ember to-accent-gold bg-clip-text text-transparent animate-fade-up inline-block" style="animation-delay: 0.3s;">
             Sharper every cycle.
@@ -70,7 +70,7 @@ const workflowSteps = [
 
         <!-- Subhead -->
         <p class="text-xl lg:text-2xl text-mill-silver max-w-2xl leading-relaxed animate-fade-up mb-12" style="animation-delay: 0.45s;">
-          mill works with Claude Code to help you think through what you want to build — then implements it in verified steps. Every cycle, it learns. The more you ship, the sharper it gets.
+          mill works with <a href="https://claude.ai/code" target="_blank" rel="noopener" class="text-accent-flame hover:text-accent-gold transition-colors">Claude Code</a> to help you think through what you want to build — then implements it in verified steps. Every cycle, it learns. The more you ship, the sharper it gets.
         </p>
 
         <!-- CTAs -->
@@ -78,11 +78,20 @@ const workflowSteps = [
           <a href="/01-why-mill"
              class="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-flame to-accent-ember
                     text-mill-black font-display font-semibold rounded-xl
-                    hover:shadow-[0_0_40px_rgba(255,107,53,0.3)] transition-all duration-500
+                    hover:shadow-[0_0_40px_rgba(255,204,0,0.3)] transition-all duration-500
                     hover:scale-[1.02] active:scale-[0.98]">
-            Start Reading
+            Learn More
             <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+          <a href="/08-getting-started"
+             class="inline-flex items-center gap-3 px-8 py-4 border border-mill-graphite
+                    text-mill-light font-display font-medium rounded-xl
+                    hover:border-accent-flame/40 hover:bg-accent-flame/5 transition-all duration-500">
+            Getting Started
+            <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </a>
           <a href="https://github.com/mindrevolution/mill"
@@ -189,7 +198,7 @@ const workflowSteps = [
     <div class="max-w-7xl mx-auto px-6 lg:px-8">
       <!-- Section header -->
       <div class="max-w-2xl mb-16">
-        <span class="font-mono text-xs text-accent-flame tracking-widest uppercase reveal">The Book</span>
+        <span class="font-mono text-xs text-accent-flame tracking-widest uppercase reveal">The Manual</span>
         <h2 class="font-display text-display-lg font-bold text-mill-white mt-4 mb-6 reveal delay-1">
           Eight chapters.<br />Everything you need.
         </h2>
@@ -246,7 +255,7 @@ const workflowSteps = [
 
     <div class="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
       <h2 class="font-display text-display-lg font-bold text-mill-white mb-6 reveal">
-        Ready to ship<br />with precision?
+        Ready to ship exactly<br />what you meant?
       </h2>
       <p class="text-xl text-mill-silver mb-12 max-w-xl mx-auto reveal delay-1">
         Install mill, run your first warmup, and experience what it feels like when AI actually understands your project.
@@ -256,7 +265,7 @@ const workflowSteps = [
         <a href="/08-getting-started"
            class="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-flame to-accent-ember
                   text-mill-black font-display font-semibold rounded-xl
-                  hover:shadow-[0_0_40px_rgba(255,107,53,0.3)] transition-all duration-500
+                  hover:shadow-[0_0_40px_rgba(255,204,0,0.3)] transition-all duration-500
                   hover:scale-[1.02] active:scale-[0.98]">
           Get Started
           <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

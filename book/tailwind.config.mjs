@@ -17,9 +17,9 @@ export default {
           white: '#faf8f5',
         },
         accent: {
-          flame: '#ff6b35',
-          ember: '#ff8c42',
-          gold: '#ffd166',
+          flame: '#ffcc00',
+          ember: '#e6b800',
+          gold: '#ffe066',
           electric: '#06d6a0',
           cyan: '#118ab2',
           violet: '#7b2ff7',
