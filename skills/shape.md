@@ -72,6 +72,30 @@ Search codebase for relevant files.
 | Feature | add, create, new | `feature` |
 | Task | refactor, update, migrate | `task` |
 
+### 2b. Classify Domain
+
+| Domain | Focus |
+|--------|-------|
+| `backend` | APIs, services, data layer |
+| `application` | Interactive apps (web, mobile, desktop) |
+| `website` | Pages (landing, marketing, content) |
+| `fullstack` | Multiple layers |
+
+```yaml
+AskUserQuestion:
+  question: "What part of the system does this affect?"
+  header: "Domain"
+  options:
+    - label: "Backend"
+      description: "APIs, services, data layer"
+    - label: "Application"
+      description: "Interactive apps — web, mobile, desktop"
+    - label: "Website"
+      description: "Pages — landing, marketing, content"
+    - label: "Full-stack"
+      description: "Touches multiple layers"
+```
+
 ### 3. Create Draft Early
 
 Create draft file at `.mill/shape/drafts/{slug}.md`:
@@ -80,6 +104,7 @@ Create draft file at `.mill/shape/drafts/{slug}.md`:
 ---
 title: Human Readable Title
 type: feature
+domain: application
 status: draft
 persona: primary-user
 ---

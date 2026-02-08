@@ -69,6 +69,25 @@ mill context --human
 
 Ensure `.mill/context.md` exists. Run `/mill:warmup` if not.
 
+### 2b. Load Domain Guidance
+
+Based on spec's `domain` field, load execution guidance:
+
+```bash
+mill template get domains {domain} --human
+```
+
+| Domain | Focus |
+|--------|-------|
+| `backend` | API design, data modeling, error handling, performance |
+| `application` | Component architecture, state management, UX |
+| `website` | Page architecture, aesthetics, responsive, performance |
+| `fullstack` | Load both backend and application guidance |
+
+**Apply this mindset throughout implementation.** Domain guidance sets quality expectations and anti-patterns to avoid.
+
+For `website`: Design references (Figma, screenshots) in the spec are source of truth. Match them precisely.
+
 ### 3. Plan Slices
 
 For non-trivial specs, plan the work in slices:

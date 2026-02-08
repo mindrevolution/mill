@@ -42,6 +42,11 @@ public static class MillPaths
     /// </summary>
     public static string Specs => Path.Combine(Templates, "specs");
 
+    /// <summary>
+    /// Path to domain execution guides.
+    /// </summary>
+    public static string Domains => Path.Combine(Templates, "domains");
+
     private static string FindMillHome()
     {
         // 1. MILL_HOME environment variable

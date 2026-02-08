@@ -40,10 +40,23 @@ mill draft list|get|validate|publish # Draft management + GitHub publish
 mill issue list|get                 # Wraps gh CLI
 mill history [add]                  # Ship run history
 mill context [show]                 # View context.md
-mill template list|get              # Archetypes/stacks/templates
+mill template list|get              # Archetypes/stacks/specs/domains
 ```
 
 Output: JSON by default, `--human` for readable output.
+
+## Domains
+
+Specs include a `domain` field that determines execution guidance:
+
+| Domain | Focus | Guidance |
+|--------|-------|----------|
+| `backend` | APIs, services, data | API design, error handling, performance |
+| `application` | Interactive apps | Component architecture, state, UX |
+| `website` | Pages (landing, marketing) | Aesthetics, responsive, performance |
+| `fullstack` | Multiple layers | Combined guidance |
+
+Domain templates live in `templates/domains/` and are loaded by `/mill:ship` during execution.
 
 ## Skills
 

@@ -80,6 +80,7 @@ If `.mill/personas.md` is loaded, use it to improve elicitation:
 ```yaml
 ---
 type: feature|bug|security|task
+domain: backend|application|website|fullstack
 title: Human-readable title
 slug: lowercase-hyphenated
 summary: one-line (update as understanding deepens)
@@ -196,9 +197,37 @@ AskUserQuestion:
   # User can always type "Other"
 ```
 
-**CREATE DRAFT NOW.** As soon as you have type and a working title:
+### 2b. Classify Domain
+
+After type, determine which part of the system this affects:
+
+| Domain | Focus | Signals |
+|--------|-------|---------|
+| `backend` | APIs, services, data | endpoint, database, API, server |
+| `application` | Interactive apps (web, mobile) | component, form, state, screen |
+| `website` | Pages (landing, marketing, content) | landing, page, responsive, SEO |
+| `fullstack` | Multiple layers | spans API and UI |
+
+**Use AskUserQuestion** to confirm domain:
+
+```yaml
+AskUserQuestion:
+  question: "What part of the system does this affect?"
+  header: "Domain"
+  options:
+    - label: "Backend"
+      description: "APIs, services, data layer"
+    - label: "Application"
+      description: "Interactive apps — web, mobile, desktop"
+    - label: "Website"
+      description: "Pages — landing, marketing, content"
+    - label: "Full-stack"
+      description: "Touches multiple layers"
+```
+
+**CREATE DRAFT NOW.** As soon as you have type, domain, and a working title:
 1. Generate slug from title
-2. Write initial draft file with `status: classifying`
+2. Write initial draft file with `status: classifying`, include `domain` field
 3. Continue elicitation — the draft will update as you learn more
 
 ### 3. Elicit

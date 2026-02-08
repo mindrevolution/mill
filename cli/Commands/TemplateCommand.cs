@@ -28,7 +28,7 @@ public static class TemplateCommand
             usage: mill template <command> [options]
 
             commands:
-              list <type>           list templates (archetypes, stacks, specs)
+              list <type>           list templates (archetypes, stacks, specs, domains)
               get <type> <id>       get template content
             """);
         return 1;
@@ -39,7 +39,7 @@ public static class TemplateCommand
         if (args.Length < 1)
         {
             Console.Error.WriteLine("usage: mill template list <type>");
-            Console.Error.WriteLine("  types: archetypes, stacks, specs");
+            Console.Error.WriteLine("  types: archetypes, stacks, specs, domains");
             return 1;
         }
 
@@ -151,6 +151,7 @@ public static class TemplateCommand
             "archetypes" => MillPaths.Archetypes,
             "stacks" => MillPaths.Stacks,
             "specs" => MillPaths.Specs,
+            "domains" => MillPaths.Domains,
             _ => null
         };
     }
