@@ -16,9 +16,9 @@ Before you begin, make sure you have:
 
 ## Install
 
-### As a Claude Code Plugin (Recommended)
+### Full Experience (Claude Code Plugin)
 
-The easiest way. Open Claude Code and run:
+The complete package — skills, CLI, and MCP integration. Open Claude Code and run:
 
 ```
 /plugin marketplace add mindrevolution/mill-plugin
@@ -29,7 +29,7 @@ The CLI binary is automatically installed when you first enable the plugin. No m
 
 ### CLI Only
 
-If you prefer a standalone installation:
+The CLI can run independently — without the Claude Code plugin. This is useful if you want to execute `mill ship` against specs that are already crafted as GitHub Issues, without the full skill pack.
 
 ```bash
 # macOS / Linux
@@ -38,6 +38,8 @@ curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh
 # Windows
 irm https://raw.githubusercontent.com/mindrevolution/mill/main/install.ps1 | iex
 ```
+
+You get the execution engine (`mill ship`, `mill ground`, `mill history`, etc.) but not the conversational skills (`/mill:spec`, `/mill:idea`, `/mill:ground`) that help you author specs and manage knowledge interactively.
 
 ## Initialize Your Project
 
@@ -62,17 +64,11 @@ This creates the `.mill/` directory with the default structure:
 
 The first time you use mill skills in Claude Code, you'll be asked to approve certain commands. Select **"Yes, and don't ask again"** to approve them permanently for the project.
 
-After this one-time setup, skills run smoothly without interruption.
+## Context Is Automatic
 
-## Your First Warmup
+When any skill needs project context, mill checks `.mill/context.md` and regenerates it automatically if it's missing or stale (default threshold: 25 commits).
 
-Before using any other skill, let mill learn your codebase:
-
-```
-/mill:warmup
-```
-
-This generates `.mill/context.md` — a comprehensive overview of your project's structure, dependencies, and patterns. Context stays fresh through a staleness threshold (default: 25 commits).
+If you ever want to force a refresh, you can run `/mill:warmup` — but you'll rarely need to.
 
 ## Build Your Ground
 
@@ -203,9 +199,9 @@ mill template list archetypes      # View available archetypes
 You've learned the full mill workflow. Here's your path forward:
 
 1. **Install and initialize** — get the tools set up
-2. **Run warmup** — let mill learn your project
-3. **Build ground** — start with personas and rules
-4. **Ship something** — pick an issue and run the full cycle
+2. **Build ground** — start with personas and rules
+3. **Draft a spec** — turn an idea into a contract
+4. **Ship it** — run the full cycle and get a PR
 5. **Review and learn** — check observations, refine ground
 
 Each cycle makes the next one sharper. That's the promise. Now go build something great.
