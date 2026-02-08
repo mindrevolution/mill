@@ -1,74 +1,151 @@
 ---
 title: "Spec"
-chapter: 6
-part: "Process"
-partNumber: 2
-description: "Turning fuzzy intent into precise, verifiable specifications"
-slug: "spec"
+number: 6
+subtitle: "Turn intent into precision"
+accent: "cyan"
 ---
 
-The specification is mill's most important artifact. It's the contract between what you want and what gets built. Everything upstream (ground, ideas) feeds into it. Everything downstream (ship) is driven by it.
+## The Art of Specification
 
-## Anatomy of a Spec
+A specification that requires clarifying questions is a draft, not a specification.
 
-Every mill specification has three sections that form a verification chain:
+This single test separates mill specs from every other requirements document you've written. The bar is high because the payoff is high: a spec that passes this test can be implemented without back-and-forth, without "what did you mean by...?", without rework.
 
-**Requirements (R)** define *what* the solution must achieve. These are outcomes, not implementation details. "Users can reset their password via email" is a requirement. "Add a POST endpoint to /api/reset" is not.
+## The Structure
 
-**Approach (A)** describes *how* the requirements will be met. This is the implementation strategy — which components to create, which patterns to follow, which trade-offs to accept. The approach is broken into parts, each addressing one or more requirements.
+Every mill spec has four sections that form a provable chain:
 
-**Criteria (C)** are testable conditions that *verify* the approach satisfies the requirements. Each criterion is specific, objective, and mechanically verifiable. "The reset email is sent within 5 seconds" is a criterion. "The feature works well" is not.
+### Requirements (R)
 
-## The Verification Chain
+What the solution must achieve. Each requirement gets an ID, a description, and a status:
 
-The three sections are linked:
+| Status | Meaning |
+|--------|---------|
+| **core** | Must be implemented. No ship without it. |
+| **must-have** | Required but could be deferred to a follow-up. |
+| **nice-to-have** | Valuable but not blocking. |
+| **out** | Explicitly excluded. Saying "no" is a decision too. |
+
+### Approach (A)
+
+How you'll build it. Broken into parts, each describing a specific mechanism — a model change, an API endpoint, a UI component, a migration script.
+
+Approach parts can be flagged with ⚠️ when uncertainty exists. These flags must be resolved before the spec is ready. You can't ship ambiguity.
+
+### Criteria (C)
+
+Testable conditions that prove each requirement is met. Not "it should work" — but "given X input, the system returns Y with status Z in under 500ms."
+
+Good criteria are:
+- **Binary** — they pass or fail, no "kind of"
+- **Automated** — they can be verified by a test command
+- **Independent** — each criterion tests one thing
+
+### Coverage (R × A × C)
+
+The proof matrix. Every core and must-have requirement must have:
+- At least one approach part implementing it
+- At least one criterion verifying it
+
+If a row in the matrix has ❌ in the approach column or — in the criteria column, the spec isn't complete.
+
+## The Workflow
+
+### Starting Fresh
 
 ```
-Requirements  → implemented by →  Approach Parts
-Approach Parts → verified by →    Criteria
+/mill:spec "Add PDF export for monthly reports"
 ```
 
-This creates a **coverage matrix (R x A x C)**. Every requirement has approach parts that implement it, and every approach part has criteria that verify it. If the coverage is incomplete, the spec has gaps.
+mill checks your project context, loads ground knowledge, and begins the conversation.
 
-## Writing Specs
+### The Conversation
 
-The `/mill:spec` skill handles the hard work:
+mill asks one question at a time, using structured options where sensible:
 
-```
-/mill:spec              # Start from scratch or from an idea
-/mill:spec --draft my-feature   # Resume a draft
-```
+1. **What type of change?** Feature / Bug / Task / Security
+2. **What domain?** Backend / Application / Website / Platform / Full-stack
+3. **What's the core problem?** (your words)
+4. **What must the solution achieve?** (requirements emerge)
+5. **How should we build it?** (approach forms)
+6. **How do we prove it works?** (criteria crystalize)
 
-The workflow is conversational but structured:
+A draft is saved early and updated as you go. You can stop mid-conversation and resume later — mill picks up where you left off.
 
-1. You describe your intent
-2. mill drafts requirements based on your description and ground knowledge
-3. You review and refine the requirements
-4. mill proposes an approach
-5. You review the approach
-6. mill generates criteria that cover the R x A matrix
-7. You approve and publish to GitHub Issues
+### Validation
 
-At every step, you have full control. mill proposes; you decide.
+Before publishing, mill validates your spec against the principles:
 
-## Specs as GitHub Issues
+- [ ] **Self-Containment** — no statement requires external clarification
+- [ ] **Language Independence** — describes what/why, not language-specific how
+- [ ] **Decision Completeness** — no TBDs, all parameters bound
+- [ ] **Explicit Non-Applicability** — omitted sections marked N/A with reason
+- [ ] **Coverage** — all core/must-have requirements have approach and criteria
+- [ ] **No ⚠️ flags** — all uncertainties resolved
 
-Published specs live as GitHub Issues — the single source of truth. This means:
+### Publishing
 
-- They're versioned and commentable
-- They integrate with your existing workflow (branches, PRs, labels)
-- They're accessible to everyone on the team
-- They survive beyond any single tool
+When validation passes, mill creates a GitHub Issue. The issue becomes the canonical spec. The local draft is deleted. One source of truth.
 
 ```bash
-# List spec drafts
-mill draft list --human
-
-# Validate a draft before publishing
-mill draft validate my-feature --human
-
-# Publish to GitHub
-mill draft publish my-feature --human
+mill draft publish add-pdf-export --human
+→ Published as issue #47
+→ https://github.com/org/repo/issues/47
 ```
 
-> A specification isn't overhead. It's the cheapest way to prevent rework.
+## Domain Awareness
+
+Specs include a domain that shapes execution guidance:
+
+| Domain | mill Pays Attention To |
+|--------|----------------------|
+| **backend** | API design, error handling, data modeling, performance |
+| **application** | Component architecture, state management, UX patterns |
+| **website** | Page architecture, responsive design, Core Web Vitals |
+| **platform** | Infrastructure-as-code, containers, observability |
+| **fullstack** | All of the above |
+
+Domain guidance isn't just decorative. When `/mill:ship` implements a backend spec, it follows backend patterns. When it implements a website spec, it optimizes for Web Vitals and visual fidelity.
+
+## Observations During Drafting
+
+As you draft, mill watches for gaps in your ground knowledge:
+
+- A persona referenced but not defined ("As a *finance admin*..." — who?)
+- A domain term used without a vocabulary entry
+- A requirement that conflicts with a documented rule
+- An entity implied but not in the schema
+
+High-confidence gaps get written as observations automatically. Uncertain ones are collected and shown at the end for your review.
+
+This is the learning loop in action. Drafting a spec doesn't just produce a spec — it enriches the knowledge base.
+
+## The Loop Contract
+
+Every spec ends with a loop contract:
+
+```markdown
+## Loop Contract
+**Test command:** `npm test`
+**Stop conditions:** 20 iterations max
+```
+
+This tells ship exactly how to verify and when to stop. No ambiguity about what "passing" means.
+
+## Common Patterns
+
+### Bug Specs
+
+Bug specs are surgical: what's broken, what's expected, how to reproduce, how to verify the fix.
+
+### Feature Specs
+
+Feature specs are the most common. Requirements → approach → criteria, with coverage proving completeness.
+
+### Task Specs
+
+Refactoring, migration, cleanup. Task specs focus on approach and before/after verification. Requirements are often simpler ("migrate from X to Y without regression").
+
+### Security Specs
+
+Security always wins classification. If a change has security implications, it's a security spec regardless of what else it does. Security specs include threat model, attack vectors, and security-specific criteria.

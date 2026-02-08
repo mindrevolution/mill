@@ -2,327 +2,276 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Fonts ─── */
+@font-face {
+  font-family: 'Clash Display';
+  src: url('https://cdn.fontshare.com/wf/LMUFRXBOPWVYCIDYNAMPYUOFDCKJ3EZU/XFUGSM4V72GBPCO45ETZ3WNMZXQBFBVL/YPWGDQQG3YBCFDHSV3RSE6X4OT3RYWSF.woff2') format('woff2');
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('https://cdn.fontshare.com/wf/YBUQRDXQMJBZ5CPAYOJXJXUSEZSCJ4GZ/R6CSQXR6DPRXXQEVKSNBNKPJ7YMRVDXU/SNUXCR53GEDRPMOPRJHZMXQ7IOMVMVOO.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+/* ─── Base ─── */
 @layer base {
-  html {
-    scroll-behavior: smooth;
+  * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  body {
-    @apply font-body text-stone-800 bg-cream dark:bg-[#0C0A09] dark:text-stone-300;
-    font-feature-settings: 'kern' 1, 'liga' 1;
+  html {
+    scroll-behavior: smooth;
+    scrollbar-color: #3a3a3a #111111;
   }
 
   ::selection {
-    @apply bg-copper-200/60 dark:bg-copper-800/40;
+    background: #ff6b35;
+    color: #0a0a0a;
+  }
+
+  body {
+    font-family: 'Satoshi', system-ui, sans-serif;
+    background-color: #0a0a0a;
+    color: #e8e4df;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Clash Display', system-ui, sans-serif;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
   }
 }
 
-/* ── Reading progress bar ─────────────────────────── */
+/* ─── Grain Overlay ─── */
+.grain::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  animation: grain 8s steps(10) infinite;
+  opacity: 0.3;
+}
+
+/* ─── Glow Effects ─── */
+.glow-flame {
+  box-shadow: 0 0 60px rgba(255, 107, 53, 0.15), 0 0 120px rgba(255, 107, 53, 0.05);
+}
+
+.glow-text {
+  text-shadow: 0 0 40px rgba(255, 107, 53, 0.3), 0 0 80px rgba(255, 107, 53, 0.1);
+}
+
+/* ─── Scroll-triggered animations ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-left.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-scale.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Stagger delays */
+.delay-1 { transition-delay: 0.1s; }
+.delay-2 { transition-delay: 0.2s; }
+.delay-3 { transition-delay: 0.3s; }
+.delay-4 { transition-delay: 0.4s; }
+.delay-5 { transition-delay: 0.5s; }
+.delay-6 { transition-delay: 0.6s; }
+
+/* ─── Reading Progress Bar ─── */
 .reading-progress {
   position: fixed;
   top: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, #B45309, #DD5E0A);
+  background: linear-gradient(90deg, #ff6b35, #ffd166);
   z-index: 100;
-  transition: width 80ms linear;
-  will-change: width;
+  transition: width 0.1s linear;
 }
 
-/* ── Chapter typography ───────────────────────────── */
-.chapter-body > p:first-of-type::first-letter {
-  font-family: 'Young Serif', serif;
-  float: left;
-  font-size: 3.5em;
-  line-height: 0.8;
-  margin-right: 0.1em;
-  margin-top: 0.1em;
-  color: #B45309;
+/* ─── Chapter Content Prose ─── */
+.prose-mill {
+  @apply text-mill-light/90 leading-relaxed;
 }
 
-:is(.dark .chapter-body) > p:first-of-type::first-letter {
-  color: #FF9520;
+.prose-mill h2 {
+  @apply font-display text-display-md text-mill-white mt-20 mb-6;
 }
 
-/* ── Grain overlay ────────────────────────────────── */
-.grain::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 90;
-  opacity: 0.018;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 256px 256px;
+.prose-mill h3 {
+  @apply font-display text-display-sm text-mill-white mt-12 mb-4;
 }
 
-:is(.dark) .grain::before {
-  opacity: 0.035;
+.prose-mill p {
+  @apply text-lg mb-6 max-w-[65ch];
 }
 
-/* ── Animations ───────────────────────────────────── */
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.prose-mill strong {
+  @apply text-mill-white font-semibold;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.prose-mill a {
+  @apply text-accent-flame underline underline-offset-4 decoration-accent-flame/30
+         hover:decoration-accent-flame transition-colors;
 }
 
-@keyframes draw-line {
-  from { width: 0; }
-  to { width: 100%; }
+.prose-mill ul, .prose-mill ol {
+  @apply mb-6 pl-6 space-y-2;
 }
 
-.animate-fade-up {
-  opacity: 0;
-  animation: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+.prose-mill li {
+  @apply text-lg text-mill-light/80;
 }
 
-.animate-fade-in {
-  opacity: 0;
-  animation: fade-in 0.8s ease forwards;
+.prose-mill ul li::marker {
+  @apply text-accent-flame;
 }
 
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
-.delay-400 { animation-delay: 400ms; }
-.delay-500 { animation-delay: 500ms; }
-.delay-600 { animation-delay: 600ms; }
-.delay-700 { animation-delay: 900ms; }
-
-/* ── Text gradient ────────────────────────────────── */
-.text-gradient-copper {
-  background: linear-gradient(135deg, #92400E 0%, #B45309 30%, #D97706 60%, #F59E0B 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.prose-mill ol li::marker {
+  @apply text-accent-flame font-display font-bold;
 }
 
-/* When combined with fade-up, chain both animations */
-.text-gradient-copper.animate-fade-up {
-  background-size: 200% 200%;
-  animation:
-    fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards,
-    gradient-shift 8s ease 1.2s infinite;
+.prose-mill blockquote {
+  @apply border-l-2 border-accent-flame/40 pl-6 py-2 my-8 italic text-mill-silver;
 }
 
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+.prose-mill pre {
+  @apply bg-mill-carbon border border-mill-graphite rounded-lg p-6 my-8 overflow-x-auto text-sm;
 }
 
-/* ── Orbital ring system ──────────────────────────── */
-.orbit-container {
-  width: 600px;
-  height: 600px;
-  margin-left: -300px;
-  margin-top: -300px;
+.prose-mill code {
+  @apply text-accent-ember;
 }
 
-@media (min-width: 1024px) {
-  .orbit-container {
-    width: 700px;
-    height: 700px;
-    margin-left: -350px;
-    margin-top: -350px;
-  }
+.prose-mill pre code {
+  @apply text-mill-light text-sm;
 }
 
-.orbit-ring-visual {
-  border: 2px solid rgba(180, 83, 9, 0.10);
-  border-radius: 50%;
-  animation: ring-spin 120s linear infinite;
+.prose-mill :not(pre) > code {
+  @apply bg-mill-carbon px-2 py-0.5 rounded text-sm;
 }
 
-:is(.dark) .orbit-ring-visual {
-  border-color: rgba(217, 119, 6, 0.09);
+.prose-mill table {
+  @apply w-full my-8 text-sm;
 }
 
-@keyframes ring-spin {
-  to { transform: rotate(360deg); }
+.prose-mill th {
+  @apply text-left font-display text-mill-white pb-3 border-b border-mill-graphite;
 }
 
-/* Orbit path: rotate(θ) translateX(R) rotate(-θ) keeps labels upright */
-@keyframes orbit-path {
-  from { transform: rotate(0deg) translateX(280px) rotate(0deg); }
-  to { transform: rotate(360deg) translateX(280px) rotate(-360deg); }
+.prose-mill td {
+  @apply py-3 border-b border-mill-graphite/50 text-mill-light/80;
 }
 
-@keyframes orbit-path-lg {
-  from { transform: rotate(0deg) translateX(330px) rotate(0deg); }
-  to { transform: rotate(360deg) translateX(330px) rotate(-360deg); }
+.prose-mill hr {
+  @apply border-mill-graphite my-16;
 }
 
-@keyframes node-appear {
-  from { opacity: 0; transform: scale(0.5); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.orbit-node {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  animation: orbit-path 90s linear infinite;
-}
-
-@media (min-width: 1024px) {
-  .orbit-node {
-    animation-name: orbit-path-lg;
-  }
-}
-
-/* Stagger the four nodes around the circle via negative delay */
-.orbit-node-1 { animation-delay: 0s; }
-.orbit-node-2 { animation-delay: -22.5s; }
-.orbit-node-3 { animation-delay: -45s; }
-.orbit-node-4 { animation-delay: -67.5s; }
-
-/* ── Floating pill nodes ───────────────────────────── */
-.orbit-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 16px 7px 11px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(180, 83, 9, 0.12);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 4px 12px rgba(180, 83, 9, 0.06);
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
-  opacity: 0;
-  animation: node-appear 0.7s ease forwards;
-}
-
-:is(.dark) .orbit-pill {
-  background: rgba(28, 25, 23, 0.55);
-  border-color: rgba(217, 119, 6, 0.14);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.2),
-    0 4px 16px rgba(217, 119, 6, 0.08);
-}
-
-.orbit-node-1 .orbit-pill { animation-delay: 0.6s; }
-.orbit-node-2 .orbit-pill { animation-delay: 0.9s; }
-.orbit-node-3 .orbit-pill { animation-delay: 1.2s; }
-.orbit-node-4 .orbit-pill { animation-delay: 1.5s; }
-
-.orbit-pill-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #B45309;
-  box-shadow: 0 0 8px rgba(180, 83, 9, 0.35);
-  flex-shrink: 0;
-}
-
-:is(.dark) .orbit-pill-dot {
-  background: #D97706;
-  box-shadow: 0 0 10px rgba(217, 119, 6, 0.45);
-}
-
-.orbit-pill-label {
-  font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: #92400E;
-}
-
-:is(.dark) .orbit-pill-label {
-  color: #D97706;
-}
-
-/* ── Radial gradient utility ──────────────────────── */
-.bg-gradient-radial {
-  background: radial-gradient(circle, var(--tw-gradient-from), var(--tw-gradient-to));
-}
-
-/* ── Scroll hint ──────────────────────────────────── */
-@keyframes scroll-pulse {
-  0%, 100% { opacity: 0.4; height: 40px; }
-  50% { opacity: 0.8; height: 52px; }
-}
-
-.scroll-hint {
-  animation: scroll-pulse 2.5s ease-in-out infinite;
-  animation-delay: 1.5s;
-}
-
-/* ── Decorative rule ──────────────────────────────── */
-.rule-copper {
-  @apply relative h-px w-full;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    #B45309 20%,
-    #B45309 80%,
-    transparent 100%
-  );
-  opacity: 0.3;
-}
-
-:is(.dark) .rule-copper {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    #DD5E0A 20%,
-    #DD5E0A 80%,
-    transparent 100%
-  );
-  opacity: 0.25;
-}
-
-/* ── Code blocks ──────────────────────────────────── */
-.prose pre {
-  @apply rounded-lg border border-stone-200 dark:border-stone-800;
-}
-
-.prose :not(pre) > code {
-  @apply rounded px-1.5 py-0.5 bg-stone-100 dark:bg-stone-800 text-copper-800 dark:text-copper-300 text-sm;
-}
-
-/* ── Scrollbar ────────────────────────────────────── */
+/* ─── Custom Scrollbar ─── */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #111111;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-stone-300 dark:bg-stone-700 rounded-full;
+  background: #3a3a3a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-stone-400 dark:bg-stone-600;
+  background: #666666;
 }
 
-/* ── TOC active state ─────────────────────────────── */
-.toc-link {
-  @apply text-stone-400 dark:text-stone-600 transition-colors duration-200 text-sm leading-relaxed;
+/* ─── Link Underline Animation ─── */
+.link-underline {
+  position: relative;
+  text-decoration: none;
 }
 
-.toc-link:hover {
-  @apply text-stone-600 dark:text-stone-400;
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #ff6b35;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.toc-link.active {
-  @apply text-copper-700 dark:text-copper-400;
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* ─── Card Hover ─── */
+.card-hover {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(255, 107, 53, 0.08), 0 0 0 1px rgba(255, 107, 53, 0.1);
+}
+
+/* ─── Number Badge ─── */
+.chapter-number {
+  @apply font-display text-[10rem] font-bold leading-none text-mill-graphite/50
+         absolute -top-12 -left-4 select-none pointer-events-none;
+}
+
+/* ─── Workflow Connector Lines ─── */
+.workflow-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+}
+
+.workflow-line.visible {
+  animation: drawLine 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

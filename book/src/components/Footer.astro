@@ -1,30 +1,65 @@
 ---
+const year = new Date().getFullYear();
 ---
 
-<footer class="border-t border-stone-200/60 dark:border-stone-800/60 mt-32">
-  <div class="max-w-6xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-4">
-    <p class="text-sm text-stone-400 dark:text-stone-600">
-      <a href="/" class="font-display text-stone-500 dark:text-stone-500 hover:text-copper-700 dark:hover:text-copper-400 transition-colors">mill</a>
-      <span class="mx-2">&middot;</span>
-      by <a href="https://mindrevolution.com" target="_blank" rel="noopener" class="hover:text-copper-700 dark:hover:text-copper-400 transition-colors">mindrevolution</a>
-    </p>
-    <div class="flex items-center gap-6 text-sm text-stone-400 dark:text-stone-600">
-      <a
-        href="https://github.com/mindrevolution/mill"
-        target="_blank"
-        rel="noopener"
-        class="hover:text-stone-600 dark:hover:text-stone-400 transition-colors"
-      >
-        GitHub
-      </a>
-      <a
-        href="https://github.com/mindrevolution/mill/blob/main/README.md"
-        target="_blank"
-        rel="noopener"
-        class="hover:text-stone-600 dark:hover:text-stone-400 transition-colors"
-      >
-        Docs
-      </a>
+<footer class="relative border-t border-mill-graphite/30">
+  <!-- Gradient fade -->
+  <div class="absolute -top-px left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent-flame/30 to-transparent"></div>
+
+  <div class="max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-24">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-16">
+      <!-- Brand -->
+      <div class="md:col-span-5">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-7 h-7 rounded-sm bg-gradient-to-br from-accent-flame to-accent-ember"></div>
+          <span class="font-display font-bold text-lg text-mill-white">mill</span>
+        </div>
+        <p class="text-mill-silver leading-relaxed max-w-sm">
+          Think it through. Ship it right. Sharper every cycle.
+        </p>
+        <p class="text-mill-ash text-sm mt-4">
+          Built by humans who care about craft.
+        </p>
+      </div>
+
+      <!-- Links -->
+      <div class="md:col-span-3">
+        <h4 class="font-display text-sm font-semibold text-mill-white mb-4 uppercase tracking-wider">Learn</h4>
+        <ul class="space-y-3">
+          <li><a href="/01-why-mill" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Why mill</a></li>
+          <li><a href="/02-principles" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Principles</a></li>
+          <li><a href="/03-the-workflow" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">The Workflow</a></li>
+          <li><a href="/08-getting-started" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Getting Started</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-2">
+        <h4 class="font-display text-sm font-semibold text-mill-white mb-4 uppercase tracking-wider">Skills</h4>
+        <ul class="space-y-3">
+          <li><a href="/04-ground" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Ground</a></li>
+          <li><a href="/05-idea" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Idea</a></li>
+          <li><a href="/06-spec" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Spec</a></li>
+          <li><a href="/07-ship" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Ship</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-2">
+        <h4 class="font-display text-sm font-semibold text-mill-white mb-4 uppercase tracking-wider">Connect</h4>
+        <ul class="space-y-3">
+          <li><a href="https://github.com/mindrevolution/mill" target="_blank" rel="noopener" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">GitHub</a></li>
+          <li><a href="https://github.com/mindrevolution/mill/issues" target="_blank" rel="noopener" class="text-mill-silver hover:text-accent-flame transition-colors text-sm link-underline">Issues</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom -->
+    <div class="mt-16 pt-8 border-t border-mill-graphite/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-mill-ash text-xs">
+        &copy; {year} mindrevolution. Open source under MIT.
+      </p>
+      <p class="text-mill-ash/50 text-xs font-mono">
+        v0.5.0-alpha
+      </p>
     </div>
   </div>
 </footer>

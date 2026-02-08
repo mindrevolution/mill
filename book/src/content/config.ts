@@ -4,10 +4,9 @@ const chapters = defineCollection({
   type: 'content',
   schema: z.object({
     title: z.string(),
-    chapter: z.number(),
-    part: z.string(),
-    partNumber: z.number(),
-    description: z.string(),
+    number: z.number(),
+    subtitle: z.string(),
+    accent: z.string().default('flame'),
   }),
 });
 

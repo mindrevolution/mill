@@ -1,100 +1,104 @@
 ---
+import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 import Pagination from '../components/Pagination.astro';
-import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
-  const allChapters = await getCollection('chapters');
-  const sorted = allChapters.sort((a, b) => a.data.chapter - b.data.chapter);
+  const chapters = await getCollection('chapters');
+  const sorted = chapters.sort((a, b) => a.data.number - b.data.number);
 
-  return sorted.map((chapter, i) => ({
+  return sorted.map((chapter, index) => ({
     params: { slug: chapter.slug },
     props: {
       chapter,
-      prev: i > 0 ? {
-        slug: sorted[i - 1].slug,
-        title: sorted[i - 1].data.title,
-        chapter: sorted[i - 1].data.chapter,
-      } : null,
-      next: i < sorted.length - 1 ? {
-        slug: sorted[i + 1].slug,
-        title: sorted[i + 1].data.title,
-        chapter: sorted[i + 1].data.chapter,
-      } : null,
+      prev: index > 0 ? {
+        slug: sorted[index - 1].slug,
+        title: sorted[index - 1].data.title,
+        number: sorted[index - 1].data.number,
+      } : undefined,
+      next: index < sorted.length - 1 ? {
+        slug: sorted[index + 1].slug,
+        title: sorted[index + 1].data.title,
+        number: sorted[index + 1].data.number,
+      } : undefined,
     },
   }));
 }
 
 const { chapter, prev, next } = Astro.props;
 const { Content, headings } = await chapter.render();
-const num = String(chapter.data.chapter).padStart(2, '0');
+const { title, number, subtitle, accent } = chapter.data;
+
+const accentColors: Record<string, { gradient: string; glow: string; text: string; badge: string }> = {
+  flame:    { gradient: 'from-accent-flame to-accent-ember', glow: 'rgba(255,107,53,0.15)', text: 'text-accent-flame', badge: 'bg-accent-flame/10 text-accent-flame' },
+  ember:    { gradient: 'from-accent-ember to-accent-gold', glow: 'rgba(255,140,66,0.15)', text: 'text-accent-ember', badge: 'bg-accent-ember/10 text-accent-ember' },
+  gold:     { gradient: 'from-accent-gold to-accent-ember', glow: 'rgba(255,209,102,0.15)', text: 'text-accent-gold', badge: 'bg-accent-gold/10 text-accent-gold' },
+  electric: { gradient: 'from-accent-electric to-accent-cyan', glow: 'rgba(6,214,160,0.15)', text: 'text-accent-electric', badge: 'bg-accent-electric/10 text-accent-electric' },
+  cyan:     { gradient: 'from-accent-cyan to-accent-electric', glow: 'rgba(17,138,178,0.15)', text: 'text-accent-cyan', badge: 'bg-accent-cyan/10 text-accent-cyan' },
+  violet:   { gradient: 'from-accent-violet to-accent-flame', glow: 'rgba(123,47,247,0.15)', text: 'text-accent-violet', badge: 'bg-accent-violet/10 text-accent-violet' },
+};
+
+const colors = accentColors[accent] || accentColors.flame;
 ---
 
-<Base title={`${num} · ${chapter.data.title}`} description={chapter.data.description}>
+<Base title={`${title} — mill`} description={subtitle}>
+  <div class="reading-progress"></div>
+  <Nav currentPage="chapter" />
 
-  <!-- Reading progress bar -->
-  <div id="reading-progress" class="reading-progress" style="width: 0%"></div>
+  <!-- Chapter Hero -->
+  <header class="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+    <!-- Background glow -->
+    <div class="absolute inset-0">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-[120px]"
+           style={`background: ${colors.glow.replace('0.15', '0.25')}`}></div>
+    </div>
 
-  <article class="pt-32 pb-16 px-6">
-    <div class="max-w-6xl mx-auto flex gap-16">
+    <div class="relative max-w-7xl mx-auto px-6 lg:px-8">
+      <!-- Chapter number - huge background -->
+      <div class="absolute -top-8 -left-4 lg:-top-4 lg:left-4 font-display font-bold text-[12rem] lg:text-[20rem] leading-none text-mill-graphite/20 select-none pointer-events-none">
+        {String(number).padStart(2, '0')}
+      </div>
 
+      <div class="relative">
+        <div class={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium mb-6 ${colors.badge}`}>
+          <span>Chapter {String(number).padStart(2, '0')}</span>
+        </div>
+
+        <h1 class="font-display text-display-xl font-bold text-mill-white mb-4 reveal">
+          {title}
+        </h1>
+
+        <p class="text-xl lg:text-2xl text-mill-silver max-w-2xl reveal delay-1">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+
+    <!-- Decorative line -->
+    <div class="absolute bottom-0 left-0 right-0 h-px">
+      <div class={`h-full bg-gradient-to-r from-transparent via-current to-transparent opacity-20 ${colors.text}`}></div>
+    </div>
+  </header>
+
+  <!-- Chapter Content -->
+  <main class="max-w-7xl mx-auto px-6 lg:px-8 pb-24">
+    <div class="flex gap-12 lg:gap-16">
       <!-- Main content -->
-      <div class="flex-1 max-w-prose mx-auto xl:mx-0">
-
-        <!-- Chapter header -->
-        <header class="mb-16 relative">
-          <!-- Large background number -->
-          <span
-            class="absolute -top-12 -left-4 text-[10rem] font-display leading-none text-stone-100 dark:text-stone-900/50 select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            {num}
-          </span>
-
-          <div class="relative">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-copper-700 dark:text-copper-500 mb-3">
-              Chapter {num} &middot; {chapter.data.part}
-            </p>
-            <h1 class="font-display text-4xl sm:text-5xl text-stone-900 dark:text-stone-100 leading-tight mb-4">
-              {chapter.data.title}
-            </h1>
-            <p class="text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
-              {chapter.data.description}
-            </p>
-          </div>
-
-          <div class="rule-copper mt-10"></div>
-        </header>
-
-        <!-- Prose content -->
-        <div class="prose prose-lg prose-mill dark:prose-invert chapter-body">
+      <article class="flex-1 min-w-0 max-w-3xl">
+        <div class="prose-mill">
           <Content />
         </div>
 
-        <!-- Pagination -->
         <Pagination prev={prev} next={next} />
-      </div>
+      </article>
 
-      <!-- Table of contents sidebar -->
-      <div class="w-56 shrink-0">
-        <TableOfContents headings={headings} />
-      </div>
+      <!-- Table of Contents -->
+      <TableOfContents headings={headings} />
     </div>
-  </article>
+  </main>
 
+  <Footer />
 </Base>
-
-<script>
-  const progressBar = document.getElementById('reading-progress');
-  if (progressBar) {
-    const update = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      progressBar.style.width = `${Math.min(progress, 100)}%`;
-    };
-    window.addEventListener('scroll', update, { passive: true });
-    update();
-  }
-</script>

@@ -4,53 +4,59 @@ interface Props {
 }
 
 const { headings } = Astro.props;
-const filtered = headings.filter(h => h.depth === 2);
+const filteredHeadings = headings.filter(h => h.depth <= 3);
 ---
 
-{filtered.length > 0 && (
-  <nav class="hidden xl:block" aria-label="Table of contents">
-    <div class="sticky top-28">
-      <p class="text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-600 mb-4">
-        On this page
-      </p>
-      <ul class="space-y-2 border-l border-stone-200 dark:border-stone-800 pl-4">
-        {filtered.map(h => (
-          <li>
-            <a
-              href={`#${h.slug}`}
-              class="toc-link block"
-              data-slug={h.slug}
-            >
-              {h.text}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </nav>
-)}
+<aside class="hidden xl:block sticky top-28 self-start" id="toc">
+  <div class="pl-8 border-l border-mill-graphite/30">
+    <h4 class="font-display text-xs font-semibold text-mill-ash uppercase tracking-widest mb-6">
+      On this page
+    </h4>
+    <nav class="space-y-1">
+      {filteredHeadings.map((heading) => (
+        <a
+          href={`#${heading.slug}`}
+          class:list={[
+            'toc-link block py-1.5 text-sm transition-all duration-300 hover:text-accent-flame',
+            heading.depth === 2 ? 'text-mill-silver font-medium' : 'text-mill-ash pl-4 text-xs',
+          ]}
+          data-slug={heading.slug}
+        >
+          {heading.text}
+        </a>
+      ))}
+    </nav>
+  </div>
+</aside>
 
 <script>
-  const tocLinks = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
-  if (tocLinks.length > 0) {
-    const headingEls = Array.from(tocLinks).map(link => {
-      const slug = link.dataset.slug;
-      return slug ? document.getElementById(slug) : null;
-    }).filter(Boolean) as HTMLElement[];
+  // Active heading tracking
+  const tocLinks = document.querySelectorAll('.toc-link');
+  const headingElements: Element[] = [];
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            tocLinks.forEach(l => l.classList.remove('active'));
-            const active = document.querySelector(`.toc-link[data-slug="${entry.target.id}"]`);
-            active?.classList.add('active');
-          }
+  tocLinks.forEach((link) => {
+    const slug = link.getAttribute('data-slug');
+    if (slug) {
+      const heading = document.getElementById(slug);
+      if (heading) headingElements.push(heading);
+    }
+  });
+
+  const tocObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          tocLinks.forEach((link) => {
+            link.classList.remove('text-accent-flame', '!text-accent-flame');
+            if (link.getAttribute('data-slug') === entry.target.id) {
+              link.classList.add('!text-accent-flame');
+            }
+          });
         }
-      },
-      { rootMargin: '-80px 0px -60% 0px', threshold: 0 }
-    );
+      });
+    },
+    { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
+  );
 
-    headingEls.forEach(el => observer.observe(el));
-  }
+  headingElements.forEach((el) => tocObserver.observe(el));
 </script>

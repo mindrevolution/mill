@@ -1,158 +1,278 @@
 ---
-import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
 
-const allChapters = await getCollection('chapters');
-const chapters = allChapters.sort((a, b) => a.data.chapter - b.data.chapter);
+const chapters = (await getCollection('chapters')).sort((a, b) => a.data.number - b.data.number);
 
-const parts = [
-  { number: 'I', title: 'Philosophy', description: 'Why mill exists and what it believes' },
-  { number: 'II', title: 'Process', description: 'How intent becomes verified code' },
-  { number: 'III', title: 'Practice', description: 'Getting started and day-to-day usage' },
+const accentMap: Record<string, string> = {
+  flame: 'from-accent-flame to-accent-ember',
+  ember: 'from-accent-ember to-accent-gold',
+  gold: 'from-accent-gold to-accent-ember',
+  electric: 'from-accent-electric to-accent-cyan',
+  cyan: 'from-accent-cyan to-accent-electric',
+  violet: 'from-accent-violet to-accent-flame',
+};
+
+const accentTextMap: Record<string, string> = {
+  flame: 'text-accent-flame',
+  ember: 'text-accent-ember',
+  gold: 'text-accent-gold',
+  electric: 'text-accent-electric',
+  cyan: 'text-accent-cyan',
+  violet: 'text-accent-violet',
+};
+
+const workflowSteps = [
+  { label: 'Ground', desc: 'Know your world', icon: '◆', color: 'accent-electric' },
+  { label: 'Idea', desc: 'Capture the spark', icon: '✦', color: 'accent-violet' },
+  { label: 'Spec', desc: 'Define precisely', icon: '▣', color: 'accent-cyan' },
+  { label: 'Ship', desc: 'Build & verify', icon: '▲', color: 'accent-flame' },
 ];
 ---
 
-<Base title="mill">
+<Base title="mill — Think it through. Ship it right.">
+  <Nav currentPage="home" />
 
-  <!-- ── Hero ──────────────────────────────────────── -->
-  <section class="relative min-h-[85vh] flex flex-col items-center justify-center px-6 overflow-hidden">
+  <!-- ═══ HERO ═══ -->
+  <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <!-- Background -->
+    <div class="absolute inset-0">
+      <!-- Gradient orbs -->
+      <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-accent-flame/8 rounded-full blur-[150px] animate-pulse-glow"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent-violet/5 rounded-full blur-[120px] animate-pulse-glow" style="animation-delay: 1.5s;"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent-ember/3 rounded-full blur-[200px]"></div>
 
-    <!-- Orbital process ring -->
-    <div class="orbit-container absolute top-1/2 left-1/2 pointer-events-none hidden md:block" aria-hidden="true">
-      <!-- Outer ring -->
-      <div class="orbit-ring-visual absolute inset-0 rounded-full"></div>
-      <!-- Inner ring -->
-      <div class="absolute inset-[70px] rounded-full border border-stone-200/15 dark:border-stone-800/15"></div>
-      <!-- Center glow -->
-      <div class="absolute inset-[35%] rounded-full bg-gradient-radial from-copper-500/[0.04] to-transparent dark:from-copper-500/[0.06]"></div>
+      <!-- Grid pattern -->
+      <div class="absolute inset-0 opacity-[0.03]"
+           style="background-image: linear-gradient(rgba(255,107,53,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,107,53,0.3) 1px, transparent 1px); background-size: 60px 60px;"></div>
+    </div>
 
-      <!-- Orbiting pill nodes -->
-      <div class="orbit-node orbit-node-1">
-        <div class="orbit-pill">
-          <span class="orbit-pill-dot"></span>
-          <span class="orbit-pill-label">Ground</span>
+    <div class="relative max-w-7xl mx-auto px-6 lg:px-8 py-32 lg:py-40">
+      <div class="max-w-5xl">
+        <!-- Eyebrow -->
+        <div class="flex items-center gap-3 mb-8 animate-fade-in">
+          <div class="w-8 h-8 rounded-sm bg-gradient-to-br from-accent-flame to-accent-ember shadow-[0_0_30px_rgba(255,107,53,0.3)]"></div>
+          <span class="font-mono text-sm text-mill-silver tracking-wide">v0.5 alpha</span>
         </div>
-      </div>
-      <div class="orbit-node orbit-node-2">
-        <div class="orbit-pill">
-          <span class="orbit-pill-dot"></span>
-          <span class="orbit-pill-label">Idea</span>
-        </div>
-      </div>
-      <div class="orbit-node orbit-node-3">
-        <div class="orbit-pill">
-          <span class="orbit-pill-dot"></span>
-          <span class="orbit-pill-label">Spec</span>
-        </div>
-      </div>
-      <div class="orbit-node orbit-node-4">
-        <div class="orbit-pill">
-          <span class="orbit-pill-dot"></span>
-          <span class="orbit-pill-label">Ship</span>
+
+        <!-- Headline -->
+        <h1 class="font-display font-bold text-display-xl text-mill-white mb-8">
+          <span class="animate-fade-up inline-block">Think it through.</span>
+          <br />
+          <span class="animate-fade-up inline-block" style="animation-delay: 0.15s;">Ship it right.</span>
+          <br />
+          <span class="bg-gradient-to-r from-accent-flame via-accent-ember to-accent-gold bg-clip-text text-transparent animate-fade-up inline-block" style="animation-delay: 0.3s;">
+            Sharper every cycle.
+          </span>
+        </h1>
+
+        <!-- Subhead -->
+        <p class="text-xl lg:text-2xl text-mill-silver max-w-2xl leading-relaxed animate-fade-up mb-12" style="animation-delay: 0.45s;">
+          mill works with Claude Code to help you think through what you want to build — then implements it in verified steps. Every cycle, it learns. The more you ship, the sharper it gets.
+        </p>
+
+        <!-- CTAs -->
+        <div class="flex flex-wrap gap-4 animate-fade-up" style="animation-delay: 0.6s;">
+          <a href="/01-why-mill"
+             class="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-flame to-accent-ember
+                    text-mill-black font-display font-semibold rounded-xl
+                    hover:shadow-[0_0_40px_rgba(255,107,53,0.3)] transition-all duration-500
+                    hover:scale-[1.02] active:scale-[0.98]">
+            Start Reading
+            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+          <a href="https://github.com/mindrevolution/mill"
+             target="_blank"
+             rel="noopener"
+             class="inline-flex items-center gap-3 px-8 py-4 border border-mill-graphite
+                    text-mill-light font-display font-medium rounded-xl
+                    hover:border-mill-slate hover:bg-mill-graphite/30 transition-all duration-500">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </a>
         </div>
       </div>
     </div>
 
-    <!-- Hero text -->
-    <div class="relative text-center max-w-5xl">
-      <!-- Overline -->
-      <p class="animate-fade-up text-[11px] font-semibold uppercase tracking-[0.35em] text-copper-700 dark:text-copper-500 mb-10">
-        A specification-first delivery system
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-fade-in" style="animation-delay: 1.2s;">
+      <div class="flex flex-col items-center gap-2 text-mill-ash">
+        <span class="text-xs font-mono tracking-wider">SCROLL</span>
+        <div class="w-px h-8 bg-gradient-to-b from-mill-ash to-transparent"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ WORKFLOW VISUALIZATION ═══ -->
+  <section class="relative py-32 lg:py-40 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+      <!-- Section header -->
+      <div class="max-w-2xl mb-20">
+        <span class="font-mono text-xs text-accent-flame tracking-widest uppercase reveal">How it works</span>
+        <h2 class="font-display text-display-lg font-bold text-mill-white mt-4 mb-6 reveal delay-1">
+          Four skills.<br />One cycle.
+        </h2>
+        <p class="text-lg text-mill-silver reveal delay-2">
+          Knowledge feeds delivery. Delivery feeds knowledge. Each rotation makes the system sharper.
+        </p>
+      </div>
+
+      <!-- Workflow steps -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {workflowSteps.map((step, i) => (
+          <div class={`reveal delay-${i + 1}`}>
+            <div class="group relative p-8 rounded-2xl border border-mill-graphite/30 bg-mill-carbon/30
+                        hover:bg-mill-carbon/60 hover:border-mill-slate/50 transition-all duration-500 card-hover h-full">
+              <!-- Step number -->
+              <div class="font-mono text-xs text-mill-ash mb-6">0{i + 1}</div>
+
+              <!-- Icon -->
+              <div class={`text-3xl mb-4 text-${step.color} transition-transform duration-500 group-hover:scale-110`}>
+                {step.icon}
+              </div>
+
+              <!-- Content -->
+              <h3 class="font-display text-xl font-bold text-mill-white mb-2">{step.label}</h3>
+              <p class="text-mill-silver text-sm">{step.desc}</p>
+
+              <!-- Hover glow -->
+              <div class={`absolute inset-0 rounded-2xl bg-${step.color}/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Cycle arrow -->
+      <div class="flex justify-center mt-12 reveal delay-5">
+        <div class="flex items-center gap-4 text-mill-ash">
+          <div class="h-px w-16 bg-gradient-to-r from-transparent to-mill-slate"></div>
+          <span class="font-mono text-xs tracking-wider">LEARNINGS FEED BACK</span>
+          <svg class="w-4 h-4 text-accent-flame" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <div class="h-px w-16 bg-gradient-to-l from-transparent to-mill-slate"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PRINCIPLES STRIP ═══ -->
+  <section class="relative py-24 lg:py-32 border-y border-mill-graphite/20">
+    <!-- Background accent -->
+    <div class="absolute inset-0 bg-gradient-to-b from-mill-carbon/50 to-transparent"></div>
+
+    <div class="relative max-w-7xl mx-auto px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-6">
+        {[
+          { title: 'Specs drive execution', desc: 'No ambiguity, no guessing' },
+          { title: 'Contracts over conversation', desc: 'Verification, not vibes' },
+          { title: 'Bounded iterations', desc: 'Work in slices, prove after each' },
+          { title: 'Skills + CLI', desc: 'AI for intelligence, structure for reliability' },
+          { title: 'Humans drive direction', desc: 'Always' },
+        ].map((p, i) => (
+          <div class={`reveal delay-${i + 1}`}>
+            <div class="text-accent-flame font-mono text-xs mb-3">0{i + 1}</div>
+            <h3 class="font-display font-semibold text-mill-white text-sm mb-1">{p.title}</h3>
+            <p class="text-mill-ash text-xs leading-relaxed">{p.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CHAPTERS GRID ═══ -->
+  <section class="relative py-32 lg:py-40">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+      <!-- Section header -->
+      <div class="max-w-2xl mb-16">
+        <span class="font-mono text-xs text-accent-flame tracking-widest uppercase reveal">The Book</span>
+        <h2 class="font-display text-display-lg font-bold text-mill-white mt-4 mb-6 reveal delay-1">
+          Eight chapters.<br />Everything you need.
+        </h2>
+        <p class="text-lg text-mill-silver reveal delay-2">
+          From philosophy to practice — a guide for humans who care about craft.
+        </p>
+      </div>
+
+      <!-- Chapter cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {chapters.map((chapter, i) => {
+          const gradient = accentMap[chapter.data.accent] || accentMap.flame;
+          const textColor = accentTextMap[chapter.data.accent] || accentTextMap.flame;
+
+          return (
+            <a href={`/${chapter.slug}`}
+               class={`reveal delay-${Math.min(i + 1, 6)}`}>
+              <div class="group relative p-8 lg:p-10 rounded-2xl border border-mill-graphite/30
+                          bg-mill-carbon/20 hover:bg-mill-carbon/50 transition-all duration-500 card-hover">
+                <!-- Chapter number -->
+                <div class="flex items-start justify-between mb-6">
+                  <span class={`font-display text-5xl lg:text-6xl font-bold bg-gradient-to-br ${gradient} bg-clip-text text-transparent opacity-30 group-hover:opacity-60 transition-opacity duration-500`}>
+                    {String(chapter.data.number).padStart(2, '0')}
+                  </span>
+                  <svg class="w-5 h-5 text-mill-ash group-hover:text-accent-flame group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M17 7H7M17 7v10" />
+                  </svg>
+                </div>
+
+                <!-- Content -->
+                <h3 class="font-display text-xl lg:text-2xl font-bold text-mill-white mb-2 group-hover:text-accent-flame transition-colors duration-300">
+                  {chapter.data.title}
+                </h3>
+                <p class="text-mill-silver text-sm">
+                  {chapter.data.subtitle}
+                </p>
+
+                <!-- Bottom accent line -->
+                <div class={`absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-40 transition-opacity duration-500`}></div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CTA SECTION ═══ -->
+  <section class="relative py-32 lg:py-40 overflow-hidden">
+    <!-- Background -->
+    <div class="absolute inset-0">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-flame/8 rounded-full blur-[200px]"></div>
+    </div>
+
+    <div class="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
+      <h2 class="font-display text-display-lg font-bold text-mill-white mb-6 reveal">
+        Ready to ship<br />with precision?
+      </h2>
+      <p class="text-xl text-mill-silver mb-12 max-w-xl mx-auto reveal delay-1">
+        Install mill, run your first warmup, and experience what it feels like when AI actually understands your project.
       </p>
 
-      <!-- Title — each line staggers in -->
-      <h1 class="font-display leading-[0.92] mb-10">
-        <span class="hero-line block text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-stone-900 dark:text-stone-100 animate-fade-up delay-100">
-          Turning intent into
-        </span>
-        <span class="hero-line block text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-stone-900 dark:text-stone-100 animate-fade-up delay-200">
-          verified deliverables,
-        </span>
-        <span class="hero-line block text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-gradient-copper animate-fade-up" style="animation-delay: 400ms, 1.6s;">
-          continuously.
-        </span>
-      </h1>
-
-      <!-- Description -->
-      <p class="animate-fade-up delay-500 text-lg sm:text-xl text-stone-500 dark:text-stone-400 leading-relaxed max-w-xl mx-auto mb-14">
-        mill brings structure to AI-assisted development. No more vibe coding.
-        Specifications drive execution. Contracts replace conversation.
-        Every deliverable is verified.
-      </p>
-
-      <!-- CTA — more prominent pill button -->
-      <div class="animate-fade-up delay-600">
-        <a
-          href="#chapters"
-          class="group inline-flex items-center gap-3 px-8 py-3 rounded-full border border-copper-600/30 dark:border-copper-500/20 text-sm font-medium uppercase tracking-[0.2em] text-copper-700 dark:text-copper-400 hover:bg-copper-700 hover:border-copper-700 hover:text-white dark:hover:bg-copper-500 dark:hover:border-copper-500 dark:hover:text-stone-950 transition-all duration-300"
-        >
-          Begin reading
-          <svg class="w-4 h-4 transition-transform group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      <div class="flex flex-wrap justify-center gap-4 reveal delay-2">
+        <a href="/08-getting-started"
+           class="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-accent-flame to-accent-ember
+                  text-mill-black font-display font-semibold rounded-xl
+                  hover:shadow-[0_0_40px_rgba(255,107,53,0.3)] transition-all duration-500
+                  hover:scale-[1.02] active:scale-[0.98]">
+          Get Started
+          <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
         </a>
       </div>
-    </div>
 
-    <!-- Scroll hint -->
-    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 animate-fade-in delay-700">
-      <div class="scroll-hint w-px h-10 bg-gradient-to-b from-transparent via-stone-300 to-stone-300 dark:via-stone-700 dark:to-stone-700"></div>
-    </div>
-  </section>
-
-  <!-- ── Chapters ──────────────────────────────────── -->
-  <section id="chapters" class="max-w-3xl mx-auto px-6 pb-24">
-
-    {parts.map((part, partIndex) => {
-      const partChapters = chapters.filter(c => c.data.partNumber === partIndex + 1);
-      return (
-        <div class="mb-20">
-          <!-- Part header -->
-          <div class="flex items-baseline gap-4 mb-8">
-            <span class="font-display text-5xl text-stone-200 dark:text-stone-800 leading-none select-none">
-              {part.number}
-            </span>
-            <div>
-              <h2 class="font-display text-2xl text-stone-900 dark:text-stone-100">
-                {part.title}
-              </h2>
-              <p class="text-sm text-stone-400 dark:text-stone-600 mt-0.5">
-                {part.description}
-              </p>
-            </div>
-          </div>
-
-          <!-- Chapter list -->
-          <div class="space-y-1">
-            {partChapters.map(chapter => (
-              <a
-                href={`/${chapter.slug}`}
-                class="group flex items-baseline gap-4 py-4 px-4 -mx-4 rounded-lg hover:bg-stone-100/60 dark:hover:bg-stone-900/40 transition-colors"
-              >
-                <span class="text-sm font-mono text-stone-300 dark:text-stone-700 tabular-nums shrink-0 w-7 text-right">
-                  {String(chapter.data.chapter).padStart(2, '0')}
-                </span>
-                <div class="flex-1 min-w-0">
-                  <h3 class="font-display text-xl text-stone-800 dark:text-stone-200 group-hover:text-copper-700 dark:group-hover:text-copper-400 transition-colors">
-                    {chapter.data.title}
-                  </h3>
-                  <p class="text-sm text-stone-400 dark:text-stone-600 mt-0.5 truncate">
-                    {chapter.data.description}
-                  </p>
-                </div>
-                <span class="text-stone-300 dark:text-stone-700 group-hover:text-copper-500 transition-colors shrink-0">
-                  &rarr;
-                </span>
-              </a>
-            ))}
-          </div>
-
-          {partIndex < parts.length - 1 && (
-            <div class="rule-copper mt-16"></div>
-          )}
+      <!-- Install snippet -->
+      <div class="mt-12 inline-block reveal delay-3">
+        <div class="bg-mill-carbon/60 border border-mill-graphite/30 rounded-xl px-8 py-4 font-mono text-sm text-mill-silver">
+          <span class="text-accent-flame">$</span> curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh | bash
         </div>
-      );
-    })}
+      </div>
+    </div>
   </section>
 
+  <Footer />
 </Base>

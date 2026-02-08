@@ -1,57 +1,124 @@
 ---
 title: "Idea"
-chapter: 5
-part: "Process"
-partNumber: 2
-description: "Capturing and time-boxing raw ideas before they become specs"
-slug: "idea"
+number: 5
+subtitle: "Capture sparks before they fade"
+accent: "violet"
 ---
 
-Ideas are the intake valve. They capture the raw, unrefined thoughts that eventually become specifications — or don't.
+## The 30-Day Rule
 
-## Why Ideas Exist
+Ideas are fragile. They appear in the middle of a code review, in the shower, during a conversation about something else entirely. Most of them vanish before they can be evaluated.
 
-Not every thought deserves a specification. Some ideas need time to mature. Others seem brilliant at 2 AM but irrelevant by morning. Ideas give you a lightweight holding pen where thoughts can sit without polluting your backlog.
+mill's Idea skill gives sparks a safe landing zone. Capture them fast. Develop them at your own pace. And give them a deadline: 30 days to become a spec or get dropped.
 
-The key design decision: **ideas expire**. Every idea has a 30-day time-box. If it doesn't graduate to a specification within 30 days, it drops automatically. This isn't a bug — it's pressure. If an idea is worth building, 30 days is enough time to refine it. If it's not, letting it go keeps your focus clean.
+This isn't arbitrary pressure. It's a forcing function against idea hoarding. We've all seen backlogs with 200 items where the bottom 180 will never be touched. mill says: decide or let go.
 
-## Capturing Ideas
+## The Lifecycle
+
+```
+spark → developing → ready → spec (or drop with essence)
+```
+
+### Spark
+
+The minimum viable idea. A title and an intent — nothing more:
 
 ```bash
-# Create a new idea interactively
-mill idea create --human
+mill idea create "Inline code review" "Let reviewers comment directly on specific lines"
+```
 
-# List active ideas
+That's it. No requirements. No approach. No criteria. Just enough to not forget.
+
+### Developing
+
+When you have time, flesh it out. mill asks questions to help you think:
+
+- What type of idea is this? (Feature / Improvement / Exploration)
+- What problem does this solve?
+- Who experiences this problem? (references personas from ground)
+- What would success look like?
+- What's the rough scope?
+
+Each answer enriches the idea file. Open questions are tracked explicitly — they're the gaps that need closing before promotion.
+
+### Ready
+
+An idea is ready when:
+
+- The intent is clear and specific
+- Open questions are resolved
+- You can articulate the scope
+- A spec could reasonably be drafted from it
+
+### Promote or Drop
+
+**Promote:** The idea graduates to a draft spec. mill carries over the context — title, intent, persona, notes — so the spec workflow starts with everything you've already thought through.
+
+**Drop:** The idea isn't worth pursuing. But the learning isn't lost. You capture the *essence* — why it was considered and why it was dropped:
+
+```bash
+mill idea drop inline-review "Users prefer the existing GitHub review flow. The friction point is actually notification timing, not review interface."
+```
+
+That essence goes into `dropped.json`. Future ideas can reference past learnings. Next time someone suggests "inline code review," you know what happened last time and why.
+
+## Nothing Is Wasted
+
+This is the philosophy behind the drop mechanism. Even rejected ideas contain knowledge:
+
+- "Users don't actually need X because Z"
+- "This would require changing the data model in ways that conflict with..."
+- "Explored this and found that the real problem is Y, not X"
+
+These learnings prevent your team from circling the same ideas. And they inform ground truth — a dropped idea might reveal a new persona or a rule that wasn't documented.
+
+## Working with Ideas
+
+### Capture
+
+```
+/mill:idea "Dark mode support"
+```
+
+mill asks a few quick questions and creates the idea file in `.mill/idea/active/`.
+
+### Browse
+
+```bash
 mill idea list --human
-
-# View a specific idea
-mill idea get my-feature-idea --human
-
-# Drop an idea manually
-mill idea drop my-feature-idea --human
 ```
 
-The `/mill:idea` skill provides a conversational workflow. You describe what you're thinking, and it helps you capture the intent, the motivation, and any constraints — just enough structure to be useful later, without the overhead of a full specification.
+See all active ideas with their stage and age.
 
-## From Idea to Spec
+### Develop
 
-When an idea is ready, you promote it to a specification:
+Open an idea and continue fleshing it out. mill picks up where you left off, asking about the gaps.
 
+### Review Dropped Ideas
+
+```bash
+mill idea dropped --human
 ```
-/mill:idea       →  captures rough intent
-/mill:spec       →  refines into precise specification
-```
 
-The spec skill reads the idea and uses it as a starting point. Your original intent is preserved and expanded into requirements, approach, and criteria.
+The dropped ideas archive — learnings from the ideas that didn't make it.
 
-## What Makes a Good Idea
+## Integration with the Cycle
 
-An idea doesn't need to be complete. It needs three things:
+Ideas don't exist in isolation:
 
-1. **Intent** — What do you want to happen?
-2. **Motivation** — Why does this matter?
-3. **Context** — What's the situation that triggered this thought?
+- They reference **personas** from ground — connecting sparks to real users
+- They use **vocabulary** from ground — keeping terminology consistent
+- When promoted, they become **drafts** in the spec workflow
+- When dropped, their **essences** inform future decisions
 
-That's it. The specification stage handles the precision. The idea stage handles the spark.
+The idea stage is intentionally lightweight. Its job is to be the fastest possible bridge between "I had a thought" and "should we build this?" — without losing anything in between.
 
-> Backlogs don't die from neglect. They die from accumulation. The 30-day time-box keeps yours alive.
+## Tips
+
+**Capture immediately.** Don't wait until you can think it through. The spark is enough.
+
+**One idea per idea.** If you're cramming multiple features into one idea, split them. Each should have a single, clear intent.
+
+**Be honest about drops.** Dropping isn't failure — it's curation. A well-managed idea list with 5 focused items beats a backlog of 50 vague ones.
+
+**Review weekly.** Spend 10 minutes reviewing your active ideas. Develop the promising ones. Drop the stale ones. Keep the list fresh.

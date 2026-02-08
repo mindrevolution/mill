@@ -1,47 +1,45 @@
 ---
-interface ChapterLink {
-  slug: string;
-  title: string;
-  chapter: number;
-}
-
 interface Props {
-  prev?: ChapterLink | null;
-  next?: ChapterLink | null;
+  prev?: { slug: string; title: string; number: number };
+  next?: { slug: string; title: string; number: number };
 }
 
 const { prev, next } = Astro.props;
 ---
 
-<nav class="mt-20 pt-8 border-t border-stone-200 dark:border-stone-800" aria-label="Chapter navigation">
-  <div class="flex justify-between items-start gap-8">
+<nav class="mt-24 pt-12 border-t border-mill-graphite/30">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     {prev ? (
-      <a
-        href={`/${prev.slug}`}
-        class="group flex flex-col items-start gap-1 max-w-[45%]"
-      >
-        <span class="text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-stone-600 group-hover:text-copper-600 dark:group-hover:text-copper-400 transition-colors">
-          &larr; Previous
-        </span>
-        <span class="font-display text-lg text-stone-700 dark:text-stone-300 group-hover:text-copper-700 dark:group-hover:text-copper-400 transition-colors">
-          <span class="text-stone-400 dark:text-stone-600 mr-1">{String(prev.chapter).padStart(2, '0')}</span>
+      <a href={`/${prev.slug}`}
+         class="group relative p-6 rounded-xl border border-mill-graphite/30 hover:border-accent-flame/30
+                bg-mill-carbon/30 hover:bg-mill-carbon/60 transition-all duration-500">
+        <div class="flex items-center gap-2 text-xs text-mill-ash mb-2">
+          <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Previous
+        </div>
+        <div class="font-display font-semibold text-mill-white group-hover:text-accent-flame transition-colors">
+          <span class="text-mill-ash font-mono text-xs mr-2">{String(prev.number).padStart(2, '0')}</span>
           {prev.title}
-        </span>
+        </div>
       </a>
     ) : <div />}
 
     {next ? (
-      <a
-        href={`/${next.slug}`}
-        class="group flex flex-col items-end gap-1 max-w-[45%] text-right ml-auto"
-      >
-        <span class="text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-stone-600 group-hover:text-copper-600 dark:group-hover:text-copper-400 transition-colors">
-          Next &rarr;
-        </span>
-        <span class="font-display text-lg text-stone-700 dark:text-stone-300 group-hover:text-copper-700 dark:group-hover:text-copper-400 transition-colors">
-          <span class="text-stone-400 dark:text-stone-600 mr-1">{String(next.chapter).padStart(2, '0')}</span>
+      <a href={`/${next.slug}`}
+         class="group relative p-6 rounded-xl border border-mill-graphite/30 hover:border-accent-flame/30
+                bg-mill-carbon/30 hover:bg-mill-carbon/60 transition-all duration-500 text-right">
+        <div class="flex items-center justify-end gap-2 text-xs text-mill-ash mb-2">
+          Next
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+        <div class="font-display font-semibold text-mill-white group-hover:text-accent-flame transition-colors">
+          <span class="text-mill-ash font-mono text-xs mr-2">{String(next.number).padStart(2, '0')}</span>
           {next.title}
-        </span>
+        </div>
       </a>
     ) : <div />}
   </div>

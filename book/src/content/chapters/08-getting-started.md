@@ -1,35 +1,35 @@
 ---
 title: "Getting Started"
-chapter: 8
-part: "Practice"
-partNumber: 3
-description: "Installation, setup, and your first delivery cycle"
-slug: "getting-started"
+number: 8
+subtitle: "From zero to first ship"
+accent: "electric"
 ---
 
-Getting mill running takes about two minutes. Here's everything you need.
+## Requirements
 
-## Prerequisites
+Before you begin, make sure you have:
 
-Before installing mill, make sure you have:
-
-- **Claude Code** (1.0.33 or later) — mill's skills run inside Claude Code
-- **GitHub CLI** (`gh`) — authenticated with your GitHub account
-- **Git** — your project must be a Git repository hosted on GitHub
-- **Node.js** — for the MCP installer
+- **Claude Code** — mill is a Claude Code skill pack
+- **GitHub CLI (`gh`)** — authenticated with your GitHub account
+- **Git** — your project must be a Git repository on GitHub
+- **Node.js** — required for the MCP installer
 
 ## Install
 
-The fastest way to install mill is via the Claude Code plugin:
+### As a Claude Code Plugin (Recommended)
 
-```bash
+The easiest way. Open Claude Code and run:
+
+```
 /plugin marketplace add mindrevolution/mill-plugin
 /plugin install mill@mindrevolution-mill-plugin
 ```
 
-The CLI is automatically installed when the plugin is first enabled.
+The CLI binary is automatically installed when you first enable the plugin. No manual setup needed.
 
-If you prefer a standalone CLI installation:
+### CLI Only
+
+If you prefer a standalone installation:
 
 ```bash
 # macOS / Linux
@@ -47,54 +47,164 @@ Navigate to your project directory and run:
 mill init
 ```
 
-This creates the `.mill/` directory with the project configuration. You'll be asked a few questions about your project — name, description, and repository URL.
+This creates the `.mill/` directory with the default structure:
+
+```
+.mill/
+├── project.json          # Configuration
+├── ground/               # Knowledge base
+├── idea/active/          # Active ideas
+├── spec/drafts/          # Spec drafts
+└── ship/                 # Work and history
+```
 
 ## First Run Permissions
 
-The first time you use mill skills in Claude Code, you'll be prompted to approve `mill` and `git` commands. Select **"Yes, and don't ask again"** to grant permanent permission for the project. After this one-time approval, all skills run without interruption.
+The first time you use mill skills in Claude Code, you'll be asked to approve certain commands. Select **"Yes, and don't ask again"** to approve them permanently for the project.
 
-## Your First Cycle
+After this one-time setup, skills run smoothly without interruption.
 
-Here's a complete delivery cycle to get familiar with mill:
+## Your First Warmup
 
-### 1. Orient yourself
+Before using any other skill, let mill learn your codebase:
 
 ```
 /mill:warmup
 ```
 
-This generates a project context file that helps all subsequent skills understand your codebase.
+This generates `.mill/context.md` — a comprehensive overview of your project's structure, dependencies, and patterns. Context stays fresh through a staleness threshold (default: 25 commits).
 
-### 2. Capture an idea
+## Build Your Ground
 
-```
-/mill:idea
-```
-
-Describe something small — a bug fix, a minor feature, a refactoring. Keep it focused for your first run.
-
-### 3. Write a specification
-
-```
-/mill:spec
-```
-
-mill will find your idea and help you refine it into a specification with requirements, approach, and criteria. Review each section carefully. Publish it as a GitHub Issue when you're satisfied.
-
-### 4. Ship it
-
-```
-/mill:ship <issue-number>
-```
-
-Watch mill implement your specification through bounded verification loops. When all criteria pass, review the Pull Request it creates.
-
-### 5. Build knowledge
+Start with the essentials:
 
 ```
 /mill:ground
 ```
 
-Review the observations that spec and ship wrote during their execution. Curate the useful ones into your project's ground knowledge.
+mill will ask what you want to work on. Start with:
 
-That's the full cycle. Each subsequent cycle gets faster as ground knowledge accumulates and the system learns your project's patterns.
+1. **Personas** — who are your primary users?
+2. **Rules** — what conventions does your team follow?
+3. **Stack** — what technologies do you use?
+
+You don't need all ten categories right away. Ground grows organically as you ship.
+
+## Capture an Idea
+
+Have something you want to build? Capture it:
+
+```
+/mill:idea "Add user authentication"
+```
+
+mill asks a few questions about the type, the problem, and the scope. The idea lands in `.mill/idea/active/` with a 30-day clock.
+
+## Draft a Spec
+
+When an idea is ready (or if you want to go straight to spec):
+
+```
+/mill:spec "JWT-based authentication for API endpoints"
+```
+
+mill walks you through:
+
+1. Type classification (feature, bug, task, security)
+2. Domain selection (backend, application, etc.)
+3. Requirements elicitation
+4. Approach design
+5. Criteria definition
+6. Validation and publishing
+
+The result: a GitHub Issue with a complete, self-contained specification.
+
+## Ship It
+
+Point ship at the issue:
+
+```
+/mill:ship 42
+```
+
+mill loads the spec, plans slices, implements them one by one, verifies against criteria, and creates a PR.
+
+## The Daily Rhythm
+
+Once mill is set up, here's what a typical workflow looks like:
+
+### Morning
+
+```
+/mill:ground
+→ Review observations from yesterday's ship runs
+→ Curate new knowledge into ground
+```
+
+### During the Day
+
+```
+/mill:idea "Quick thought about caching"
+→ Capture it in 30 seconds, develop later
+```
+
+### When Ready to Build
+
+```
+/mill:spec "Add response caching to API"
+→ 10-minute conversation to produce a complete spec
+→ Published as GitHub Issue #55
+```
+
+```
+/mill:ship 55
+→ Implemented in 4 slices
+→ PR #56 created, verified and ready for review
+```
+
+### Weekly
+
+```
+mill idea list --human
+→ Review active ideas
+→ Promote the ready ones, drop the stale ones
+```
+
+## CLI Quick Reference
+
+```bash
+mill init                          # Initialize .mill/
+mill ground list --human           # View knowledge base
+mill ground list personas --human  # View specific category
+mill observations list --human     # View learning inbox
+mill idea list --human             # View active ideas
+mill idea dropped --human          # View dropped ideas + learnings
+mill draft list --human            # View spec drafts
+mill history --human               # View ship history
+mill context status                # Check context freshness
+mill template list archetypes      # View available archetypes
+```
+
+## Tips for Success
+
+**Invest in ground early.** The richer your knowledge base, the better your specs and implementations. Even 30 minutes of initial setup pays back immediately.
+
+**Write precise specs.** The time you spend making a spec self-contained is time you don't spend debugging misimplementations.
+
+**Review observations.** This is how mill learns. Make it a regular habit, not an afterthought.
+
+**Trust the process.** Bounded iterations and verified slices feel slower on the first run. By the third run, you'll wonder how you shipped without them.
+
+**Start small.** Pick a straightforward feature for your first ship run. Build confidence with the workflow before tackling complex specs.
+
+## What's Next?
+
+You've learned the full mill workflow. Here's your path forward:
+
+1. **Install and initialize** — get the tools set up
+2. **Run warmup** — let mill learn your project
+3. **Build ground** — start with personas and rules
+4. **Ship something** — pick an issue and run the full cycle
+5. **Review and learn** — check observations, refine ground
+
+Each cycle makes the next one sharper. That's the promise. Now go build something great.

@@ -1,74 +1,110 @@
 ---
+interface Props {
+  currentPage?: string;
+}
+
+const { currentPage } = Astro.props;
 ---
 
-<nav
-  id="main-nav"
-  class="fixed top-0 inset-x-0 z-50 transition-all duration-300"
->
-  <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-    <!-- Wordmark -->
-    <a href="/" class="font-display text-2xl text-stone-900 dark:text-stone-100 hover:text-copper-700 dark:hover:text-copper-400 transition-colors">
-      mill
-    </a>
+<nav class="fixed top-0 left-0 right-0 z-50 transition-all duration-500" id="main-nav">
+  <div class="absolute inset-0 bg-mill-black/80 backdrop-blur-xl border-b border-mill-graphite/0 transition-all duration-500" id="nav-bg"></div>
 
-    <div class="flex items-center gap-6">
-      <!-- Chapters link -->
-      <a
-        href="/#chapters"
-        class="text-sm font-medium text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
-      >
-        Chapters
+  <div class="relative max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 lg:h-20">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="relative">
+          <div class="w-8 h-8 rounded-sm bg-gradient-to-br from-accent-flame to-accent-ember
+                      group-hover:shadow-[0_0_20px_rgba(255,107,53,0.4)] transition-shadow duration-500"></div>
+          <div class="absolute inset-0 w-8 h-8 rounded-sm bg-gradient-to-br from-accent-flame to-accent-ember
+                      opacity-0 group-hover:opacity-50 blur-md transition-opacity duration-500"></div>
+        </div>
+        <span class="font-display font-bold text-xl text-mill-white tracking-tight">mill</span>
       </a>
 
-      <!-- GitHub -->
-      <a
-        href="https://github.com/mindrevolution/mill"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
-        aria-label="GitHub"
-      >
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-        </svg>
-      </a>
+      <!-- Desktop Nav -->
+      <div class="hidden md:flex items-center gap-1">
+        <a href="/"
+           class:list={[
+             'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300',
+             currentPage === 'home'
+               ? 'text-accent-flame bg-accent-flame/10'
+               : 'text-mill-silver hover:text-mill-white hover:bg-mill-graphite/50'
+           ]}>
+          Home
+        </a>
+        <a href="/01-why-mill"
+           class:list={[
+             'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300',
+             currentPage === 'chapter'
+               ? 'text-accent-flame bg-accent-flame/10'
+               : 'text-mill-silver hover:text-mill-white hover:bg-mill-graphite/50'
+           ]}>
+          Read
+        </a>
+        <a href="https://github.com/mindrevolution/mill"
+           target="_blank"
+           rel="noopener"
+           class="px-4 py-2 text-sm font-medium text-mill-silver hover:text-mill-white
+                  rounded-lg hover:bg-mill-graphite/50 transition-all duration-300 flex items-center gap-2">
+          GitHub
+          <svg class="w-3.5 h-3.5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M17 7H7M17 7v10" />
+          </svg>
+        </a>
+      </div>
 
-      <!-- Dark mode toggle -->
+      <!-- Mobile menu button -->
       <button
-        id="theme-toggle"
-        class="text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
-        aria-label="Toggle dark mode"
+        id="mobile-menu-btn"
+        class="md:hidden p-2 text-mill-silver hover:text-mill-white transition-colors"
+        aria-label="Toggle menu"
       >
-        <!-- Sun (shown in dark mode) -->
-        <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="menu-icon">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 8h16M4 16h16" />
         </svg>
-        <!-- Moon (shown in light mode) -->
-        <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        <svg class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="close-icon">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden md:hidden">
+    <div class="bg-mill-dark/95 backdrop-blur-xl border-b border-mill-graphite px-6 py-6 space-y-2">
+      <a href="/" class="block px-4 py-3 text-mill-light hover:text-accent-flame rounded-lg hover:bg-mill-graphite/30 transition-all">Home</a>
+      <a href="/01-why-mill" class="block px-4 py-3 text-mill-light hover:text-accent-flame rounded-lg hover:bg-mill-graphite/30 transition-all">Start Reading</a>
+      <a href="https://github.com/mindrevolution/mill" target="_blank" rel="noopener"
+         class="block px-4 py-3 text-mill-light hover:text-accent-flame rounded-lg hover:bg-mill-graphite/30 transition-all">GitHub</a>
     </div>
   </div>
 </nav>
 
 <script>
-  const toggle = document.getElementById('theme-toggle');
-  toggle?.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.theme = isDark ? 'dark' : 'light';
+  // Scroll effects
+  const nav = document.getElementById('main-nav');
+  const navBg = document.getElementById('nav-bg');
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 50) {
+      navBg?.classList.add('border-mill-graphite/30');
+      navBg?.classList.remove('border-mill-graphite/0');
+    } else {
+      navBg?.classList.remove('border-mill-graphite/30');
+      navBg?.classList.add('border-mill-graphite/0');
+    }
   });
 
-  // Nav background on scroll
-  const nav = document.getElementById('main-nav');
-  const updateNav = () => {
-    if (!nav) return;
-    if (window.scrollY > 32) {
-      nav.classList.add('bg-cream/80', 'dark:bg-[#0C0A09]/80', 'backdrop-blur-lg', 'border-b', 'border-stone-200/50', 'dark:border-stone-800/50');
-    } else {
-      nav.classList.remove('bg-cream/80', 'dark:bg-[#0C0A09]/80', 'backdrop-blur-lg', 'border-b', 'border-stone-200/50', 'dark:border-stone-800/50');
-    }
-  };
-  updateNav();
-  window.addEventListener('scroll', updateNav, { passive: true });
+  // Mobile menu
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const menuIcon = document.getElementById('menu-icon');
+  const closeIcon = document.getElementById('close-icon');
+
+  menuBtn?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+    menuIcon?.classList.toggle('hidden');
+    closeIcon?.classList.toggle('hidden');
+  });
 </script>
