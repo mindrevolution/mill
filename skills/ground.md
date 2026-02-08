@@ -8,6 +8,25 @@ argument-hint: "[category] - personas, standards, concepts, or design"
 
 Build and manage product knowledge in `.mill/ground/`.
 
+## Interaction Pattern
+
+**Always use the AskUserQuestion tool** for gathering knowledge. Present 2-4 options plus free text. One question at a time.
+
+```yaml
+AskUserQuestion:
+  question: "What category do you want to work on?"
+  header: "Category"
+  options:
+    - label: "Personas"
+      description: "Who you build for"
+    - label: "Standards"
+      description: "How you build"
+    - label: "Concepts"
+      description: "Domain vocabulary"
+    - label: "Design"
+      description: "Visual language"
+```
+
 ## Categories
 
 | Category | Purpose | Examples |
@@ -43,28 +62,41 @@ mill ground list --human
 
 ### 2. Create or Update Items
 
-For each category, help the user define their product knowledge.
+For each category, **use AskUserQuestion** to gather knowledge:
 
 **Personas** — Ask about users:
-- Who are the primary users?
-- What are their jobs-to-be-done?
-- What pain points do they have?
-- What triggers them to use the product?
+```yaml
+AskUserQuestion:
+  question: "What type of user is this?"
+  header: "User type"
+  options:
+    - label: "End user"
+      description: "Primary product user"
+    - label: "Admin"
+      description: "Manages settings/users"
+    - label: "Operator"
+      description: "Runs/maintains the system"
+```
+
+Then elicit: job-to-be-done, pain points, triggers.
 
 **Standards** — Ask about conventions:
-- What tech stack is used?
-- What quality bars apply?
-- What coding conventions matter?
+```yaml
+AskUserQuestion:
+  question: "What kind of standard?"
+  header: "Standard"
+  options:
+    - label: "Tech stack"
+      description: "Languages, frameworks, tools"
+    - label: "Quality bar"
+      description: "Testing, coverage, performance"
+    - label: "Conventions"
+      description: "Naming, structure, patterns"
+```
 
-**Concepts** — Ask about domain:
-- What are the key business terms?
-- What entities exist in the domain?
-- What relationships matter?
+**Concepts** — Ask about domain vocabulary.
 
-**Design** — Ask about visuals:
-- What colors are used?
-- What typography applies?
-- What component patterns exist?
+**Design** — Ask about visual language.
 
 ### 3. Write Knowledge Files
 

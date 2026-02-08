@@ -4,6 +4,25 @@ Transform user intent into a complete, loop-ready specification.
 
 **CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/shape/drafts/`) as defined below.
 
+## Interaction Pattern
+
+**Always use the AskUserQuestion tool** for elicitation. Present 2-4 options plus free text ("Other"). One question at a time.
+
+```yaml
+AskUserQuestion:
+  question: "What type of change is this?"
+  header: "Type"
+  options:
+    - label: "Feature"
+      description: "Add new capability"
+    - label: "Bug"
+      description: "Fix broken behavior"
+    - label: "Task"
+      description: "Refactor, migrate, cleanup"
+```
+
+Never output raw numbered lists and ask "pick one" — use the tool.
+
 ## Context
 Pre-loaded: `.mill/context.md`, `.mill/standards/*.md`, `.mill/memory/project.md`, `.mill/personas.md` (if exists), uncommitted changes.
 
@@ -161,16 +180,20 @@ key files: [list of 5-10 paths]
 
 Task validation: no user-facing change, nothing broken, no security implication.
 
-Offer numbered options based on code analysis:
-```
-this sounds like a [Type]. correct?
+**Use AskUserQuestion** to confirm type and gather details:
 
-what specifically [is wrong / do you want]?
-1. [option from code]
-2. [option]
-3. [option]
-
-or just type what you want
+```yaml
+AskUserQuestion:
+  question: "This sounds like a [Type]. What specifically do you want?"
+  header: "Details"
+  options:
+    - label: "[option from code analysis]"
+      description: "[what this would mean]"
+    - label: "[option 2]"
+      description: "[what this would mean]"
+    - label: "[option 3]"
+      description: "[what this would mean]"
+  # User can always type "Other"
 ```
 
 **CREATE DRAFT NOW.** As soon as you have type and a working title:
@@ -273,14 +296,19 @@ Probe when relevant:
 4. If answer confirms no gap → continue to next question
 5. After all gaps addressed → proceed to Confirm
 
-```
-challenging spec for gaps...
+**Use AskUserQuestion** for each challenge:
 
-[area]: [specific question about this spec]
-
-1. [option if applicable]
-2. [option]
-3. not a concern because [user explains]
+```yaml
+AskUserQuestion:
+  question: "[area]: [specific question about this spec]"
+  header: "[area]"
+  options:
+    - label: "[option if applicable]"
+      description: "[what this means for the spec]"
+    - label: "[option 2]"
+      description: "[what this means]"
+    - label: "Not a concern"
+      description: "User will explain why"
 ```
 
 **Do not invent problems.** If the spec is solid, acknowledge it and move on. Challenge is not a gate to add scope — it surfaces genuine risks.
@@ -289,21 +317,17 @@ challenging spec for gaps...
 
 **MANDATORY GATE — DO NOT PROCEED WITHOUT EXPLICIT USER APPROVAL**
 
-Present the spec and STOP. Wait for user response.
+Present the spec, show validation summary, then **use AskUserQuestion** for approval:
 
-```
-spec ready for review:
-
-[spec]
-
----
-validation:
-  ✓ {n} testable criteria
-  ✓ verification defined
-  ✓ scope clear
-  ✓ no open questions
-
-approve and create issue? [y/n]
+```yaml
+AskUserQuestion:
+  question: "Spec ready. Create GitHub issue?"
+  header: "Approve"
+  options:
+    - label: "Yes, create issue"
+      description: "Publish spec to GitHub Issues"
+    - label: "No, needs changes"
+      description: "I'll provide feedback"
 ```
 
 **If open questions exist**, show validation failure and resolve them first:

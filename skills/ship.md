@@ -8,6 +8,27 @@ argument-hint: "<issue-number> - GitHub issue to implement"
 
 Execute bounded work loops against specs. Work in slices until verification passes.
 
+## Interaction Pattern
+
+Ship is mostly autonomous — the spec should be complete from `/mill:shape`. **Use AskUserQuestion only when:**
+
+- Spec has ambiguity that blocks implementation
+- Multiple valid approaches exist and choice matters
+- Scope clarification needed before proceeding
+
+```yaml
+AskUserQuestion:
+  question: "Spec says 'handle errors gracefully'. Which approach?"
+  header: "Approach"
+  options:
+    - label: "Toast notifications"
+      description: "Show inline error messages"
+    - label: "Error page"
+      description: "Redirect to error view"
+```
+
+Don't ask about implementation details you can decide autonomously.
+
 ## Overview
 
 Ship takes a GitHub issue (spec) and implements it through bounded iterations:

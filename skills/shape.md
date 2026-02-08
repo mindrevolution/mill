@@ -8,6 +8,25 @@ argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 
 Transform user intent into a complete, loop-ready specification.
 
+## Interaction Pattern
+
+**Always use the AskUserQuestion tool** for elicitation. Present 2-4 options plus free text ("Other"). One question at a time.
+
+```yaml
+AskUserQuestion:
+  question: "What type of change is this?"
+  header: "Type"
+  options:
+    - label: "Feature"
+      description: "Add new capability"
+    - label: "Bug"
+      description: "Fix broken behavior"
+    - label: "Task"
+      description: "Refactor, migrate, cleanup"
+```
+
+Never output raw numbered lists and ask "pick one" — use the tool.
+
 ## Overview
 
 Shape takes an idea and produces a GitHub Issue with:
@@ -100,7 +119,7 @@ As a [persona], I want [capability] so that [benefit].
 
 ### 4. Elicit Details
 
-One question at a time:
+**Use AskUserQuestion** for each layer. One question at a time:
 1. Surface problem
 2. Impact/motivation
 3. Desired state
@@ -130,21 +149,17 @@ Probe for gaps:
 
 ### 7. Confirm and Publish
 
-Present the spec for approval:
+Present the spec, show validation summary, then **use AskUserQuestion** for approval:
 
-```
-spec ready for review:
-
-[spec content]
-
----
-validation:
-  ✓ 4 testable criteria
-  ✓ verification defined
-  ✓ scope clear
-  ✓ no open questions
-
-approve and create issue? [y/n]
+```yaml
+AskUserQuestion:
+  question: "Spec ready. Create GitHub issue?"
+  header: "Approve"
+  options:
+    - label: "Yes, create issue"
+      description: "Publish spec to GitHub Issues"
+    - label: "No, needs changes"
+      description: "I'll provide feedback"
 ```
 
 **Wait for explicit approval before publishing.**
