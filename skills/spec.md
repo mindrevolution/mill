@@ -4,7 +4,7 @@ allowed-tools: Read, Write, Glob, Grep, Bash(mill draft*, mill ground list, mill
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 ---
 
-# Shape
+# Spec
 
 Transform user intent into a complete, loop-ready specification.
 
@@ -29,11 +29,11 @@ Never output raw numbered lists and ask "pick one" — use the tool.
 
 ## Overview
 
-Shape takes an idea and produces a GitHub Issue with:
+Spec takes an idea and produces a GitHub Issue with:
 - **Requirements (R)** — what the solution must achieve
-- **Approach (A)** — how we'll build it (with parts)
-- **Coverage** — proof that approach satisfies requirements
-- **Acceptance Criteria** — testable verification conditions
+- **Approach (A)** — how we'll build it (parts + mechanisms)
+- **Criteria (C)** — testable verification conditions
+- **Coverage (R × A × C)** — proof that approach implements requirements and criteria verify them
 - **Loop Contract** — test command, stop conditions
 
 ## Commands
@@ -102,7 +102,7 @@ AskUserQuestion:
 
 ### 3. Create Draft Early
 
-Create draft file at `.mill/shape/drafts/{slug}.md`:
+Create draft file at `.mill/spec/drafts/{slug}.md`:
 
 ```markdown
 ---
@@ -128,15 +128,17 @@ approach: A
 | A1 | {what we build/change} | |
 | A2 | {another mechanism} | ⚠️ |
 
-## Coverage (R × A)
-| Req | A |
-|-----|---|
-| R1 | ✅ |
-| R2 | ✅ |
+## Criteria
+| ID | Condition |
+|----|-----------|
+| C1 | {testable condition for R1} |
+| C2 | {testable condition for R2} |
 
-## Acceptance Criteria
-- [ ] {testable condition for R1}
-- [ ] {testable condition for R2}
+## Coverage (R × A × C)
+| Req | Requirement | Approach | Criteria |
+|-----|-------------|----------|----------|
+| R1 | {description} | A1 | C1 |
+| R2 | {description} | A2 | C2 |
 
 ## Scope
 **In:** {included}
@@ -169,18 +171,19 @@ Once requirements are clear, define approach:
 
 ### 4c. Coverage Check
 
-Build coverage table (R × A):
-- ✅ = covered
-- ❌ = not covered (explain why)
+Build coverage table (R × A × C):
+- Approach column: list parts (A1, A2) or ❌ if not covered
+- Criteria column: list criteria (C1, C2) or — if no verification
 
-All `core` and `must-have` requirements need ✅.
+All `core` and `must-have` requirements need both approach parts and criteria.
 
 ### 5. Validate
 
 Check before publishing:
-- [ ] All core/must-have requirements covered (✅)
+- [ ] All core/must-have requirements have approach parts (no ❌)
+- [ ] All core/must-have requirements have criteria (no —)
 - [ ] No ⚠️ flags remain in approach
-- [ ] Acceptance criteria testable
+- [ ] All criteria are testable conditions
 - [ ] Scope clear (in/out)
 - [ ] No placeholders or open questions
 - [ ] Loop Contract present

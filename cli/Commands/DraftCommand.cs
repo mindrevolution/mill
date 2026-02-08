@@ -4,7 +4,7 @@ using Mill.Services;
 namespace Mill.Commands;
 
 /// <summary>
-/// Draft (shape) workspace commands.
+/// Draft (spec) workspace commands.
 /// </summary>
 public static class DraftCommand
 {
@@ -39,7 +39,7 @@ public static class DraftCommand
         return 1;
     }
 
-    private static string DraftsPath => Path.Combine(ProjectContext.MillFolder, "shape", "drafts");
+    private static string DraftsPath => Path.Combine(ProjectContext.MillFolder, "spec", "drafts");
 
     private static async Task<int> List(bool human)
     {
@@ -206,7 +206,7 @@ public static class DraftCommand
         // No cached result - skills should run the validation prompt
         if (human)
         {
-            Output.Warn("No validation result. Run /mill:shape to validate.");
+            Output.Warn("No validation result. Run /mill:spec to validate.");
         }
         else
         {

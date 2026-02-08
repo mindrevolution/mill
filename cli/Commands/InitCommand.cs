@@ -34,7 +34,7 @@ public static class InitCommand
             Path.Combine(millFolder, "ground", "concepts"),
             Path.Combine(millFolder, "ground", "design"),
             Path.Combine(millFolder, "brief", "active"),
-            Path.Combine(millFolder, "shape", "drafts"),
+            Path.Combine(millFolder, "spec", "drafts"),
             Path.Combine(millFolder, "ship", "work"),
         };
 
@@ -52,7 +52,7 @@ public static class InitCommand
         var gitignore = """
             # mill gitignore - ephemeral local data
             brief/active/
-            shape/drafts/
+            spec/drafts/
             ship/work/
             """;
         File.WriteAllText(Path.Combine(millFolder, ".gitignore"), gitignore);

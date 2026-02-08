@@ -140,9 +140,9 @@ When the brief is ready to become a spec:
 - Scope is defined
 
 Promote to draft:
-1. Move content to `.mill/shape/drafts/{slug}.md`
+1. Move content to `.mill/spec/drafts/{slug}.md`
 2. Delete the brief
-3. Continue with `/mill:shape` to complete the spec
+3. Continue with `/mill:spec` to complete the spec
 
 ### 4. Or Drop with Essence
 
@@ -158,7 +158,7 @@ mill brief drop my-idea "Learned that users prefer Y instead"
 
 - Briefs reference **personas** from ground
 - Briefs use **concepts** from ground
-- Ready briefs become **drafts** in shape
+- Ready briefs become **drafts** in spec
 - Dropped essences inform future decisions
 
 ## Rules

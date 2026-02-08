@@ -27,7 +27,7 @@ mill init
 
 ```
 /mill:warmup              # Generate project context
-/mill:shape               # Draft a specification
+/mill:spec               # Draft a specification
 /mill:ship 42             # Implement issue #42
 ```
 
@@ -47,7 +47,7 @@ flowchart LR
     end
 
     subgraph Delivery
-        B[Brief] --> S[Shape] --> X[Ship]
+        B[Brief] --> S[Spec] --> X[Ship]
     end
 
     G -.->|informs| B
@@ -61,7 +61,7 @@ flowchart LR
 |-|-|
 | **Ground** | Build product knowledge — personas, standards, concepts |
 | **Brief** | Capture ideas with intent — 30-day time-box |
-| **Shape** | Refine into verified specs — publish to GitHub Issues |
+| **Spec** | Refine into verified specs — publish to GitHub Issues |
 | **Ship** | Execute bounded loops — until tests pass |
 
 ### Skills
@@ -70,7 +70,7 @@ flowchart LR
 |-------|---------|
 | `/mill:ground` | Manage product knowledge |
 | `/mill:brief` | Capture and develop ideas |
-| `/mill:shape` | Draft specifications → GitHub Issues |
+| `/mill:spec` | Draft specifications → GitHub Issues |
 | `/mill:ship` | Implement specs with verification |
 | `/mill:warmup` | Generate codebase context |
 | `/mill:question` | Answer questions (no changes) |

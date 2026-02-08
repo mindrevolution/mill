@@ -10,7 +10,7 @@ Execute bounded work loops against specs. Work in slices until verification pass
 
 ## Interaction Pattern
 
-Ship is mostly autonomous — the spec should be complete from `/mill:shape`. **Use AskUserQuestion only when:**
+Ship is mostly autonomous — the spec should be complete from `/mill:spec`. **Use AskUserQuestion only when:**
 
 - Spec has ambiguity that blocks implementation
 - Multiple valid approaches exist and choice matters
@@ -183,7 +183,7 @@ If limit reached without completion → signal for human review
 
 ## Integration
 
-- Specs come from GitHub Issues (created by `/mill:shape`)
+- Specs come from GitHub Issues (created by `/mill:spec`)
 - Context from `.mill/context.md` (created by `/mill:warmup`)
 - Standards from `.mill/ground/standards/`
 - History tracked in `.mill/ship/history.json`

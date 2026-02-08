@@ -83,7 +83,7 @@ int ShowHelp()
         Use with Claude Code skills:
           /mill:ground            knowledge management
           /mill:brief             idea capture
-          /mill:shape             spec drafting
+          /mill:spec              spec drafting
           /mill:ship              bounded work loops
           /mill:warmup            generate context.md
           /mill:question          answer questions

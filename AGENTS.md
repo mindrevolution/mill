@@ -65,30 +65,30 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 |-------|---------|
 | `/mill:ground` | Build product knowledge — personas, standards, concepts, design |
 | `/mill:brief` | Capture ideas with 30-day lifecycle |
-| `/mill:shape` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
+| `/mill:spec` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
 | `/mill:ship` | Execute bounded work loops until verification passes |
 | `/mill:warmup` | Generate `.mill/context.md` from codebase |
 | `/mill:question` | Answer questions without making changes |
 
 ## Spec Structure
 
-Specs separate **what** from **how**:
+Specs link **what** → **how** → **proof**:
 
 ```
 Requirements (R)     → what the solution must achieve
-        ↓ satisfied by
+        ↓ implemented by
 Approach (A)         → how we'll build it (parts + mechanisms)
         ↓ verified by
-Acceptance Criteria  → testable conditions
+Criteria (C)         → testable conditions
 ```
 
-**Coverage check (R × A)** proves the approach addresses all requirements before implementation.
+**Coverage (R × A × C)** proves the chain: requirements have approach parts, and criteria verify them.
 
 ## Workflow
 
 ```mermaid
 flowchart TD
-    A[User Intent] --> B["/mill:shape"]
+    A[User Intent] --> B["/mill:spec"]
     B --> C["GitHub Issue #N"]
     C --> D["/mill:ship"]
     D -->|verify| E{Verification}
@@ -115,7 +115,7 @@ flowchart TD
 ├── brief/
 │   └── active/                     # Live briefs [gitignored]
 
-├── shape/
+├── spec/
 │   └── drafts/                     # Specs before publishing [gitignored]
 
 └── ship/

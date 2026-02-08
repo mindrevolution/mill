@@ -2,7 +2,7 @@
 
 Transform user intent into a complete, loop-ready specification.
 
-**CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/shape/drafts/`) as defined below.
+**CRITICAL:** Do NOT use Claude Code's built-in `/plan` mode, plan files, or TodoWrite tool. Use ONLY MILL's draft system (`.mill/spec/drafts/`) as defined below.
 
 ## Interaction Pattern
 
@@ -73,7 +73,7 @@ If `.mill/personas.md` is loaded, use it to improve elicitation:
 
 ### File Location
 
-`.mill/shape/drafts/{slug}.md`
+`.mill/spec/drafts/{slug}.md`
 
 ### Format
 
@@ -111,18 +111,20 @@ Status: `core` (primary goal), `must-have`, `nice-to-have`, `out`
 
 Flag: empty = understood, ⚠️ = unknown (needs investigation)
 
-## Coverage (R × A)
-| Req | A |
-|-----|---|
-| R1 | ✅ |
-| R2 | ✅ |
-| R3 | ❌ |
+## Criteria
+| ID | Condition |
+|----|-----------|
+| C1 | {testable condition for R1} |
+| C2 | {testable condition for R2} |
 
-Notes: {explain any ❌}
+## Coverage (R × A × C)
+| Req | Requirement | Approach | Criteria |
+|-----|-------------|----------|----------|
+| R1 | {short description} | A1, A2 | C1 |
+| R2 | {short description} | A3 | C2 |
+| R3 | {short description} | ❌ | — |
 
-## Acceptance Criteria
-- [ ] {testable condition for R1}
-- [ ] {testable condition for R2}
+Notes: {explain any ❌ or —}
 
 ## Scope
 **In:** {what's included}
@@ -161,7 +163,7 @@ This ensures the UI always shows current progress, even if the session is interr
 
 **If `# Resume Mode` exists at the END with a file path:**
 1. **IMMEDIATELY read that file** using the Read tool — this is your draft
-2. Do NOT search `.mill/shape/drafts/` or warm up context — the draft path is given
+2. Do NOT search `.mill/spec/drafts/` or warm up context — the draft path is given
 3. After reading, acknowledge: "resuming: {title from draft}" and ask what to refine
 4. Skip to **step 3 (Elicit)** to continue
 
@@ -169,7 +171,7 @@ This ensures the UI always shows current progress, even if the session is interr
 
 ### 1. Understand Context
 1. Read project instructions: check `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
-2. **Only if no `# User Intent` was provided:** Check `.mill/shape/drafts/*.md` for similar work — offer to continue if found
+2. **Only if no `# User Intent` was provided:** Check `.mill/spec/drafts/*.md` for similar work — offer to continue if found
 3. Search codebase for relevant files
 4. Read key files
 5. Summarize findings (2-3 lines)
@@ -334,47 +336,62 @@ Once requirements are clear, define **Approach (A)** — how we'll build it.
 
 ### 4. Coverage Check
 
-Before validating details, verify the approach covers all requirements.
+Before validating details, verify the full chain: requirements → approach → criteria.
 
-**Build the coverage table:**
+**Build the coverage table (R × A × C):**
 
 ```markdown
-## Coverage (R × A)
-| Req | A |
-|-----|---|
-| R1 | ✅ |
-| R2 | ✅ |
-| R3 | ❌ |
+## Criteria
+| ID | Condition |
+|----|-----------|
+| C1 | Search "test" returns matching letters |
+| C2 | Response time < 200ms on 1000 records |
+| C3 | Results update without page reload |
+
+## Coverage (R × A × C)
+| Req | Requirement | Approach | Criteria |
+|-----|-------------|----------|----------|
+| R1 | Search by content | A1, A2 | C1 |
+| R2 | Results < 200ms | A3 | C2, C3 |
+| R3 | Search history | ❌ | — |
 
 Notes:
 - R3 ❌: Search history deferred to v2
 ```
 
+**Coverage chain:**
+- **R → A**: Does the approach implement this requirement?
+- **R → C**: Does a criterion verify this requirement was met?
+- **A → C**: Do criteria test what the approach builds?
+
 **Rules:**
-- Binary only: ✅ (covered) or ❌ (not covered)
 - Every requirement must appear
-- Explain each ❌ — is it out of scope, or missing from approach?
+- Approach column: list parts (A1, A2) or ❌ if not covered
+- Criteria column: list criteria (C1, C2) or — if no verification
+- Explain each ❌ or — in Notes
 
 **Coverage failures:**
-- If core/must-have requirement is ❌ → add parts to approach or mark requirement `out`
-- If ⚠️ flags remain in approach → investigate before claiming ✅
-- If requirement feels unsatisfied but shows ✅ → missing requirement, add it
+- If core/must-have has ❌ in Approach → add parts or mark requirement `out`
+- If requirement has — in Criteria → add testable criterion
+- If ⚠️ flags remain in approach → investigate before finalizing
+- If criterion tests nothing in the table → orphaned, remove or link to requirement
 
 **Multiple approaches:** If comparing A vs B, show both columns:
 
 ```markdown
-| Req | A | B |
-|-----|---|---|
-| R1 | ✅ | ✅ |
-| R2 | ❌ | ✅ |
+| Req | Requirement | A | B | Criteria |
+|-----|-------------|---|---|----------|
+| R1 | Search by content | A1 | B1, B2 | C1 |
+| R2 | Results < 200ms | ❌ | B3 | C2 |
 ```
 
 ### 5. Validate
 
 ```
-[ ] all core/must-have requirements covered (✅ in coverage)
+[ ] all core/must-have requirements have approach parts (no ❌)
+[ ] all core/must-have requirements have criteria (no —)
 [ ] no ⚠️ flags remain in approach
-[ ] acceptance criteria testable
+[ ] all criteria are testable conditions
 [ ] scope clear (in/out)
 [ ] no placeholders
 [ ] no open questions
@@ -501,7 +518,7 @@ Fallback: if `gh` fails, write to `.mill/{type}/{slug}.md`.
 2. One question at a time
 3. Offer 2-4 options + "or just type"
 4. **Save draft EARLY and OFTEN** — create file after classification, update after every user answer
-5. Write to `.mill/shape/drafts/` ONLY — never use `/plan`, TodoWrite, or other locations
+5. Write to `.mill/spec/drafts/` ONLY — never use `/plan`, TodoWrite, or other locations
 6. No placeholders in final spec (partial content during elicitation is fine)
 7. Security always wins classification
 8. Force decisions — no "it depends"
