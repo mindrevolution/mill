@@ -68,14 +68,15 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 | `/mill:idea` | Capture ideas with 30-day lifecycle |
 | `/mill:spec` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
 | `/mill:ship` | Execute bounded work loops until verification passes |
-| `/mill:warmup` | Generate `.mill/context.md` from codebase |
+
+Context generation (`_warmup.md`) runs automatically when `/mill:spec` or `/mill:ship` detect stale context.
 
 ## Observations
 
 Observations is the **learning inbox** for mill. Skills write observations during execution. `/mill:ground` reviews and curates them into ground truth.
 
 ```
-Skills (spec, ship, warmup, ground)
+Skills (spec, ship, ground)
         │
         ▼ write .md files directly (no CLI)
 .mill/observations/*.md

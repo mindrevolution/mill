@@ -61,13 +61,13 @@ mill issue get <number> --human
 
 Read the issue body as the spec.
 
-### 2. Check Context
+### 2. Ensure Context
 
 ```bash
-mill context --human
+mill context status
 ```
 
-Ensure `.mill/context.md` exists. Run `/mill:warmup` if not.
+If missing or stale (JSON shows `fresh: false`), read and execute `skills/_warmup.md` workflow before proceeding.
 
 ### 2b. Load Domain Guidance
 

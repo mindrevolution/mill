@@ -78,12 +78,17 @@ mill draft publish my-feature --human
 
 ## Workflow
 
-### 1. Understand Context
+### 1. Ensure Context
 
-Read project context:
 ```bash
-mill context --human
-mill ground list --human
+mill context status
+```
+
+If missing or stale (JSON shows `fresh: false`), read and execute `skills/_warmup.md` workflow first.
+
+Then load ground knowledge:
+```bash
+mill ground list
 ```
 
 Search codebase for relevant files.

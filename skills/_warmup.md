@@ -1,12 +1,14 @@
 ---
-description: Generate codebase context and write .mill/context.md
+description: "[internal] Generate codebase context and write .mill/context.md"
 allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *)
-argument-hint: "[force] - regenerate even if context exists"
+internal: true
 ---
 
-# Warmup
+# Warmup (Internal)
 
 Build project context and write `.mill/context.md`.
+
+> **Note:** This is an internal skill. It runs automatically when `/mill:spec` or `/mill:ship` detect missing or stale context. Users don't invoke it directly.
 
 ## Prerequisites
 

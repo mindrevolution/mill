@@ -91,7 +91,6 @@ int ShowHelp()
           /mill:idea              idea capture
           /mill:spec              spec drafting
           /mill:ship              bounded work loops
-          /mill:warmup            generate context.md
         """);
     return 0;
 }
