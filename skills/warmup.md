@@ -139,45 +139,74 @@ First line MUST be the HTML comment with git hash (for staleness detection).
 
 ## Observations
 
-During context generation, note discoveries for later review:
-- New modules not in context
-- Architecture changes detected
-- Stale documentation found
+During context generation, note discoveries using LLM judgment:
+- Empty ground folders (no personas, rules, patterns defined)
+- Conventions discovered in code (naming, architecture patterns)
+- Personas implied by role enums or user types
+- Domain vocabulary used consistently
+- New modules not in previous context (update mode)
 
-### Writing Observations
+### High-confidence gaps (auto-write)
 
-Write observation files when discovering significant changes:
+When clearly a gap, write observation immediately:
 
-- Path: `.mill/observations/warmup-{date}-{slug}.md`
-- Frontmatter: source: warmup, type: discovery
-- Describe what was discovered
+1. Write using Write tool:
+   - Path: `.mill/observations/warmup-{date}-{slug}.md`
+   - Frontmatter: source: warmup, type: discovery, created: {date}
 
-Example observation:
+2. Continue without interruption
+
+Example — empty ground:
 
 ```markdown
 ---
 source: warmup
-type: discovery
+type: concern
 created: 2025-02-08
 ---
 
-# New Module: Notifications
+# Empty Ground Folders
 
-Found new `src/Notifications/` module not covered in previous context.
+Project has no ground truth defined yet.
 
-## Details
+## Missing
 
-- Location: `src/Notifications/`
-- Files: 12 new files
-- Purpose: Appears to handle push notifications
+- personas/ — no user types defined
+- rules/ — no conventions documented
+- patterns/ — no architecture patterns captured
+
+## Discovered Conventions
+
+From code analysis:
+- No "Async" suffix on methods
+- Enums stored as strings
+- Feature-sliced architecture
 
 ## Suggested Action
 
-Review module structure and update ground/ if needed.
+Run /mill:ground to curate these into ground truth.
 ```
 
-Don't interrupt the warmup flow — observations are reviewed later via /mill:ground.
+### Uncertain gaps (collect and ask)
+
+When unsure, collect during warmup and ask at end:
+
+```yaml
+AskUserQuestion:
+  question: "Found potential ground truth. Note any for review?"
+  header: "Observations"
+  multiSelect: true
+  options:
+    - label: "Conventions discovered"
+      description: "No Async suffix, enums as strings, kebab-case routes"
+    - label: "Personas implied"
+      description: "Producer, Director, Camera roles found in MuxRole enum"
+    - label: "Architecture pattern"
+      description: "Feature-sliced vertical architecture"
+```
+
+For selected items, write observation files. For unselected, ignore.
 
 ## Report
 
-Confirm `.mill/context.md` written with commit hash.
+Confirm `.mill/context.md` written with commit hash. Mention observations written (if any).
