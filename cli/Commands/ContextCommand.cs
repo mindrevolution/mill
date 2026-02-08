@@ -74,11 +74,16 @@ public static class ContextCommand
         return 0;
     }
 
+    private const int StaleThreshold = 20; // commits before full regeneration needed
+
     private static int Status(bool human)
     {
         var exists = File.Exists(ContextPath);
         DateTime? updatedAt = null;
         string? commitHash = null;
+        string? currentHash = null;
+        int commitsBehind = 0;
+        string freshness = "missing"; // missing | fresh | recent | stale
 
         if (exists)
         {
@@ -86,16 +91,81 @@ public static class ContextCommand
             updatedAt = info.LastWriteTimeUtc;
         }
 
-        // Try to read meta file for commit hash
-        if (File.Exists(ContextMetaPath))
+        // Try to read commit hash from context.md first line
+        if (exists)
         {
             try
             {
-                var metaJson = File.ReadAllText(ContextMetaPath);
-                var meta = JsonHelper.Deserialize<ContextMeta>(metaJson);
-                commitHash = meta?.CommitHash;
+                using var reader = new StreamReader(ContextPath);
+                var firstLine = reader.ReadLine();
+                if (firstLine?.StartsWith("<!-- mill-context-hash:") == true)
+                {
+                    var start = firstLine.IndexOf(':') + 1;
+                    var end = firstLine.IndexOf("-->");
+                    if (start > 0 && end > start)
+                    {
+                        commitHash = firstLine[start..end].Trim();
+                    }
+                }
             }
             catch { }
+        }
+
+        // Get current HEAD
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("git", "rev-parse HEAD")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = ProjectContext.ProjectPath
+            };
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process != null)
+            {
+                currentHash = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit();
+            }
+        }
+        catch { }
+
+        // Count commits between context hash and HEAD
+        if (exists && commitHash != null && currentHash != null)
+        {
+            if (commitHash == currentHash)
+            {
+                freshness = "fresh";
+                commitsBehind = 0;
+            }
+            else
+            {
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo("git", $"rev-list --count {commitHash}..HEAD")
+                    {
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = ProjectContext.ProjectPath
+                    };
+                    using var process = System.Diagnostics.Process.Start(psi);
+                    if (process != null)
+                    {
+                        var countStr = process.StandardOutput.ReadToEnd().Trim();
+                        process.WaitForExit();
+                        if (int.TryParse(countStr, out var count))
+                        {
+                            commitsBehind = count;
+                            freshness = count <= StaleThreshold ? "recent" : "stale";
+                        }
+                    }
+                }
+                catch
+                {
+                    freshness = "stale"; // can't determine, assume stale
+                }
+            }
         }
 
         if (human)
@@ -104,15 +174,22 @@ public static class ContextCommand
             {
                 Output.Warn("Context not generated");
             }
-            else
+            else if (freshness == "fresh")
             {
                 Output.Success("Context ready");
-                Output.Field("Path", ContextPath);
-                Output.Field("Updated", updatedAt?.ToString("yyyy-MM-dd HH:mm"));
-                if (commitHash != null)
-                {
-                    Output.Field("Commit", commitHash[..8], dim: true);
-                }
+                Output.Field("Commit", commitHash?[..8] ?? "unknown", dim: true);
+            }
+            else if (freshness == "recent")
+            {
+                Output.Success($"Context ready ({commitsBehind} new commits)");
+                Output.Field("Context", commitHash?[..8] ?? "unknown", dim: true);
+                Output.Field("Current", currentHash?[..8] ?? "unknown", dim: true);
+            }
+            else
+            {
+                Output.Warn($"Context stale ({commitsBehind} commits behind)");
+                Output.Field("Context", commitHash?[..8] ?? "unknown", dim: true);
+                Output.Field("Current", currentHash?[..8] ?? "unknown", dim: true);
             }
         }
         else
@@ -120,9 +197,12 @@ public static class ContextCommand
             Console.WriteLine(JsonHelper.Serialize(new
             {
                 exists,
+                freshness,
+                commitsBehind,
                 path = exists ? ContextPath : null,
                 updatedAt,
-                commitHash
+                commitHash,
+                currentHash
             }));
         }
 

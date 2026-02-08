@@ -5,18 +5,57 @@ allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *)
 
 # Warmup
 
-Orient Claude to your codebase by analyzing architecture and generating `.mill/context.md`.
+Orient Claude to your codebase. Loads existing context if fresh, regenerates if stale.
 
-## Prerequisites
+## Step 1: Check Context Status
 
-Check if mill is initialized:
 ```bash
-mill init --human
+mill context status
 ```
 
-If not initialized, run `mill init` first.
+Returns JSON with `freshness` field. Branch based on result:
 
-## Progress Markers
+| Freshness | Meaning | Action |
+|-----------|---------|--------|
+| `fresh` | Exact commit match | Load Mode |
+| `recent` | 1-20 commits behind | Update Mode |
+| `stale` | >20 commits behind | Generate Mode |
+| `missing` | No context.md | Generate Mode |
+
+---
+
+## Load Mode (freshness: fresh)
+
+Context matches current commit. Just load:
+
+1. Read `.mill/context.md`
+2. Read ground files:
+   - `mill ground list` to see what exists
+   - Read key ground files (personas, standards, patterns)
+3. Report: "Context loaded"
+
+**No file writes. No git commands beyond status check.**
+
+---
+
+## Update Mode (freshness: recent)
+
+Context is slightly behind. Load and show new commits:
+
+1. Read `.mill/context.md`
+2. Read ground files (personas, standards, patterns)
+3. Show new commits: `git log {commitHash}..HEAD --oneline`
+4. Report: "Context loaded ({N} new commits)"
+
+**No regeneration needed. Just awareness of recent changes.**
+
+---
+
+## Generate Mode (freshness: stale or missing)
+
+Context needs regeneration. Run full analysis:
+
+### Progress Markers
 
 Emit each marker on its own line BEFORE starting that step:
 ```
@@ -30,7 +69,7 @@ Emit each marker on its own line BEFORE starting that step:
 [8/8] Writing context...
 ```
 
-## Workflow
+### Workflow
 
 1. `git rev-parse HEAD` — capture current commit
 2. `git ls-files` — enumerate project files
