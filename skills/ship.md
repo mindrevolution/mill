@@ -82,6 +82,7 @@ mill template get domains {domain} --human
 | `backend` | API design, data modeling, error handling, performance |
 | `application` | Component architecture, state management, UX |
 | `website` | Page architecture, aesthetics, responsive, performance |
+| `platform` | IaC, containers, reliability, observability, security |
 | `fullstack` | Load both backend and application guidance |
 
 **Apply this mindset throughout implementation.** Domain guidance sets quality expectations and anti-patterns to avoid.

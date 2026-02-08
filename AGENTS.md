@@ -54,6 +54,7 @@ Specs include a `domain` field that determines execution guidance:
 | `backend` | APIs, services, data | API design, error handling, performance |
 | `application` | Interactive apps | Component architecture, state, UX |
 | `website` | Pages (landing, marketing) | Aesthetics, responsive, performance |
+| `platform` | Infrastructure, orchestration | IaC, containers, reliability, observability |
 | `fullstack` | Multiple layers | Combined guidance |
 
 Domain templates live in `templates/domains/` and are loaded by `/mill:ship` during execution.

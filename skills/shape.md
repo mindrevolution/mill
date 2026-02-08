@@ -79,6 +79,7 @@ Search codebase for relevant files.
 | `backend` | APIs, services, data layer |
 | `application` | Interactive apps (web, mobile, desktop) |
 | `website` | Pages (landing, marketing, content) |
+| `platform` | Infrastructure, containers, CI/CD |
 | `fullstack` | Multiple layers |
 
 ```yaml
@@ -92,6 +93,8 @@ AskUserQuestion:
       description: "Interactive apps — web, mobile, desktop"
     - label: "Website"
       description: "Pages — landing, marketing, content"
+    - label: "Platform"
+      description: "Infrastructure, containers, CI/CD, scripts"
     - label: "Full-stack"
       description: "Touches multiple layers"
 ```

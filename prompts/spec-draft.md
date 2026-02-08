@@ -80,7 +80,7 @@ If `.mill/personas.md` is loaded, use it to improve elicitation:
 ```yaml
 ---
 type: feature|bug|security|task
-domain: backend|application|website|fullstack
+domain: backend|application|website|platform|fullstack
 title: Human-readable title
 slug: lowercase-hyphenated
 summary: one-line (update as understanding deepens)
@@ -206,6 +206,7 @@ After type, determine which part of the system this affects:
 | `backend` | APIs, services, data | endpoint, database, API, server |
 | `application` | Interactive apps (web, mobile) | component, form, state, screen |
 | `website` | Pages (landing, marketing, content) | landing, page, responsive, SEO |
+| `platform` | Infrastructure, orchestration | container, deploy, K8s, Terraform, CI/CD |
 | `fullstack` | Multiple layers | spans API and UI |
 
 **Use AskUserQuestion** to confirm domain:
@@ -221,6 +222,8 @@ AskUserQuestion:
       description: "Interactive apps — web, mobile, desktop"
     - label: "Website"
       description: "Pages — landing, marketing, content"
+    - label: "Platform"
+      description: "Infrastructure, containers, CI/CD, scripts"
     - label: "Full-stack"
       description: "Touches multiple layers"
 ```
