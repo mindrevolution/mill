@@ -1,6 +1,6 @@
 ---
 description: Transform ideas into complete, loop-ready specifications
-allowed-tools: Read, Write, Glob, Grep, Bash(mill draft*, mill ground list, mill template get specs*, git *)
+allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *)
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 ---
 

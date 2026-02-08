@@ -1,6 +1,6 @@
 ---
 description: Manage product knowledge - personas, standards, concepts, design
-allowed-tools: Read, Write, Glob, Grep, Bash(mill ground*, mill observations*, git *, rm *)
+allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *, rm *)
 argument-hint: "[category] - personas, rules, decisions, vocabulary, or review"
 ---
 

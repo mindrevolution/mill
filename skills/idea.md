@@ -1,6 +1,6 @@
 ---
 description: Capture and develop ideas with 30-day lifecycle
-allowed-tools: Read, Write, Bash(mill idea*, mill ground list)
+allowed-tools: Read, Write, Bash(mill *)
 argument-hint: "[title] - start capturing a new idea"
 ---
 
