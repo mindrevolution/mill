@@ -50,7 +50,6 @@ jobs:
           - `/mill:ship` - Execute bounded work loops
           - `/mill:ground` - Manage product knowledge
           - `/mill:idea` - Capture ideas
-          - `/mill:question` - Answer codebase questions
 
           ## Requirements
 

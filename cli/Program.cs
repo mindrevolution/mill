@@ -86,7 +86,6 @@ int ShowHelp()
           /mill:spec              spec drafting
           /mill:ship              bounded work loops
           /mill:warmup            generate context.md
-          /mill:question          answer questions
         """);
     return 0;
 }

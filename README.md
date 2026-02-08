@@ -73,7 +73,6 @@ flowchart LR
 | `/mill:spec` | Draft specifications → GitHub Issues |
 | `/mill:ship` | Implement specs with verification |
 | `/mill:warmup` | Generate codebase context |
-| `/mill:question` | Answer questions (no changes) |
 
 ### CLI Commands
 

@@ -68,7 +68,6 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 | `/mill:spec` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
 | `/mill:ship` | Execute bounded work loops until verification passes |
 | `/mill:warmup` | Generate `.mill/context.md` from codebase |
-| `/mill:question` | Answer questions without making changes |
 
 ## Spec Structure
 
