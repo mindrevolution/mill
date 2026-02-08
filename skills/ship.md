@@ -162,10 +162,29 @@ If verification fails → continue iterating with feedback
 
 ### 7. Record History
 
-After completion:
+After completion, record the run with all available fields:
+
 ```bash
-mill history add '{"date":"2024-01-15","issue":42,"pr":43,"title":"Add auth",...}'
+mill history add '{"date":"2025-02-08","issue":42,"pr":43,"title":"Add user authentication","type":"feature","persona":null,"intent":"JWT-based auth for API endpoints","outcome":"success","contextAdded":[],"iterations":3,"durationMs":null,"prUrl":"https://github.com/org/repo/pull/43","gitUser":"Marc"}'
 ```
+
+**Field reference:**
+
+| Field | Type | Source | Notes |
+|-------|------|--------|-------|
+| `date` | `string` | Today's date | ISO format |
+| `issue` | `int` | Spec issue number | From step 1 |
+| `pr` | `int` | Created PR number | From step 6 |
+| `title` | `string` | Issue title | From spec |
+| `type` | `string` | Spec classification | `"bug"`, `"feature"`, `"task"`, `"security"` |
+| `persona` | `string?` | Spec persona | Only for user-facing features with a defined persona from `ground/personas/`. `null` for bugs, tasks, infra work. |
+| `intent` | `string` | Brief summary | One-line description of what was achieved |
+| `outcome` | `string` | Ship result | `"success"` or `"failure"` |
+| `contextAdded` | `string[]` | Ground items added | List of ground knowledge paths added during ship. Empty `[]` if none. **Not a boolean.** |
+| `iterations` | `int` | Slice count | Number of slices executed |
+| `durationMs` | `int?` | Wall-clock time | `null` if not tracked |
+| `prUrl` | `string` | Full PR URL | From `gh pr create` output |
+| `gitUser` | `string` | Git author | From `git config user.name` |
 
 ## Slicing Rules
 
