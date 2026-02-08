@@ -18,11 +18,6 @@ public static class MillPaths
     public static string Templates => Path.Combine(Home, "templates");
 
     /// <summary>
-    /// Path to prompts directory.
-    /// </summary>
-    public static string Prompts => Path.Combine(Home, "prompts");
-
-    /// <summary>
     /// Path to skills directory.
     /// </summary>
     public static string Skills => Path.Combine(Home, "skills");

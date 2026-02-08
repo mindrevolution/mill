@@ -1,5 +1,5 @@
 ---
-description: Capture and develop ideas with 30-day lifecycle
+description: "Capture a rough idea (30-day lifecycle) • https://mill.mindrevolution.com/idea"
 allowed-tools: Read, Write, Bash(mill *)
 argument-hint: "[title] - start capturing a new idea"
 ---

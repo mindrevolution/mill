@@ -1,5 +1,5 @@
 ---
-description: Transform ideas into complete, loop-ready specifications
+description: "Turn intent into a precise, complete spec • https://mill.mindrevolution.com/spec"
 allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *)
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 ---
@@ -84,7 +84,7 @@ mill draft publish my-feature --human
 mill context status
 ```
 
-If missing or stale (JSON shows `fresh: false`), read and execute `skills/_warmup.md` workflow first.
+If missing or stale (JSON shows `fresh: false`), run `/mill:warmup` first.
 
 Then load ground knowledge:
 ```bash

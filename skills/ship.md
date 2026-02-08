@@ -1,5 +1,5 @@
 ---
-description: Execute bounded work loops against specs until verification passes
+description: "Implement a spec → Pull Request • https://mill.mindrevolution.com/ship"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 argument-hint: "<issue-number> - GitHub issue to implement"
 ---
@@ -67,7 +67,7 @@ Read the issue body as the spec.
 mill context status
 ```
 
-If missing or stale (JSON shows `fresh: false`), read and execute `skills/_warmup.md` workflow before proceeding.
+If missing or stale (JSON shows `fresh: false`), run `/mill:warmup` before proceeding.
 
 ### 2b. Load Domain Guidance
 

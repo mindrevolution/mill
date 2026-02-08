@@ -20,8 +20,7 @@ mill/                           # Main repository (source of truth)
 ├── cli/                        # .NET CLI
 ├── skills/                     # Skill source files → synced to mill-plugin
 ├── plugin/                     # MCP installer → synced to mill-plugin
-├── templates/                  # Spec/archetype/stack templates
-└── prompts/                    # LLM prompts
+└── templates/                  # Spec/archetype/stack/domain templates
 
 mill-plugin/                    # Distribution repository (auto-synced)
 ├── .claude-plugin/             # Plugin manifest + marketplace
@@ -64,12 +63,11 @@ Domain templates live in `templates/domains/` and are loaded by `/mill:ship` dur
 
 | Skill | Purpose |
 |-------|---------|
-| `/mill:ground` | Build product knowledge — personas, standards, concepts, design |
-| `/mill:idea` | Capture ideas with 30-day lifecycle |
-| `/mill:spec` | Transform intent into specs with Requirements (R) + Approach (A) → GitHub Issues |
-| `/mill:ship` | Execute bounded work loops until verification passes |
-
-Context generation (`_warmup.md`) runs automatically when `/mill:spec` or `/mill:ship` detect stale context.
+| `/mill:ground` | Define who you build for and how |
+| `/mill:idea` | Capture a rough idea (30-day lifecycle) |
+| `/mill:spec` | Turn intent into a precise, complete spec |
+| `/mill:ship` | Implement a spec → Pull Request |
+| `/mill:warmup` | Orient Claude to your codebase |
 
 ## Observations
 

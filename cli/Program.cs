@@ -87,10 +87,11 @@ int ShowHelp()
           --version, -v           show version
 
         Use with Claude Code skills:
-          /mill:ground            knowledge management + observation review
-          /mill:idea              idea capture
-          /mill:spec              spec drafting
-          /mill:ship              bounded work loops
+          /mill:ground            define who you build for and how
+          /mill:idea              capture a rough idea (30-day lifecycle)
+          /mill:spec              turn intent into a precise, complete spec
+          /mill:ship              implement a spec → pull request
+          /mill:warmup            orient Claude to your codebase
         """);
     return 0;
 }

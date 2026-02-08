@@ -1,14 +1,11 @@
 ---
-description: "[internal] Generate codebase context and write .mill/context.md"
+description: "Orient Claude to your codebase • https://mill.mindrevolution.com/warmup"
 allowed-tools: Read, Write, Glob, Grep, Bash(mill *, git *)
-internal: true
 ---
 
-# Warmup (Internal)
+# Warmup
 
-Build project context and write `.mill/context.md`.
-
-> **Note:** This is an internal skill. It runs automatically when `/mill:spec` or `/mill:ship` detect missing or stale context. Users don't invoke it directly.
+Orient Claude to your codebase by analyzing architecture and generating `.mill/context.md`.
 
 ## Prerequisites
 
