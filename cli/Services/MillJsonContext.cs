@@ -43,6 +43,15 @@ namespace Mill.Services;
 [JsonSerializable(typeof(InitResponse))]
 [JsonSerializable(typeof(DraftNoValidationResponse))]
 [JsonSerializable(typeof(HistoryAddResponse))]
+// Ship models
+[JsonSerializable(typeof(ShipIteration))]
+[JsonSerializable(typeof(List<ShipIteration>))]
+[JsonSerializable(typeof(ShipResult))]
+[JsonSerializable(typeof(ParsedSignal))]
+[JsonSerializable(typeof(ClaudeResponse))]
+[JsonSerializable(typeof(ContinuePayload))]
+[JsonSerializable(typeof(VerifyPayload))]
+[JsonSerializable(typeof(RejectedPayload))]
 // GitHub CLI deserialization
 [JsonSerializable(typeof(List<GhIssueListItem>))]
 [JsonSerializable(typeof(GhIssueViewItem))]

@@ -24,6 +24,7 @@ return args switch
     ["idea", .. var rest] => await IdeaCommand.Run(rest, human),
     ["draft", .. var rest] => await DraftCommand.Run(rest, human),
     ["spec", .. var rest] => await SpecCommand.Run(rest, human),
+    ["ship", .. var rest] => await ShipCommand.Run(rest, human),
     ["history", .. var rest] => await HistoryCommand.Run(rest, human),
     ["context", .. var rest] => await ContextCommand.Run(rest, human),
     ["template", .. var rest] => await TemplateCommand.Run(rest, human),
@@ -69,6 +70,8 @@ int ShowHelp()
 
           spec list               list open specs
           spec get <number>       get spec details
+
+          ship <number>           implement a spec → pull request
 
           history                 list run history
           history add <json>      add a history entry

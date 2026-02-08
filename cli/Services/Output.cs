@@ -171,6 +171,50 @@ public static class Output
         Console.WriteLine($"  {bar} {color}{score}/{max}{Reset} {Dim}({verdict}){Reset}");
     }
 
+    /// <summary>
+    /// Print a ship iteration progress line.
+    /// </summary>
+    public static void ShipIteration(int iteration, int max, string signal, string? detail, long durationMs)
+    {
+        var icon = signal switch
+        {
+            "MILL_CONTINUE" => $"{Cyan}→{Reset}",
+            "MILL_VERIFY" => $"{Yellow}◆{Reset}",
+            "MILL_ABORT" => $"{Red}✗{Reset}",
+            "MILL_DONE" => $"{Green}✓{Reset}",
+            "MILL_REJECTED" => $"{Red}↻{Reset}",
+            _ => $"{Dim}?{Reset}"
+        };
+        var time = durationMs >= 1000 ? $"{durationMs / 1000}s" : $"{durationMs}ms";
+        Console.WriteLine($"  {icon}  {Dim}[{iteration}/{max}]{Reset} {signal} {Dim}({time}){Reset}");
+        if (!string.IsNullOrEmpty(detail))
+        {
+            Console.WriteLine($"       {Dim}{Truncate(detail, 70)}{Reset}");
+        }
+    }
+
+    /// <summary>
+    /// Print ship run summary.
+    /// </summary>
+    public static void ShipSummary(bool success, int iterations, long durationMs, string? prUrl)
+    {
+        Blank();
+        Rule();
+        if (success)
+        {
+            var time = durationMs >= 1000 ? $"{durationMs / 1000}s" : $"{durationMs}ms";
+            Success($"Ship complete — {iterations} iteration(s) in {time}");
+            if (!string.IsNullOrEmpty(prUrl))
+            {
+                Url(prUrl);
+            }
+        }
+        else
+        {
+            Warn($"Ship failed after {iterations} iteration(s)");
+        }
+    }
+
     private static string Truncate(string text, int maxLength)
     {
         if (text.Length <= maxLength) return text;
