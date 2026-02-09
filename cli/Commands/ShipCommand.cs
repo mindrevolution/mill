@@ -466,16 +466,8 @@ public static class ShipCommand
                 catch (OperationCanceledException) { }
 
                 // Prefer result event text; fall back to accumulated text deltas
-                var resultEventLen = resultText?.Length ?? 0;
                 if (string.IsNullOrEmpty(resultText))
                     resultText = textCollector.ToString();
-
-                // Diagnostic: show what we captured (temporary)
-                if (human)
-                {
-                    var hasSignal = resultText?.Contains("MILL_") ?? false;
-                    Output.Progress($"[debug] result_event={resultEventLen}ch deltas={textCollector.Length}ch signal={hasSignal}");
-                }
             }
             else
             {
@@ -555,8 +547,11 @@ public static class ShipCommand
 
     private static ParsedSignal ParseSignal(string output)
     {
+        // Normalize: strip markdown bold from signal names (Claude sometimes writes **MILL_VERIFY**)
+        output = Regex.Replace(output, @"\*{2}(MILL_(?:CONTINUE|VERIFY|DONE|ABORT|REJECTED))\*{2}", "$1");
+
         // Scan for MILL_ABORT first (uses colon syntax, not JSON)
-        var abortMatch = Regex.Match(output, @"MILL_ABORT:\s*(.+?)(?:\n|$)", RegexOptions.Singleline);
+        var abortMatch = Regex.Match(output, @"MILL_ABORT[:\s]\s*(.+?)(?:\n|$)", RegexOptions.Singleline);
         if (abortMatch.Success)
         {
             return new ParsedSignal("MILL_ABORT", AbortReason: abortMatch.Groups[1].Value.Trim());
@@ -582,8 +577,10 @@ public static class ShipCommand
                     Done: payload.Done,
                     Verification: payload.Verification);
             }
-            return new ParsedSignal("MILL_VERIFY");
         }
+        // Fallback: MILL_VERIFY without JSON payload
+        if (output.Contains("MILL_VERIFY"))
+            return new ParsedSignal("MILL_VERIFY");
 
         // Scan for MILL_REJECTED + JSON payload
         var rejectedMatch = Regex.Match(output, @"MILL_REJECTED\s*\n\s*(\{[\s\S]*?\})", RegexOptions.Singleline);
@@ -596,8 +593,10 @@ public static class ShipCommand
                     Blockers: payload.Blockers,
                     Suggestion: payload.Suggestion);
             }
-            return new ParsedSignal("MILL_REJECTED");
         }
+        // Fallback: MILL_REJECTED without JSON payload
+        if (output.Contains("MILL_REJECTED"))
+            return new ParsedSignal("MILL_REJECTED");
 
         // Scan for MILL_CONTINUE + JSON payload
         var continueMatch = Regex.Match(output, @"MILL_CONTINUE\s*\n\s*(\{[\s\S]*?\})", RegexOptions.Singleline);
@@ -608,8 +607,10 @@ public static class ShipCommand
             {
                 return new ParsedSignal("MILL_CONTINUE", Done: payload.Done, Next: payload.Next);
             }
-            return new ParsedSignal("MILL_CONTINUE");
         }
+        // Fallback: MILL_CONTINUE without JSON payload
+        if (output.Contains("MILL_CONTINUE"))
+            return new ParsedSignal("MILL_CONTINUE");
 
         // No recognized signal
         return new ParsedSignal("UNKNOWN");
