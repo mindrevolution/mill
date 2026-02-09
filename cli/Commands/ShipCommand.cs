@@ -772,26 +772,39 @@ public static class ShipCommand
         {
             await File.WriteAllTextAsync(tempFile, body);
             var escapedTitle = title.Replace("\"", "\\\"");
-            var prResult = await RunProcess("gh",
-                $"pr create --title \"{escapedTitle}\" --body-file \"{tempFile}\" --head {branch}",
-                worktreePath);
+            var prArgs = $"pr create --title \"{escapedTitle}\" --body-file \"{tempFile}\" --head {branch}";
 
-            if (!prResult.Success)
+            // Retry up to 3 times for transient GitHub API errors
+            const int maxRetries = 3;
+            for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
-                if (human) Output.Warn($"PR creation failed: {prResult.Error}");
-                return (false, null, null);
+                var prResult = await RunProcess("gh", prArgs, worktreePath);
+
+                if (prResult.Success)
+                {
+                    var prUrl = prResult.Output.Trim();
+                    int? prNumber = null;
+                    if (!string.IsNullOrEmpty(prUrl))
+                    {
+                        var lastSlash = prUrl.LastIndexOf('/');
+                        if (lastSlash >= 0 && int.TryParse(prUrl[(lastSlash + 1)..], out var num))
+                            prNumber = num;
+                    }
+                    return (true, prUrl, prNumber);
+                }
+
+                if (attempt < maxRetries)
+                {
+                    if (human) Output.Warn($"PR creation failed (attempt {attempt}/{maxRetries}), retrying...");
+                    await Task.Delay(attempt * 3000);
+                }
+                else
+                {
+                    if (human) Output.Warn($"PR creation failed: {prResult.Error}");
+                }
             }
 
-            var prUrl = prResult.Output.Trim();
-            int? prNumber = null;
-            if (!string.IsNullOrEmpty(prUrl))
-            {
-                var lastSlash = prUrl.LastIndexOf('/');
-                if (lastSlash >= 0 && int.TryParse(prUrl[(lastSlash + 1)..], out var num))
-                    prNumber = num;
-            }
-
-            return (true, prUrl, prNumber);
+            return (false, null, null);
         }
         finally
         {
