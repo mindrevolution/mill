@@ -30,10 +30,13 @@ CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 .mill/.prompt
 .mill/memory/issue-*-plan.md
 
-# Book site (Astro)
-book/node_modules/
-book/.astro/
-book/dist/
+# Secrets
+.env
+
+# Manual site (Astro)
+manual/node_modules/
+manual/.astro/
+manual/dist/
 
 # Temp files
 tmp/

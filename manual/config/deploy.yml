@@ -1,0 +1,29 @@
+service: mill-manual
+
+image: ghcr.io/mindrevolution/mill-manual
+
+servers:
+  web:
+    hosts:
+      - mill.mindrevolution.com
+
+proxy:
+  ssl: true
+  host: mill.mindrevolution.com
+  app_port: 80
+
+registry:
+  server: ghcr.io
+  username:
+    - CONTAINER_REGISTRY_USER
+  password:
+    - CONTAINER_REGISTRY_TOKEN
+
+builder:
+  arch: amd64
+  context: .
+  dockerfile: Dockerfile
+
+accessories: {}
+
+asset_path: /usr/share/nginx/html
