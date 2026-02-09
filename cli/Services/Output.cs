@@ -215,6 +215,22 @@ public static class Output
         }
     }
 
+    /// <summary>
+    /// Print a dim progress line (e.g., heartbeat during long operations).
+    /// </summary>
+    public static void Progress(string text)
+    {
+        Console.Error.WriteLine($"       {Dim}{text}{Reset}");
+    }
+
+    /// <summary>
+    /// Print a tool call indicator (e.g., → Read, → Bash).
+    /// </summary>
+    public static void ToolCall(string toolName)
+    {
+        Console.Error.WriteLine($"       {Dim}→ {toolName}{Reset}");
+    }
+
     private static string Truncate(string text, int maxLength)
     {
         if (text.Length <= maxLength) return text;

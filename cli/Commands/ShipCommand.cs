@@ -89,7 +89,7 @@ public static class ShipCommand
 
                 // Build and invoke work prompt
                 var prompt = BuildWorkPrompt(i, MaxIterations, issueNumber, spec, context, domainGuidance, rejectionFeedback);
-                var (output, error) = await InvokeClaude(prompt, worktreePath, ClaudeTimeoutMs);
+                var (output, error) = await InvokeClaude(prompt, worktreePath, ClaudeTimeoutMs, human);
 
                 var iterDuration = GetElapsedMs(iterStart);
 
@@ -122,7 +122,7 @@ public static class ShipCommand
 
                         var verifyStart = Stopwatch.GetTimestamp();
                         var verifyPrompt = BuildVerifyPrompt(spec, testCommand, context);
-                        var (verifyOutput, verifyError) = await InvokeClaude(verifyPrompt, worktreePath, ClaudeTimeoutMs);
+                        var (verifyOutput, verifyError) = await InvokeClaude(verifyPrompt, worktreePath, ClaudeTimeoutMs, human);
                         var verifyDuration = GetElapsedMs(verifyStart);
 
                         if (verifyError != null)
@@ -295,7 +295,12 @@ public static class ShipCommand
         // Clean up stale worktree if it exists
         if (Directory.Exists(worktreePath))
         {
-            await RunProcess("git", $"worktree remove --force \"{worktreePath}\"", ProjectContext.ProjectPath);
+            var removeResult = await RunProcess("git", $"worktree remove --force \"{worktreePath}\"", ProjectContext.ProjectPath);
+            if (!removeResult.Success)
+            {
+                try { Directory.Delete(worktreePath, recursive: true); } catch { }
+                await RunProcess("git", "worktree prune", ProjectContext.ProjectPath);
+            }
         }
 
         // Try to create worktree with existing branch first, then new branch
@@ -335,19 +340,25 @@ public static class ShipCommand
         if (Directory.Exists(worktreePath))
         {
             var result = await RunProcess("git", $"worktree remove --force \"{worktreePath}\"", ProjectContext.ProjectPath);
-            if (human && !result.Success)
-                Output.Warn($"Worktree cleanup failed: {result.Error}");
+            if (!result.Success)
+            {
+                // Force-delete directory and prune worktree metadata
+                try { Directory.Delete(worktreePath, recursive: true); } catch { }
+                await RunProcess("git", "worktree prune", ProjectContext.ProjectPath);
+            }
         }
     }
 
     // ── Claude Invocation ─────────────────────────────────────────────
 
-    private static async Task<(string Output, string? Error)> InvokeClaude(string prompt, string workingDir, int timeoutMs)
+    private static async Task<(string Output, string? Error)> InvokeClaude(string prompt, string workingDir, int timeoutMs, bool human = false)
     {
+        var outputFormat = human ? "stream-json" : "json";
+        var streamFlags = human ? " --verbose --include-partial-messages" : "";
         var psi = new ProcessStartInfo
         {
             FileName = "claude",
-            Arguments = "-p --output-format json --allowedTools \"Read,Edit,Write,Glob,Grep,Bash\"",
+            Arguments = $"-p --output-format {outputFormat}{streamFlags} --allowedTools \"Read,Edit,Write,Glob,Grep,Bash\"",
             WorkingDirectory = workingDir,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
@@ -367,9 +378,135 @@ public static class ShipCommand
             process.StandardInput.Close();
 
             using var cts = new CancellationTokenSource(timeoutMs);
-            var outputTask = process.StandardOutput.ReadToEndAsync(cts.Token);
-            var errorTask = process.StandardError.ReadToEndAsync(cts.Token);
 
+            // Collect stderr for error reporting
+            var stderrCollector = new StringBuilder();
+            var stderrTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (await process.StandardError.ReadLineAsync(cts.Token) is { } line)
+                        stderrCollector.AppendLine(line);
+                }
+                catch (OperationCanceledException) { }
+            }, cts.Token);
+
+            string? resultText = null;
+
+            if (human)
+            {
+                // Stream mode: read NDJSON line-by-line, show tool calls, extract result
+                var lastActivity = Stopwatch.GetTimestamp();
+                var textCollector = new StringBuilder();
+
+                // Heartbeat resets on each tool call event
+                var heartbeatTask = Task.Run(async () =>
+                {
+                    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+                    try
+                    {
+                        while (await timer.WaitForNextTickAsync(cts.Token))
+                        {
+                            var silenceMs = GetElapsedMs(lastActivity);
+                            if (silenceMs >= 30_000)
+                            {
+                                var elapsed = GetElapsedMs(lastActivity) / 1000;
+                                Output.Progress($"⏱ {elapsed}s since last activity");
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException) { }
+                }, cts.Token);
+
+                try
+                {
+                    while (await process.StandardOutput.ReadLineAsync(cts.Token) is { } line)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        try
+                        {
+                            var evt = JsonHelper.Deserialize<StreamEvent>(line);
+                            if (evt == null) continue;
+
+                            if (evt.Type == "stream_event")
+                            {
+                                // Tool call start → display progress
+                                if (evt.Event?.Type == "content_block_start" &&
+                                    evt.Event.ContentBlock?.Type == "tool_use" &&
+                                    evt.Event.ContentBlock.Name is { } toolName)
+                                {
+                                    Output.ToolCall(toolName);
+                                    lastActivity = Stopwatch.GetTimestamp();
+                                }
+                                // Text delta → accumulate for signal parsing
+                                else if (evt.Event?.Type == "content_block_delta" &&
+                                         evt.Event.Delta?.Type == "text_delta" &&
+                                         evt.Event.Delta.Text is { } text)
+                                {
+                                    textCollector.Append(text);
+                                }
+                            }
+                            else if (evt.Type == "result")
+                            {
+                                if (evt.Subtype == "error")
+                                {
+                                    resultText = null;
+                                    break;
+                                }
+                                resultText = evt.Result;
+                            }
+                        }
+                        catch
+                        {
+                            // Unparseable line — skip
+                        }
+                    }
+                }
+                catch (OperationCanceledException) { }
+
+                // Prefer result event text; fall back to accumulated text deltas
+                var resultEventLen = resultText?.Length ?? 0;
+                if (string.IsNullOrEmpty(resultText))
+                    resultText = textCollector.ToString();
+
+                // Diagnostic: show what we captured (temporary)
+                if (human)
+                {
+                    var hasSignal = resultText?.Contains("MILL_") ?? false;
+                    Output.Progress($"[debug] result_event={resultEventLen}ch deltas={textCollector.Length}ch signal={hasSignal}");
+                }
+            }
+            else
+            {
+                // JSON mode: read all stdout at once
+                var outputTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+
+                // Heartbeat — print elapsed time every 30s (non-human doesn't have this, but keep for consistency)
+                try
+                {
+                    await process.WaitForExitAsync(cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    return ("", "Claude invocation timed out");
+                }
+
+                await cts.CancelAsync();
+                var output = await outputTask;
+                var stderr = stderrCollector.ToString().Trim();
+                try { await stderrTask; } catch (OperationCanceledException) { }
+
+                if (process.ExitCode != 0)
+                    return ("", $"Claude exited with code {process.ExitCode}: {stderr}");
+
+                // Unwrap JSON envelope
+                var unwrapped = UnwrapClaudeResponse(output);
+                return (unwrapped ?? output, null);
+            }
+
+            // Wait for process exit (stream mode — stdout already closed)
             try
             {
                 await process.WaitForExitAsync(cts.Token);
@@ -380,15 +517,18 @@ public static class ShipCommand
                 return ("", "Claude invocation timed out");
             }
 
-            var output = await outputTask;
-            var stderr = await errorTask;
+            // Stop heartbeat and drain stderr
+            await cts.CancelAsync();
+            try { await stderrTask; } catch (OperationCanceledException) { }
+            var stderrText = stderrCollector.ToString().Trim();
 
             if (process.ExitCode != 0)
-                return ("", $"Claude exited with code {process.ExitCode}: {stderr.Trim()}");
+                return ("", $"Claude exited with code {process.ExitCode}: {stderrText}");
 
-            // Unwrap JSON envelope
-            var unwrapped = UnwrapClaudeResponse(output);
-            return (unwrapped ?? output, null);
+            if (resultText == null)
+                return ("", "No result received from Claude stream");
+
+            return (resultText, null);
         }
         catch (Exception ex)
         {

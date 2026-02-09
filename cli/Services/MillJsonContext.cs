@@ -52,6 +52,11 @@ namespace Mill.Services;
 [JsonSerializable(typeof(ContinuePayload))]
 [JsonSerializable(typeof(VerifyPayload))]
 [JsonSerializable(typeof(RejectedPayload))]
+// Stream event models (stream-json NDJSON)
+[JsonSerializable(typeof(StreamEvent))]
+[JsonSerializable(typeof(StreamEventData))]
+[JsonSerializable(typeof(StreamContentBlock))]
+[JsonSerializable(typeof(StreamDelta))]
 // GitHub CLI deserialization
 [JsonSerializable(typeof(List<GhIssueListItem>))]
 [JsonSerializable(typeof(GhIssueViewItem))]

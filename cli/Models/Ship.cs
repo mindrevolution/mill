@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Mill.Models;
 
 public record ShipIteration(
@@ -49,3 +51,19 @@ internal record VerifyPayload(string? Branch, string? Title, string? Done, strin
 
 /// <summary>JSON payload after MILL_REJECTED token</summary>
 internal record RejectedPayload(List<string>? Blockers, string? Suggestion);
+
+/// <summary>Top-level NDJSON line from claude --output-format stream-json</summary>
+internal record StreamEvent(string? Type, string? Subtype, StreamEventData? Event, string? Result);
+
+/// <summary>Nested event data within a stream event</summary>
+internal record StreamEventData(
+    string? Type,
+    [property: JsonPropertyName("content_block")] StreamContentBlock? ContentBlock,
+    StreamDelta? Delta
+);
+
+/// <summary>Tool use content block within a stream event</summary>
+internal record StreamContentBlock(string? Type, string? Name);
+
+/// <summary>Delta within a content_block_delta event</summary>
+internal record StreamDelta(string? Type, string? Text);
