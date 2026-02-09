@@ -32,32 +32,27 @@ jobs:
 
           # Create README
           cat > plugin-dist/README.md << 'EOF'
-          # mill Plugin
+          # mindrevolution — Claude Code Plugins
 
-          Claude Code plugin for [mill](https://github.com/mindrevolution/mill) - specification-first delivery system.
+          A plugin marketplace for Claude Code by [mindrevolution](https://github.com/mindrevolution).
 
-          ## Installation
+          ## Setup
 
           ```
           /plugin marketplace add mindrevolution/claude-plugins
+          ```
+
+          ## Available Plugins
+
+          ### mill
+
+          Specification-first delivery system — turn intent into verified pull requests.
+
+          ```
           /plugin install mill@mindrevolution
           ```
 
-          ## Commands
-
-          - `/mill:warmup` - Generate codebase context
-          - `/mill:spec` - Draft specifications
-          - `/mill:ship` - Execute bounded work loops
-          - `/mill:ground` - Manage product knowledge
-          - `/mill:idea` - Capture ideas
-
-          ## Requirements
-
-          - Claude Code 1.0.33+
-          - Node.js (for CLI auto-installer)
-          - `gh` CLI (GitHub CLI) - authenticated
-
-          The mill CLI is automatically installed when you first use the plugin.
+          Learn more: [mill on GitHub](https://github.com/mindrevolution/mill) · [Documentation](https://mill.mindrevolution.com)
           EOF
 
       - name: Push to claude-plugins
