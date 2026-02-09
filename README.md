@@ -55,7 +55,7 @@ flowchart LR
 | `/mill:idea` | Capture a rough thought — 30 days to develop or drop |
 | `/mill:spec` | Think through your intent → GitHub Issue |
 | `/mill:ship` | Pre-flight → `mill ship` → Pull Request |
-| `/mill:warmup` | Orient mill to your codebase |
+| `/mill:warmup` | Orient mill to your codebase (usually automatic) |
 
 Every cycle feeds learnings back — patterns found, decisions made, gaps noticed. You review. The next cycle starts smarter.
 
@@ -69,6 +69,8 @@ mill spec list --human       # Published specs (GitHub issues)
 mill ship 42 --human         # Implement spec #42 (worktree + iterations + PR)
 mill history --human         # Ship history
 ```
+
+`--human` switches from JSON (default, for skill consumption) to readable output.
 
 ## Requirements
 
