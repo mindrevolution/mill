@@ -38,5 +38,5 @@ if ($paths -notcontains $installDir) {
 
 Write-Host ""
 Write-Host "CLI installed. For Claude Code integration:" -ForegroundColor Green
-Write-Host "  /plugin marketplace add mindrevolution/mill-plugin"
-Write-Host "  /plugin install mill@mindrevolution-mill-plugin"
+Write-Host "  /plugin marketplace add mindrevolution/claude-plugins"
+Write-Host "  /plugin install mill@mindrevolution"

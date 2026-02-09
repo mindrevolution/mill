@@ -39,8 +39,8 @@ jobs:
           ## Installation
 
           ```
-          /plugin marketplace add mindrevolution/mill-plugin
-          /plugin install mill@mindrevolution-mill-plugin
+          /plugin marketplace add mindrevolution/claude-plugins
+          /plugin install mill@mindrevolution
           ```
 
           ## Commands
@@ -60,13 +60,13 @@ jobs:
           The mill CLI is automatically installed when you first use the plugin.
           EOF
 
-      - name: Push to mill-plugin
+      - name: Push to claude-plugins
         uses: cpina/github-action-push-to-another-repository@main
         env:
           SSH_DEPLOY_KEY: ${{ secrets.MILL_PLUGIN_DEPLOY_KEY }}
         with:
           source-directory: 'plugin-dist'
           destination-github-username: 'mindrevolution'
-          destination-repository-name: 'mill-plugin'
+          destination-repository-name: 'claude-plugins'
           target-branch: main
           commit-message: "Sync from mill ${{ github.ref_name }}"

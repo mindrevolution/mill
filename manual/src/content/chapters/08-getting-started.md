@@ -21,8 +21,8 @@ Before you begin, make sure you have:
 The complete package — skills, CLI, and MCP integration. Open Claude Code and run:
 
 ```
-/plugin marketplace add mindrevolution/mill-plugin
-/plugin install mill@mindrevolution-mill-plugin
+/plugin marketplace add mindrevolution/claude-plugins
+/plugin install mill@mindrevolution
 ```
 
 The CLI binary is automatically installed when you first enable the plugin. No manual setup needed.

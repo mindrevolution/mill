@@ -18,11 +18,11 @@ mill is a specification-first delivery system that integrates with Claude Code a
 ```
 mill/                           # Main repository (source of truth)
 ├── cli/                        # .NET CLI
-├── skills/                     # Skill source files → synced to mill-plugin
-├── plugin/                     # MCP installer → synced to mill-plugin
+├── skills/                     # Skill source files → synced to claude-plugins
+├── plugin/                     # MCP installer → synced to claude-plugins
 └── templates/                  # Spec/archetype/stack/domain templates
 
-mill-plugin/                    # Distribution repository (auto-synced)
+claude-plugins/                 # Distribution repository (auto-synced)
 ├── .claude-plugin/             # Plugin manifest + marketplace
 ├── .mcp.json                   # MCP server config
 ├── skills/                     # Commands for Claude Code
@@ -174,8 +174,8 @@ When you first use mill skills in a project, Claude Code will prompt for permiss
 Install via Claude Code plugin (recommended):
 
 ```
-/plugin marketplace add mindrevolution/mill-plugin
-/plugin install mill@mindrevolution-mill-plugin
+/plugin marketplace add mindrevolution/claude-plugins
+/plugin install mill@mindrevolution
 ```
 
 The CLI is auto-installed when the plugin is first enabled.
@@ -192,11 +192,11 @@ irm https://raw.githubusercontent.com/mindrevolution/mill/main/install.ps1 | iex
 
 ## Plugin Sync
 
-The `mill-plugin` repo is auto-synced from `mill` on each release:
+The `claude-plugins` repo is auto-synced from `mill` on each release:
 
 1. Release published on `mill` repo
 2. GitHub Action (`sync-plugin.yml`) triggers
-3. Copies `skills/`, `plugin/`, `.claude-plugin/`, `.mcp.json` to `mill-plugin`
+3. Copies `skills/`, `plugin/`, `.claude-plugin/`, `.mcp.json` to `claude-plugins`
 4. Users get updates via plugin auto-update
 
 ## Development

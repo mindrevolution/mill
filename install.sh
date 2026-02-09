@@ -51,5 +51,5 @@ fi
 
 echo ""
 echo "CLI installed. For Claude Code integration:"
-echo "  /plugin marketplace add mindrevolution/mill-plugin"
-echo "  /plugin install mill@mindrevolution-mill-plugin"
+echo "  /plugin marketplace add mindrevolution/claude-plugins"
+echo "  /plugin install mill@mindrevolution"

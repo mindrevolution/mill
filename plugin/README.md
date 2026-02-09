@@ -7,11 +7,11 @@ This folder contains the MCP auto-installer for the mill Claude Code plugin.
 When users install the plugin:
 
 ```
-/plugin marketplace add mindrevolution/mill-plugin
-/plugin install mill@mindrevolution-mill-plugin
+/plugin marketplace add mindrevolution/claude-plugins
+/plugin install mill@mindrevolution
 ```
 
-1. Claude Code clones the `mill-plugin` repo
+1. Claude Code clones the `claude-plugins` repo
 2. Commands from `skills/` are installed automatically
 3. The MCP server starts and checks if mill CLI is installed
 4. If missing, it downloads and installs the latest release
@@ -23,5 +23,5 @@ When users install the plugin:
 
 ## Sync Process
 
-This plugin is synced to `mindrevolution/mill-plugin` via GitHub Action on each release.
+This plugin is synced to `mindrevolution/claude-plugins` via GitHub Action on each release.
 Source of truth is the main `mill` repo.
