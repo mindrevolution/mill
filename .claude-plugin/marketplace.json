@@ -1,6 +1,10 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "mindrevolution",
   "description": "mill - specification-first delivery system",
+  "owner": {
+    "name": "mindrevolution"
+  },
   "plugins": [
     {
       "name": "mill",
