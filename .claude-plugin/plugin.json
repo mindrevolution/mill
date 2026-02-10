@@ -1,6 +1,6 @@
 {
   "name": "mill",
-  "version": "1.0.0",
+  "version": "0.6.0-beta",
   "description": "Specification-first delivery system - turn intent into verified deliverables",
   "author": {
     "name": "mindrevolution"
