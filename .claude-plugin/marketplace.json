@@ -1,14 +1,14 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "mindrevolution",
-  "description": "mill - specification-first delivery system",
+  "description": "mill — think it through, ship it right, sharper every cycle",
   "owner": {
     "name": "mindrevolution"
   },
   "plugins": [
     {
       "name": "mill",
-      "description": "Turn intent into verified deliverables with spec-driven workflows",
+      "description": "Skill pack that turns intent into verified PRs — spec drafting, agent teams, independent verification, and continuous learning built into Claude Code",
       "source": "./plugin"
     }
   ]
