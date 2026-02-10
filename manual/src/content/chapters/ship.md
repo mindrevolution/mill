@@ -161,9 +161,9 @@ If agent teams aren't available (experimental feature disabled), ship falls back
 
 History tells the story of your project's delivery:
 
-- How many iterations does a typical feature take?
+- What team sizes work best for different spec types?
 - Which types of specs succeed most reliably?
-- Where are the failure patterns?
+- How often does verification reject, and why?
 - Is delivery getting more efficient over time?
 
 This data, combined with ground knowledge, makes each cycle more predictable.
