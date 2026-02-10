@@ -36,7 +36,6 @@ This creates the `.mill/` directory with the default structure:
 
 ```
 .mill/
-├── project.json          # Configuration
 ├── ground/               # Knowledge base (10 categories)
 ├── idea/active/          # Active ideas
 ├── spec/drafts/          # Spec drafts

@@ -65,13 +65,15 @@ Read(".mill/templates/domains/{domain}.md")
 
 Where `{domain}` comes from the spec's labels (backend, application, website, platform).
 
-### 4. Read project.json
+### 4. Detect Project Settings
 
+Detect default branch from git:
+```bash
+git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo "refs/remotes/origin/main"
 ```
-Read(".mill/project.json")
-```
+Parse the branch name (last segment).
 
-Extract `test_command` and `default_branch`.
+Detect test command by inspecting the project (e.g., `package.json` scripts, `Makefile`, `pyproject.toml`, CI workflows). If ambiguous, ask the user.
 
 ### 5. Create Worktree
 
@@ -111,7 +113,7 @@ For each implementer, use the Task tool to launch a teammate agent. Each gets:
 3. **Domain guidance** — from `.mill/templates/domains/{domain}.md`
 4. **File ownership boundaries** — explicit: "you may ONLY edit files in src/api/ and src/models/"
 5. **Working directory** — the worktree path `.mill/ship/work/issue-{N}/`
-6. **Test command** — from project.json
+6. **Test command** — detected from project
 7. **Teammate prompt template** — load from `.mill/templates/teammates/implementer.md` and fill placeholders
 
 Use `Task` tool with `subagent_type: "general-purpose"`. Build the prompt by reading `.mill/templates/teammates/implementer.md` and substituting:
@@ -121,7 +123,7 @@ Use `Task` tool with `subagent_type: "general-purpose"`. Build the prompt by rea
 - `{{SPEC_CONTENT}}` → full spec body
 - `{{CONTEXT}}` → project context
 - `{{DOMAIN_GUIDANCE}}` → domain template content
-- `{{TEST_COMMAND}}` → test command from project.json
+- `{{TEST_COMMAND}}` → detected test command
 - `{{WORKTREE_PATH}}` → absolute path to worktree
 
 For a team-of-1: single implementer gets the full spec and all files.
@@ -144,8 +146,8 @@ Load `.mill/templates/teammates/verifier.md` and substitute:
 - `{{ISSUE_NUMBER}}` → issue number
 - `{{SPEC_CONTENT}}` → full spec body
 - `{{WORKTREE_PATH}}` → absolute path to worktree
-- `{{TEST_COMMAND}}` → test command from project.json
-- `{{DEFAULT_BRANCH}}` → from project.json
+- `{{TEST_COMMAND}}` → detected test command
+- `{{DEFAULT_BRANCH}}` → detected from git
 
 Use `Task` tool with `subagent_type: "general-purpose"`.
 

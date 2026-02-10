@@ -19,7 +19,7 @@ Initialize `.mill/` in the current git repository. Creates directory structure, 
 Check if `.mill/` already exists:
 
 ```
-Glob(".mill/project.json")
+Glob(".mill/ground")
 ```
 
 If it exists, ask:
@@ -45,30 +45,7 @@ Create all directories via Bash:
 mkdir -p .mill/ground/strategic .mill/ground/personas .mill/ground/rules .mill/ground/decisions .mill/ground/vocabulary .mill/ground/stack .mill/ground/schema .mill/ground/design .mill/ground/patterns .mill/ground/debt .mill/observations .mill/idea/active .mill/spec/drafts .mill/ship/work .mill/templates
 ```
 
-### 3. Write project.json
-
-Write default configuration using the Write tool:
-
-Path: `.mill/project.json`
-
-```json
-{
-  "version": "1.0",
-  "initialized": "{ISO_DATE}",
-  "test_command": "",
-  "default_branch": "main"
-}
-```
-
-Set `initialized` to current ISO date. Detect default branch from git:
-
-```bash
-git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo "refs/remotes/origin/main"
-```
-
-Parse the branch name (last segment) and use it for `default_branch`.
-
-### 4. Write .gitignore
+### 3. Write .gitignore
 
 Write `.mill/.gitignore` using the Write tool:
 

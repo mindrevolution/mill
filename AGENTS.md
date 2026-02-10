@@ -137,7 +137,6 @@ flowchart TD
 
 ```
 .mill/                              # Created by /mill:init
-├── project.json                    # Config (test command, default branch)
 ├── context.md                      # Auto-generated project context
 │
 ├── ground/                         # Product knowledge (10 categories)
