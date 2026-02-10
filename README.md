@@ -9,7 +9,7 @@ You describe intent. mill asks the right questions, writes a complete spec, asse
 ## Quick Start
 
 ```
-/plugin marketplace add mindrevolution/claude-plugins
+/plugin marketplace add mindrevolution/mill
 /plugin install mill@mindrevolution
 ```
 

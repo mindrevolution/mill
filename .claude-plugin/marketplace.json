@@ -5,7 +5,7 @@
     {
       "name": "mill",
       "description": "Turn intent into verified deliverables with spec-driven workflows",
-      "source": "."
+      "source": "./plugin"
     }
   ]
 }

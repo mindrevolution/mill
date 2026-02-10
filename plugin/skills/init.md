@@ -102,7 +102,7 @@ This finds the plugin installation path (e.g., `~/.claude/plugins/mill@mindrevol
 If no plugin path found, check if templates exist in the same repo (for mill developing itself):
 
 ```
-Glob("templates/domains/backend.md")
+Glob("plugin/templates/domains/backend.md")
 ```
 
 Once the source templates directory is found, copy all template subdirectories:

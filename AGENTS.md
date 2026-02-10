@@ -11,16 +11,16 @@ mill is a skill pack for Claude Code. Markdown skills orchestrate Claude Code's 
 ## Architecture
 
 ```
-mill/                           # Source of truth
-├── skills/                     # Skill prompts (synced to plugin repo)
-├── templates/                  # Archetypes, stacks, specs, domains, teammates
-├── .claude-plugin/             # Plugin manifest for Claude Code
-└── manual/                     # Documentation site (Astro)
-
-claude-plugins/                 # Distribution repo (auto-synced on release)
-├── .claude-plugin/             # Plugin manifest + marketplace
-├── skills/                     # Skills for Claude Code
-└── templates/                  # Copied to .mill/templates/ during /mill:init
+mill/
+├── .claude-plugin/
+│   └── marketplace.json        # Plugin marketplace discovery (source: "./plugin")
+├── plugin/                     # Plugin distribution root (cached on install)
+│   ├── .claude-plugin/
+│   │   └── plugin.json         # Plugin manifest
+│   ├── skills/                 # Skill prompts
+│   └── templates/              # Archetypes, stacks, specs, domains, teammates
+├── manual/                     # Documentation site (Astro)
+└── AGENTS.md
 ```
 
 ## Skills
@@ -71,7 +71,7 @@ If agent teams aren't available (experimental feature disabled), ship falls back
 
 ## Domains
 
-Specs include a `domain` field that loads execution guidance from `templates/domains/`:
+Specs include a `domain` field that loads execution guidance from `.mill/templates/domains/`:
 
 | Domain | Focus | Guidance |
 |--------|-------|----------|
@@ -178,7 +178,7 @@ That's it.
 ## Installation
 
 ```
-/plugin marketplace add mindrevolution/claude-plugins
+/plugin marketplace add mindrevolution/mill
 /plugin install mill@mindrevolution
 ```
 
@@ -192,17 +192,9 @@ Then in your project:
 
 Claude Code will prompt for permission to run `gh` and `git` commands. Select **"Yes, and don't ask again"** for smooth operation.
 
-## Plugin Sync
-
-The `claude-plugins` repo is auto-synced from `mill` on each release:
-
-1. Tag pushed on `mill` repo → GitHub release created
-2. `sync-plugin.yml` copies `skills/`, `templates/`, `.claude-plugin/` to `claude-plugins`
-3. Users get updates via plugin auto-update
-
 ## Development
 
-Edit `skills/*.md` and `templates/**/*.md` directly. Test by running the skills in a project with `.mill/` initialized.
+Edit `plugin/skills/*.md` and `plugin/templates/**/*.md` directly. Test by running the skills in a project with `.mill/` initialized.
 
 ## Key Principles
 
