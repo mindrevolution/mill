@@ -188,10 +188,6 @@ Then in your project:
 /mill:init
 ```
 
-## First Run
-
-Claude Code will prompt for permission to run `gh` and `git` commands. Select **"Yes, and don't ask again"** for smooth operation.
-
 ## Development
 
 Edit `plugin/skills/*.md` and `plugin/templates/**/*.md` directly. Test by running the skills in a project with `.mill/` initialized.

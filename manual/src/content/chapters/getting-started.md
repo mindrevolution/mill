@@ -18,7 +18,8 @@ Before you begin, make sure you have:
 Open Claude Code and run:
 
 ```
-/install mill@mindrevolution
+/plugin marketplace add mindrevolution/mill
+/plugin install mill@mindrevolution
 ```
 
 That's it. The skills and templates are ready to use.
@@ -43,11 +44,7 @@ This creates the `.mill/` directory with the default structure:
 └── ship/                 # Worktrees for implementation
 ```
 
-## First Run Permissions
-
-The first time you use mill skills, Claude Code will ask to approve certain commands (`gh`, `git`, `rm`, `mkdir`). Select **"Yes, and don't ask again"** to approve them permanently for the project.
-
-## Context Is Automatic
+## Project Context Is Automatic
 
 When any skill needs project context, mill checks `.mill/context.md` and regenerates it automatically if it's missing or stale (default threshold: 25 commits).
 
@@ -106,7 +103,7 @@ Point ship at the issue:
 /mill:ship 42
 ```
 
-mill assembles a team — a lead orchestrates, implementers build within assigned file boundaries, and a separate verifier checks every criterion independently. When verification passes, a PR is created. One skill, full pipeline.
+mill [assembles a team](/ship) — a lead orchestrates, implementers build within assigned file boundaries, and a separate verifier checks every criterion independently. When verification passes, a PR is created. One skill, full pipeline.
 
 ## The Daily Rhythm
 
