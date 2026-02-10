@@ -71,7 +71,7 @@ If agent teams aren't available (experimental feature disabled), ship falls back
 
 ## Domains
 
-Specs include a `domain` field that loads execution guidance from `.mill/templates/domains/`:
+Specs include a `domain` field that loads execution guidance from the plugin's `templates/domains/`:
 
 | Domain | Focus | Guidance |
 |--------|-------|----------|
@@ -154,11 +154,6 @@ flowchart TD
 ├── observations/                   # Learning inbox [gitignored]
 ├── idea/active/                    # Live idea briefs [gitignored]
 ├── spec/drafts/                    # Specs before publishing [gitignored]
-│
-├── templates/                      # Copied from plugin during init
-│   ├── specs/                      # Spec templates (feature, bug, task, security)
-│   ├── domains/                    # Domain execution guidance
-│   └── teammates/                  # Implementer and verifier prompts
 │
 └── ship/
     └── work/                       # Git worktrees [gitignored]

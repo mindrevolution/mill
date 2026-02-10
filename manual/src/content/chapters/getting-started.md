@@ -22,7 +22,7 @@ Open Claude Code and run:
 /plugin install mill@mindrevolution
 ```
 
-That's it. The skills and templates are ready to use.
+That's it. The skills are ready to use.
 
 ## Initialize Your Project
 
@@ -39,7 +39,6 @@ This creates the `.mill/` directory with the default structure:
 ├── ground/               # Knowledge base (10 categories)
 ├── idea/active/          # Active ideas
 ├── spec/drafts/          # Spec drafts
-├── templates/            # Copied from plugin
 └── ship/                 # Worktrees for implementation
 ```
 

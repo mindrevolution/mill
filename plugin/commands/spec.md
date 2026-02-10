@@ -76,7 +76,7 @@ Write(".mill/spec/drafts/{slug}.md", content)
 Glob(".mill/ground/**/*.md") → Read each
 
 # Load spec templates
-Glob(".mill/templates/specs/*.md") → Read each
+Glob("**/templates/specs/*.md") → Read the appropriate template
 
 # Check context freshness (inline — see warmup skill)
 Read(".mill/context.md") → extract hash → git rev-parse HEAD → compare
@@ -306,9 +306,9 @@ AskUserQuestion:
 
 ## Templates
 
-Load spec templates from the project-local copy:
+Load spec templates from the plugin:
 ```
-Glob(".mill/templates/specs/*.md") → Read the appropriate template
+Glob("**/templates/specs/*.md") → Read the appropriate template
 ```
 
 ## Observations
