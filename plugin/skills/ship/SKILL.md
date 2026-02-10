@@ -1,4 +1,5 @@
 ---
+name: ship
 description: "Implement a spec → Pull Request • https://mill.mindrevolution.com/ship"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(*gh *, *git *, *rm *, *mkdir *)
 argument-hint: "<issue-number> - GitHub issue to implement"

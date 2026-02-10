@@ -1,4 +1,5 @@
 ---
+name: spec
 description: "Turn intent into a precise, complete spec • https://mill.mindrevolution.com/spec"
 allowed-tools: Read, Write, Glob, Grep, Bash(*gh *, *git *, *rm *)
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
