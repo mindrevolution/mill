@@ -1,6 +1,6 @@
 ---
 description: "Define who you build for and how • https://mill.mindrevolution.com/ground"
-allowed-tools: Read, Write, Glob, Grep, Bash(*mill *, *git *, *rm *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*rm *, *git *)
 argument-hint: "[category] - personas, rules, decisions, vocabulary, or review"
 ---
 
@@ -13,6 +13,14 @@ Build and manage product knowledge in `.mill/ground/`. Review observations from 
 **Always use the AskUserQuestion tool** for gathering knowledge. Present 2-4 options plus free text. One question at a time.
 
 ## Entry Point
+
+Check observations first:
+
+```
+Glob(".mill/observations/*.md")
+```
+
+Read each observation file to get titles and count.
 
 ```yaml
 AskUserQuestion:
@@ -27,28 +35,24 @@ AskUserQuestion:
       description: "Extract changes from code"
 ```
 
-Check observations first:
-```bash
-mill observations list --human
-```
-
-If observations exist, show count in "Review observations" option.
-
 ---
 
 ## Observation Review Flow
 
 ### 1. List Observations
 
-```bash
-mill observations list --human
 ```
+Glob(".mill/observations/*.md")
+```
+
+Read each file to display title and type from frontmatter.
 
 ### 2. For Each Observation
 
 Read the full observation:
-```bash
-mill observations get {id} --human
+
+```
+Read(".mill/observations/{id}.md")
 ```
 
 Then present action options:
@@ -89,9 +93,9 @@ AskUserQuestion:
        - label: "{option3}"
    ```
 
-3. Write to appropriate ground folder:
-   ```bash
-   mill ground create {category} {id} -
+3. Write to appropriate ground folder using the Write tool:
+   ```
+   Write(".mill/ground/{category}/{id}.md", content)
    ```
 
 4. Delete observation file:
@@ -100,15 +104,23 @@ AskUserQuestion:
    ```
 
 **Create spec:**
-1. Transform observation into idea:
-   ```bash
-   mill idea create "{title}" "{intent from observation}"
+1. Transform observation into idea — write directly:
    ```
-2. Delete observation file
+   Write(".mill/idea/active/{slug}.md", content)
+   ```
+   Use frontmatter: title, stage: spark, intent, created date.
+
+2. Delete observation file:
+   ```bash
+   rm .mill/observations/{id}.md
+   ```
 
 **Add to debt:**
-1. Append to `ground/debt/{topic}.md`
-2. Delete observation file
+1. Read existing `ground/debt/{topic}.md` (if any), append content, Write back
+2. Delete observation file:
+   ```bash
+   rm .mill/observations/{id}.md
+   ```
 
 **Dismiss:**
 1. Delete observation file:
@@ -119,8 +131,9 @@ AskUserQuestion:
 ### 4. Continue
 
 After processing, check for more observations:
-```bash
-mill observations list --human
+
+```
+Glob(".mill/observations/*.md")
 ```
 
 If more exist, continue. Otherwise, exit or offer other actions.
@@ -142,26 +155,26 @@ If more exist, continue. Otherwise, exit or offer other actions.
 | **patterns** | Code patterns | Common solutions, idioms |
 | **debt** | Technical debt | Known issues, future work |
 
-## Commands
+## File Operations
 
-```bash
+```
 # List all knowledge items
-mill ground list --human
+Glob(".mill/ground/**/*.md") → Read each for frontmatter
 
 # List by category
-mill ground list personas --human
+Glob(".mill/ground/{category}/*.md") → Read each
 
 # Get item content
-mill ground get rules tech-stack --human
+Read(".mill/ground/{category}/{id}.md")
 
-# Create item (content from stdin)
-echo "content" | mill ground create personas primary-user -
+# Create item
+Write(".mill/ground/{category}/{id}.md", content)
 
 # List observations
-mill observations list --human
+Glob(".mill/observations/*.md") → Read each
 
 # Get observation
-mill observations get ship-42-test-gaps --human
+Read(".mill/observations/{id}.md")
 ```
 
 ## Create Knowledge Flow
@@ -237,7 +250,7 @@ AskUserQuestion:
 
 ### 3. Write Knowledge Files
 
-Format for knowledge items:
+Write using the Write tool to `.mill/ground/{category}/{id}.md`:
 
 ```markdown
 ---
@@ -261,9 +274,11 @@ id: primary-user
 
 ### 4. Verify
 
-```bash
-mill ground list --human
 ```
+Glob(".mill/ground/**/*.md")
+```
+
+Read and confirm the new file was written correctly.
 
 ## Integration with Specs
 
@@ -277,12 +292,12 @@ Knowledge items inform spec drafting:
 
 For new projects, use templates to bootstrap:
 
-```bash
+```
 # List available archetypes
-mill template list archetypes --human
+Glob(".mill/templates/archetypes/*.md") → Read each
 
 # List available stacks
-mill template list stacks --human
+Glob(".mill/templates/stacks/*.md") → Read each
 ```
 
 Then create initial ground files based on archetype and stack.

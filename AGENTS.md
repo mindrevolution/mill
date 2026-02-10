@@ -6,46 +6,33 @@ Turning intent into verified deliverables, continuously.
 
 ## Overview
 
-mill is a specification-first delivery system that integrates with Claude Code as a skill pack. It provides structure and intelligence for the entire delivery workflow.
-
-### Two Components
-
-1. **CLI** (`mill`) — Data operations, GitHub integration, structured output
-2. **Skills** (`/mill:*`) — LLM-powered workflows invoked in Claude Code
+mill is a specification-first delivery system that integrates with Claude Code as a skill pack. It provides structure and intelligence for the entire delivery workflow — pure skills, no CLI binary.
 
 ## Architecture
 
 ```
 mill/                           # Main repository (source of truth)
-├── cli/                        # .NET CLI
 ├── skills/                     # Skill source files → synced to claude-plugins
-├── plugin/                     # MCP installer → synced to claude-plugins
-└── templates/                  # Spec/archetype/stack/domain templates
+└── templates/                  # Archetypes, stacks, specs, domains, teammates
 
 claude-plugins/                 # Distribution repository (auto-synced)
 ├── .claude-plugin/             # Plugin manifest + marketplace
-├── .mcp.json                   # MCP server config
-├── skills/                     # Commands for Claude Code
-└── plugin/mill-installer/      # Auto-installs CLI on plugin enable
+├── skills/                     # Skills for Claude Code
+└── templates/                  # Templates copied during /mill:init
 ```
 
-## CLI Commands
+## Skills
 
-```bash
-mill init                           # Initialize .mill/ in current repo
-mill ground list|get|create         # Knowledge CRUD (10 categories)
-mill observations list|get          # Learning inbox (written by skills)
-mill idea list|get|create|drop      # Idea lifecycle
-mill draft list|get|validate|publish # Draft management + GitHub publish
-mill issue list|get                 # Wraps gh CLI
-mill history [add]                  # Ship run history
-mill context [show|status]          # View context.md or check freshness
-mill template list|get              # Archetypes/stacks/specs/domains
-```
+| Skill | Purpose |
+|-------|---------|
+| `/mill:init` | Initialize `.mill/` in a project |
+| `/mill:ground` | Define who you build for and how |
+| `/mill:idea` | Capture a rough idea (30-day lifecycle) |
+| `/mill:spec` | Turn intent into a precise, complete spec |
+| `/mill:ship` | Assemble a team, implement a spec → Pull Request |
+| `/mill:warmup` | Orient Claude to your codebase |
 
-Output: JSON by default, `--human` for readable output.
-
-**Important:** Run `mill` and `git` commands directly without `cd` prefix. Claude Code already runs in the project directory. Commands with `cd /path &&` prefix won't match allowed-tools patterns.
+Skills use Claude Code's native tools (Read, Write, Glob, Grep, Bash) for all file operations. No external binary needed.
 
 ## Domains
 
@@ -61,16 +48,6 @@ Specs include a `domain` field that determines execution guidance:
 
 Domain templates live in `templates/domains/` and are loaded by `/mill:ship` during execution.
 
-## Skills
-
-| Skill | Purpose |
-|-------|---------|
-| `/mill:ground` | Define who you build for and how |
-| `/mill:idea` | Capture a rough idea (30-day lifecycle) |
-| `/mill:spec` | Turn intent into a precise, complete spec |
-| `/mill:ship` | Implement a spec → Pull Request |
-| `/mill:warmup` | Orient Claude to your codebase |
-
 ## Observations
 
 Observations is the **learning inbox** for mill. Skills write observations during execution. `/mill:ground` reviews and curates them into ground truth.
@@ -78,7 +55,7 @@ Observations is the **learning inbox** for mill. Skills write observations durin
 ```
 Skills (spec, ship, ground)
         │
-        ▼ write .md files directly (no CLI)
+        ▼ write .md files directly
 .mill/observations/*.md
         │
         ▼ review via /mill:ground (AskUserQuestion)
@@ -106,7 +83,7 @@ Approach (A)         → how we'll build it (parts + mechanisms)
 Criteria (C)         → testable conditions
 ```
 
-**Coverage (R × A × C)** proves the chain: requirements have approach parts, and criteria verify them.
+**Coverage (R x A x C)** proves the chain: requirements have approach parts, and criteria verify them.
 
 ## Workflow
 
@@ -122,6 +99,18 @@ flowchart TD
     G -->|approve| H[Merge]
     G -->|changes| D
 ```
+
+## Ship: Agent Teams
+
+`/mill:ship` uses an "always a team" model:
+
+1. **Lead** (the skill session) — orchestrates, never implements directly
+2. **Implementer(s)** — 1-4 agents, each with file ownership boundaries
+3. **Verifier** — separate agent with clean context, checks spec criteria independently
+
+Even simple specs get a team-of-1 implementer + 1 verifier. The verifier never sees implementer reasoning — structural independence ensures genuine review.
+
+Falls back to single-session mode if agent teams aren't available.
 
 ## Project Structure
 
@@ -151,6 +140,13 @@ flowchart TD
 ├── spec/
 │   └── drafts/                     # Specs before publishing [gitignored]
 
+├── templates/                      # Copied from plugin during /mill:init
+│   ├── archetypes/
+│   ├── stacks/
+│   ├── specs/
+│   ├── domains/
+│   └── teammates/
+
 └── ship/
     ├── work/                       # Worktrees [gitignored]
     └── history.json                # Completed runs
@@ -160,34 +156,27 @@ flowchart TD
 
 ## Requirements
 
-- Claude Code 1.0.33+
+- Claude Code
 - `gh` CLI (GitHub CLI) — authenticated
-- Node.js (for MCP installer)
 - Git repository
 
 ## First Run
 
-When you first use mill skills in a project, Claude Code will prompt for permission to run `mill` and `git` commands. Select **"Yes, and don't ask again"** to approve these commands permanently for the project. After this one-time approval, skills run smoothly without interruption.
+When you first use mill skills in a project, Claude Code will prompt for permission to run `gh` and `git` commands. Select **"Yes, and don't ask again"** to approve these commands permanently for the project. After this one-time approval, skills run smoothly without interruption.
 
 ## Installation
 
-Install via Claude Code plugin (recommended):
+Install via Claude Code plugin:
 
 ```
 /plugin marketplace add mindrevolution/claude-plugins
 /plugin install mill@mindrevolution
 ```
 
-The CLI is auto-installed when the plugin is first enabled.
+Then initialize in your project:
 
-### CLI Only (without plugin)
-
-```bash
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/mindrevolution/mill/main/install.sh | bash
-
-# Windows
-irm https://raw.githubusercontent.com/mindrevolution/mill/main/install.ps1 | iex
+```
+/mill:init
 ```
 
 ## Plugin Sync
@@ -196,25 +185,17 @@ The `claude-plugins` repo is auto-synced from `mill` on each release:
 
 1. Release published on `mill` repo
 2. GitHub Action (`sync-plugin.yml`) triggers
-3. Copies `skills/`, `plugin/`, `.claude-plugin/`, `.mcp.json` to `claude-plugins`
+3. Copies `skills/`, `templates/`, `.claude-plugin/` to `claude-plugins`
 4. Users get updates via plugin auto-update
 
 ## Development
 
-```bash
-# Build CLI
-cd cli && dotnet build
-
-# Run CLI
-dotnet run -- --help
-dotnet run -- init --human
-dotnet run -- ground list --human
-```
+Skills are markdown files in `skills/`. Templates are in `templates/`. Edit and test directly — no build step.
 
 ## Key Principles
 
 1. **Specs drive execution** — GitHub Issues are source of truth
 2. **Contracts over conversation** — No "done" without verification
-3. **Bounded iterations** — Work in slices, verify after each
-4. **Skills + CLI** — LLM for intelligence, CLI for structure
+3. **Team-based delivery** — Lead orchestrates, implementers build, verifier checks
+4. **Skills over CLI** — LLM-native tools, no binary dependencies
 5. **Humans drive direction** — AI improves the code

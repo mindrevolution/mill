@@ -1,6 +1,6 @@
 ---
 description: "Capture a rough idea (30-day lifecycle) • https://mill.mindrevolution.com/idea"
-allowed-tools: Read, Write, Bash(*mill *)
+allowed-tools: Read, Write, Glob, Bash(*rm *)
 argument-hint: "[title] - start capturing a new idea"
 ---
 
@@ -38,23 +38,23 @@ spark → developing → ready → [promote to draft | drop with essence]
 | **developing** | Adding context, exploring scope |
 | **ready** | Clear enough to become a spec |
 
-## Commands
+## File Operations
 
-```bash
+```
 # List active ideas
-mill idea list --human
+Glob(".mill/idea/active/*.md") → Read each for frontmatter
 
 # Get idea details
-mill idea get my-idea --human
+Read(".mill/idea/active/{slug}.md")
 
 # Create new idea
-mill idea create "My Idea" "Enable users to X so they can Y" --human
+Write(".mill/idea/active/{slug}.md", content)
 
-# Drop with learned essence
-mill idea drop my-idea "Users don't actually need X because Z" --human
+# Drop idea
+Read idea → Bash(rm .mill/idea/active/{slug}.md) → Read+append+Write .mill/idea/dropped.json
 
-# View dropped ideas (learnings)
-mill idea dropped --human
+# View dropped ideas
+Read(".mill/idea/dropped.json")
 ```
 
 ## Workflow
@@ -79,9 +79,20 @@ Options based on loaded personas (if available):
   - "Different reason..." (free text)
 ```
 
-After gathering responses:
-```bash
-mill idea create "Feature Name" "Intent statement"
+After gathering responses, generate a slug from the title (lowercase, hyphens, no special chars) and write:
+
+```
+Write(".mill/idea/active/{slug}.md", content)
+```
+
+With frontmatter:
+```markdown
+---
+title: Feature Name
+stage: spark
+intent: Enable users to X so they can Y
+created: {ISO_DATE}
+---
 ```
 
 ### 2. Develop the Idea
@@ -110,7 +121,7 @@ Options (multiSelect: true):
   - "Full production-ready"
 ```
 
-Update the idea file at `.mill/idea/active/{slug}.md`:
+Read the existing idea file, update it with new content, and Write back:
 
 ```markdown
 ---
@@ -118,6 +129,7 @@ title: Feature Name
 stage: developing
 intent: Enable users to X so they can Y
 persona: primary-user
+created: {ISO_DATE}
 concepts:
   - key-concept
 ---
@@ -140,9 +152,11 @@ When the idea is ready to become a spec:
 - Scope is defined
 
 Promote to draft:
-1. Move content to `.mill/spec/drafts/{slug}.md`
-2. Delete the idea
-3. Continue with `/mill:spec` to complete the spec
+1. Read the idea file from `.mill/idea/active/{slug}.md`
+2. Transform content into spec draft format
+3. Write to `.mill/spec/drafts/{slug}.md`
+4. Delete the idea: `rm .mill/idea/active/{slug}.md`
+5. Continue with `/mill:spec` to complete the spec
 
 ### 4. Or Drop with Essence
 
@@ -150,9 +164,19 @@ If the idea isn't worth pursuing:
 - Capture what was learned
 - The essence goes into `dropped.json` for team knowledge
 
-```bash
-mill idea drop my-idea "Learned that users prefer Y instead"
-```
+1. Read the idea file
+2. Read existing `.mill/idea/dropped.json` (or start with `[]` if missing)
+3. Append entry:
+   ```json
+   {
+     "slug": "my-idea",
+     "title": "My Idea",
+     "essence": "Learned that users prefer Y instead",
+     "dropped": "{ISO_DATE}"
+   }
+   ```
+4. Write updated `.mill/idea/dropped.json`
+5. Delete the idea file: `rm .mill/idea/active/{slug}.md`
 
 ## Integration
 

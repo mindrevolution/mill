@@ -1,9 +1,7 @@
-# Build outputs
+# Build artifacts (leftover from CLI era)
 bin/
 obj/
 out/
-cli/bin/
-cli/obj/
 
 # IDE
 .vs/
@@ -13,22 +11,14 @@ cli/obj/
 # OS
 .DS_Store
 
-# MILL dogfooding — using MILL to develop MILL itself
-# These artifacts are generated when running mill init/model/loop on this repo.
-# Kept out of version control to maintain a clean source tree while we iterate.
-spec/                 # Context, memory, drafts, standards
-.mill/                # Worktrees for loop execution (ephemeral sandboxes)
+# mill dogfooding — using mill to develop mill itself
+# These artifacts are generated when running mill skills on this repo.
+spec/
+.mill/
 CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 
 # Claude Code local settings
 .claude/
-
-# MILL worktrees
-.mill/work/
-
-# MILL ephemeral
-.mill/.prompt
-.mill/memory/issue-*-plan.md
 
 # Secrets
 .env

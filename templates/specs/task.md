@@ -91,7 +91,6 @@ High | Medium | Low
 - **Success Criteria:** All acceptance criteria met; no regressions; verification passes
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{additional checks}}
-- **Completion Promise:** `MILL_DONE`
 - **Stop Conditions:** {{max iterations}} iterations
 
 ---
@@ -102,4 +101,4 @@ High | Medium | Low
 
 ---
 
-*Built from intent with MILL*
+*Built with mill*

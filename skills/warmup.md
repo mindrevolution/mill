@@ -1,6 +1,6 @@
 ---
 description: "Orient Claude to your codebase • https://mill.mindrevolution.com/warmup"
-allowed-tools: Read, Write, Glob, Grep, Bash(*mill *, *git *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*git *)
 ---
 
 # Warmup
@@ -9,17 +9,21 @@ Orient Claude to your codebase. Loads existing context if fresh, regenerates if 
 
 ## Step 1: Check Context Status
 
-```bash
-mill context status
-```
+Determine freshness inline:
 
-Returns JSON with `freshness` field. Branch based on result:
+1. Read `.mill/context.md` — extract hash from first line: `<!-- mill-context-hash: {HASH} -->`
+   - If file doesn't exist → freshness is `missing`
+2. Get current commit: `git rev-parse HEAD`
+3. If hashes match → freshness is `fresh`
+4. If hashes differ: `git rev-list --count {HASH}..HEAD` to get distance
+   - 1–25 commits → freshness is `recent`
+   - \>25 commits → freshness is `stale`
 
 | Freshness | Meaning | Action |
 |-----------|---------|--------|
 | `fresh` | Exact commit match | Load Mode |
-| `recent` | 1-20 commits behind | Update Mode |
-| `stale` | >20 commits behind | Generate Mode |
+| `recent` | 1-25 commits behind | Update Mode |
+| `stale` | >25 commits behind | Generate Mode |
 | `missing` | No context.md | Generate Mode |
 
 ---
@@ -30,8 +34,8 @@ Context matches current commit. Just load:
 
 1. Read `.mill/context.md`
 2. Read ground files:
-   - `mill ground list` to see what exists
-   - Read key ground files (personas, standards, patterns)
+   - `Glob(".mill/ground/**/*.md")` to see what exists
+   - Read key ground files (personas, rules, patterns)
 3. Report: "Context loaded"
 
 **No file writes. No git commands beyond status check.**
@@ -43,8 +47,8 @@ Context matches current commit. Just load:
 Context is slightly behind. Load and show new commits:
 
 1. Read `.mill/context.md`
-2. Read ground files (personas, standards, patterns)
-3. Show new commits: `git log {commitHash}..HEAD --oneline`
+2. Read ground files (personas, rules, patterns)
+3. Show new commits: `git log {HASH}..HEAD --oneline`
 4. Report: "Context loaded ({N} new commits)"
 
 **No regeneration needed. Just awareness of recent changes.**
@@ -75,7 +79,7 @@ Emit each marker on its own line BEFORE starting that step:
 2. `git ls-files` — enumerate project files
 3. Read `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
 4. Read `README.md`, `.mill/ground/product.md` if present
-5. Read `.mill/ground/standards/*.md`
+5. `Glob(".mill/ground/standards/*.md")` → Read each
 6. `git log -n 20 --oneline`
 7. Map architecture:
    - Identify entry points (main files, bootstrapping)

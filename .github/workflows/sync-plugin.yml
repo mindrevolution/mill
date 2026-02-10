@@ -15,20 +15,17 @@ jobs:
         run: |
           mkdir -p plugin-dist/.claude-plugin
           mkdir -p plugin-dist/skills
-          mkdir -p plugin-dist/plugin
+          mkdir -p plugin-dist/templates
 
           # Copy plugin manifest and marketplace
           cp .claude-plugin/plugin.json plugin-dist/.claude-plugin/
           cp .claude-plugin/marketplace.json plugin-dist/.claude-plugin/
 
-          # Copy MCP config
-          cp .mcp.json plugin-dist/
-
-          # Copy skills (commands)
+          # Copy skills
           cp -r skills/* plugin-dist/skills/
 
-          # Copy MCP installer
-          cp -r plugin/* plugin-dist/plugin/
+          # Copy templates
+          cp -r templates/* plugin-dist/templates/
 
           # Create README
           cat > plugin-dist/README.md << 'EOF'

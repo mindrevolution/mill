@@ -93,7 +93,6 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 - **Success Criteria:** All acceptance criteria pass; all verification commands succeed
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{additional checks}}
-- **Completion Promise:** `MILL_DONE`
 - **Stop Conditions:** {{max iterations}} iterations
 
 ---
@@ -104,4 +103,4 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 
 ---
 
-*Built from intent with MILL*
+*Built with mill*

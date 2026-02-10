@@ -171,7 +171,6 @@ Expected: {{attack fails, appropriate response}}
 - **Success Criteria:** Attack vector closed; security test passes; no regressions
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{security test commands}}
-- **Completion Promise:** `MILL_DONE`
 - **Stop Conditions:** {{max iterations}} iterations
 - **Escalation:** Immediately if Critical/High and blocked
 
@@ -183,4 +182,4 @@ Expected: {{attack fails, appropriate response}}
 
 ---
 
-*Built from intent with MILL*
+*Built with mill*

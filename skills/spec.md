@@ -1,6 +1,6 @@
 ---
 description: "Turn intent into a precise, complete spec • https://mill.mindrevolution.com/spec"
-allowed-tools: Read, Write, Glob, Grep, Bash(*mill *, *git *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*gh *, *git *, *rm *)
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 ---
 
@@ -43,12 +43,12 @@ A specification that requires clarifying questions is a draft, not a specificati
 
 If a reader asks any of these, the spec has failed:
 
-| ❌ Fails | ✅ Passes |
-|----------|-----------|
+| Fails | Passes |
+|-------|--------|
 | "Configure the stream endpoint" | "Set `RTMP_INGEST=rtmp://ingest.example.com:1935/live` in `encoder/.env`" |
 | "Use the appropriate codec" | "Encode with H.264 Main Profile, 1080p@30fps, 4500kbps CBR" |
 | "The API returns video metadata" | "The API returns `{streamId, resolution, bitrate, codec, status, viewerCount}`" |
-| "Handle transcoding errors" | "On transcode failure: retry 3×, then emit `stream.failed` event with `{streamId, error, timestamp}`" |
+| "Handle transcoding errors" | "On transcode failure: retry 3x, then emit `stream.failed` event with `{streamId, error, timestamp}`" |
 | "Update the content status" | "Set `content.status = 'published'` and `content.publishedAt = NOW()` in `cms_entries` table" |
 
 ## Overview
@@ -57,32 +57,40 @@ Spec takes an idea and produces a GitHub Issue with:
 - **Requirements (R)** — what the solution must achieve
 - **Approach (A)** — how we'll build it (parts + mechanisms)
 - **Criteria (C)** — testable verification conditions
-- **Coverage (R × A × C)** — proof that approach implements requirements and criteria verify them
+- **Coverage (R x A x C)** — proof that approach implements requirements and criteria verify them
 - **Loop Contract** — test command, stop conditions
 
-## Commands
+## File Operations
 
-```bash
+```
 # List drafts
-mill draft list --human
+Glob(".mill/spec/drafts/*.md") → Read each for frontmatter
 
 # Get draft content
-mill draft get my-feature --human
+Read(".mill/spec/drafts/{slug}.md")
 
-# Validate draft (check for issues)
-mill draft validate my-feature --human
+# Write/update draft
+Write(".mill/spec/drafts/{slug}.md", content)
 
-# Publish to GitHub
-mill draft publish my-feature --human
+# Load ground knowledge
+Glob(".mill/ground/**/*.md") → Read each
+
+# Load spec templates
+Glob(".mill/templates/specs/*.md") → Read each
+
+# Check context freshness (inline — see warmup skill)
+Read(".mill/context.md") → extract hash → git rev-parse HEAD → compare
 ```
 
 ## Workflow
 
 ### 0. Check Existing Drafts
 
-```bash
-mill draft list --human
 ```
+Glob(".mill/spec/drafts/*.md")
+```
+
+Read each draft's frontmatter for title and last-modified info.
 
 If drafts exist, offer to resume:
 
@@ -91,28 +99,27 @@ AskUserQuestion:
   question: "Continue an existing draft or start new?"
   header: "Drafts"
   options:
-    - label: "relive-master-playlist-fallback"
-      description: "Last updated 2h ago"
-    - label: "forwarding-service-interface"
-      description: "Last updated 5d ago"
+    - label: "{draft-slug-1}"
+      description: "Last updated {time ago}"
+    - label: "{draft-slug-2}"
+      description: "Last updated {time ago}"
     - label: "Start new spec"
       description: "Create a fresh specification"
 ```
 
-If user selects a draft → load it with `mill draft get {slug}` and continue from where it left off.
+If user selects a draft → Read `.mill/spec/drafts/{slug}.md` and continue from where it left off.
 If user selects "Start new" or no drafts exist → proceed to step 1.
 
 ### 1. Ensure Context
 
-```bash
-mill context status
-```
-
-If missing or stale (JSON shows `freshness: "stale"`), run `/mill:warmup` first.
+Check context freshness inline:
+1. Read `.mill/context.md` — extract hash from first line
+2. `git rev-parse HEAD` — compare
+3. If missing or stale, run `/mill:warmup` first
 
 Then load ground knowledge:
-```bash
-mill ground list
+```
+Glob(".mill/ground/**/*.md") → Read key files
 ```
 
 Search codebase for relevant files.
@@ -155,7 +162,7 @@ AskUserQuestion:
 
 ### 3. Create Draft Early
 
-Create draft file at `.mill/spec/drafts/{slug}.md`:
+Write draft file using the Write tool at `.mill/spec/drafts/{slug}.md`:
 
 ```markdown
 ---
@@ -187,7 +194,7 @@ approach: A
 | C1 | {testable condition for R1} |
 | C2 | {testable condition for R2} |
 
-## Coverage (R × A × C)
+## Coverage (R x A x C)
 | Req | Requirement | Approach | Criteria |
 |-----|-------------|----------|----------|
 | R1 | {description} | A1 | C1 |
@@ -224,7 +231,7 @@ Once requirements are clear, define approach:
 
 ### 4c. Coverage Check
 
-Build coverage table (R × A × C):
+Build coverage table (R x A x C):
 - Approach column: list parts (A1, A2) or ❌ if not covered
 - Criteria column: list criteria (C1, C2) or — if no verification
 
@@ -275,18 +282,33 @@ AskUserQuestion:
 
 ### 8. Publish
 
-```bash
-mill draft publish my-feature --human
-```
-
-This creates a GitHub issue and deletes the draft.
+1. Read the draft: `Read(".mill/spec/drafts/{slug}.md")`
+2. Extract title, type, domain from frontmatter
+3. Build the issue body from the draft content (strip frontmatter)
+4. Write body to a temp file using the Write tool:
+   ```
+   Write(".mill/.prompt", body_content)
+   ```
+5. Create GitHub issue:
+   ```bash
+   gh issue create --title "{title}" --body-file .mill/.prompt --label "spec,{type},{domain}"
+   ```
+6. Parse the issue URL from output
+7. Delete the draft:
+   ```bash
+   rm .mill/spec/drafts/{slug}.md
+   ```
+8. Clean up temp file:
+   ```bash
+   rm .mill/.prompt
+   ```
+9. Report the issue URL to the user
 
 ## Templates
 
-Get spec templates:
-```bash
-mill template list specs --human
-mill template get specs feature --human
+Load spec templates from the project-local copy:
+```
+Glob(".mill/templates/specs/*.md") → Read the appropriate template
 ```
 
 ## Observations

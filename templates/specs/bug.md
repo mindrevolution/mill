@@ -96,7 +96,6 @@ Then: {{should NOT exhibit bug behavior}}
 - **Success Criteria:** Bug no longer reproducible; regression test passes; all existing tests pass
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{additional checks}}
-- **Completion Promise:** `MILL_DONE`
 - **Stop Conditions:** {{max iterations}} iterations
 
 ---
@@ -107,4 +106,4 @@ Then: {{should NOT exhibit bug behavior}}
 
 ---
 
-*Built from intent with MILL*
+*Built with mill*
