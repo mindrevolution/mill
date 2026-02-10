@@ -290,14 +290,21 @@ Knowledge items inform spec drafting:
 
 ## Kickstart (New Projects)
 
-For new projects, use templates to bootstrap:
+For new projects, ask the user directly:
 
+```yaml
+AskUserQuestion:
+  question: "What kind of product is this?"
+  header: "Product"
+  options:
+    - label: "SaaS"
+      description: "Web app with subscriptions"
+    - label: "API / Platform"
+      description: "Developer-facing service"
+    - label: "Marketing site"
+      description: "Content, landing pages"
+    - label: "Internal tool"
+      description: "Team-facing utility"
 ```
-# List available archetypes
-Glob(".mill/templates/archetypes/*.md") → Read each
 
-# List available stacks
-Glob(".mill/templates/stacks/*.md") → Read each
-```
-
-Then create initial ground files based on archetype and stack.
+Then ask about their stack, conventions, and key personas. Create initial ground files from the conversation — no templates needed.

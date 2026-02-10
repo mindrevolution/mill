@@ -107,17 +107,15 @@ Glob("plugin/templates/domains/backend.md")
 
 Once the source templates directory is found, copy all template subdirectories:
 
-For each subdirectory (`archetypes/`, `stacks/`, `specs/`, `domains/`, `teammates/`):
-1. `Glob("{source}/archetypes/*.md")` → Read each → Write to `.mill/templates/archetypes/{name}.md`
-2. `Glob("{source}/stacks/*.md")` → Read each → Write to `.mill/templates/stacks/{name}.md`
-3. `Glob("{source}/specs/*.md")` → Read each → Write to `.mill/templates/specs/{name}.md`
-4. `Glob("{source}/domains/*.md")` → Read each → Write to `.mill/templates/domains/{name}.md`
-5. `Glob("{source}/teammates/*.md")` → Read each → Write to `.mill/templates/teammates/{name}.md`
+For each subdirectory (`specs/`, `domains/`, `teammates/`):
+1. `Glob("{source}/specs/*.md")` → Read each → Write to `.mill/templates/specs/{name}.md`
+2. `Glob("{source}/domains/*.md")` → Read each → Write to `.mill/templates/domains/{name}.md`
+3. `Glob("{source}/teammates/*.md")` → Read each → Write to `.mill/templates/teammates/{name}.md`
 
 Create template directories first:
 
 ```bash
-mkdir -p .mill/templates/archetypes .mill/templates/stacks .mill/templates/specs .mill/templates/domains .mill/templates/teammates
+mkdir -p .mill/templates/specs .mill/templates/domains .mill/templates/teammates
 ```
 
 ### 7. Report

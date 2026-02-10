@@ -18,7 +18,7 @@ mill/
 │   ├── .claude-plugin/
 │   │   └── plugin.json         # Plugin manifest
 │   ├── commands/               # Slash commands (user-invoked)
-│   └── templates/              # Archetypes, stacks, specs, domains, teammates
+│   └── templates/              # Specs, domains, teammates
 ├── manual/                     # Documentation site (Astro)
 └── AGENTS.md
 ```
@@ -157,8 +157,6 @@ flowchart TD
 ├── spec/drafts/                    # Specs before publishing [gitignored]
 │
 ├── templates/                      # Copied from plugin during init
-│   ├── archetypes/                 # Project archetypes (SaaS, API, mobile, etc.)
-│   ├── stacks/                     # Technology stacks
 │   ├── specs/                      # Spec templates (feature, bug, task, security)
 │   ├── domains/                    # Domain execution guidance
 │   └── teammates/                  # Implementer and verifier prompts
