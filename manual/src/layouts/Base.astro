@@ -7,7 +7,7 @@ interface Props {
   ogImage?: string;
 }
 
-const { title, description = 'Think it through. Ship it right. Sharper every cycle.', ogImage } = Astro.props;
+const { title, description = 'mill is a skill pack for Claude Code that turns intent into verified pull requests — spec-driven delivery with agent teams, independent verification, and continuous learning.', ogImage } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -32,6 +32,11 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <!-- Twitter / link previews -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
 
     <title>{title}</title>
   </head>
