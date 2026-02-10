@@ -34,7 +34,7 @@ claude-plugins/                 # Distribution repo (auto-synced on release)
 | `/mill:ship` | Assemble team, implement, verify → PR | Read, Write, Edit, Glob, Grep, Bash(gh, git, rm, mkdir) |
 | `/mill:warmup` | Orient Claude to your codebase | Read, Write, Glob, Grep, Bash(git) |
 
-All file I/O, GitHub integration, context checking, and history tracking happens through Claude Code's tools directly. Claude reads markdown natively — no intermediary format needed.
+All file I/O, GitHub integration, and context checking happens through Claude Code's tools directly. Claude reads markdown natively — no intermediary format needed.
 
 ## Ship: Agent Teams
 
@@ -164,8 +164,7 @@ flowchart TD
 │   └── teammates/                  # Implementer and verifier prompts
 │
 └── ship/
-    ├── work/                       # Git worktrees [gitignored]
-    └── history.json                # Completed ship runs
+    └── work/                       # Git worktrees [gitignored]
 ```
 
 ## Requirements

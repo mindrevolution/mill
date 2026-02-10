@@ -40,7 +40,7 @@ This creates the `.mill/` directory with the default structure:
 ├── idea/active/          # Active ideas
 ├── spec/drafts/          # Spec drafts
 ├── templates/            # Copied from plugin
-└── ship/                 # Work and history
+└── ship/                 # Worktrees for implementation
 ```
 
 ## First Run Permissions

@@ -88,11 +88,11 @@ Ship takes a GitHub Issue and assembles a team of agents to implement it. One sk
 3. **Delegate** — lead spawns implementers with specific task assignments and file boundaries
 4. **Verify independently** — a separate agent checks the work (work can't grade its own homework)
 5. **Ship** — create a Pull Request with full traceability
-6. **Clean up** — remove the worktree, record history
+6. **Clean up** — remove the worktree
 
 Ship is autonomous. The spec should be complete enough that implementation doesn't need human input. If the spec has gaps that block implementation, the lead escalates to you — the spec goes back to drafting.
 
-After shipping, mill records the run in history and the implementation writes observations about what it discovered.
+During implementation, mill writes observations about what it discovered — patterns, gaps, concerns — which feed the learning loop.
 
 ## The Learning Loop
 

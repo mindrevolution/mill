@@ -89,17 +89,7 @@ ship/work/
 .prompt
 ```
 
-### 5. Write history.json
-
-Write empty history using the Write tool:
-
-Path: `.mill/ship/history.json`
-
-```json
-[]
-```
-
-### 6. Copy Templates
+### 5. Copy Templates
 
 Find the plugin's templates directory by searching for a known marker file:
 

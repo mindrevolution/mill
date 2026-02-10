@@ -101,14 +101,9 @@ mill creates a Pull Request with:
 
 The PR connects back to the spec issue, creating full traceability from intent → spec → implementation → review.
 
-### 9. Clean Up and Record
+### 9. Clean Up
 
-After completion, mill:
-
-- Removes the worktree (clean slate)
-- Records the run in `.mill/ship/history.json`
-
-History tracks everything: issue, PR, team size, duration, outcome. Over time, this data shows trends — are specs getting smaller? Are ship runs getting faster? Where do failures cluster?
+After completion, mill removes the worktree — clean slate. Your git log and GitHub PRs are the history.
 
 ## Structural Independence
 
@@ -157,13 +152,3 @@ If the spec is missing information that blocks implementation, the lead escalate
 
 If agent teams aren't available (experimental feature disabled), ship falls back to single-session mode: the lead implements directly, then does an explicit self-review phase against the spec. Degraded but functional.
 
-## History and Trends
-
-History tells the story of your project's delivery:
-
-- What team sizes work best for different spec types?
-- Which types of specs succeed most reliably?
-- How often does verification reject, and why?
-- Is delivery getting more efficient over time?
-
-This data, combined with ground knowledge, makes each cycle more predictable.

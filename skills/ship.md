@@ -203,24 +203,7 @@ Parse the PR URL from output. Clean up temp file:
 rm .mill/.prompt
 ```
 
-### 12. Record History
-
-Read `.mill/ship/history.json`, append entry, Write back:
-
-```json
-{
-  "date": "{ISO_DATE}",
-  "issue": {N},
-  "pr": "{PR_URL}",
-  "title": "{spec title}",
-  "type": "{feature|bug|task|security}",
-  "outcome": "success",
-  "teammates": {count},
-  "rejections": {rejection_count}
-}
-```
-
-### 13. Cleanup
+### 12. Cleanup
 
 ```bash
 git worktree remove --force .mill/ship/work/issue-{N}
@@ -267,5 +250,4 @@ These are reviewed later via `/mill:ground`. Don't interrupt the ship flow.
 4. **Test before PR** — all tests must pass
 5. **Max 3 rejection cycles** — if still failing, escalate to user
 6. **Always clean up** — worktree removed after PR creation
-7. **History recorded** — every ship run gets a history entry
-8. **Commits reference issue** — every commit message includes `#{N}`
+7. **Commits reference issue** — every commit message includes `#{N}`
