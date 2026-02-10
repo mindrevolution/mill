@@ -44,13 +44,13 @@ Ground isn't static. It grows with every cycle. When mill ships a feature, it ob
 
 Not everything starts as a specification. Sometimes it's just a hunch. A thought in the shower. A feature request that *might* be worth pursuing.
 
-**Idea** gives these sparks a home. Capture them quickly with just a title and an intent:
+**Idea** gives these sparks a home. Capture them quickly:
 
 ```
-mill idea create "Inline code review" "Let reviewers comment on specific lines without leaving the PR view"
+/mill:idea "Inline code review"
 ```
 
-Ideas have a 30-day lifecycle. During that time, you develop them — add context, explore scope, answer open questions. When they're ready, they graduate to specs. When they're not worth pursuing, you drop them — but you capture the *essence* of what you learned.
+mill asks a few questions and saves the idea with a 30-day lifecycle. During that time, you develop it — add context, explore scope, answer open questions. When it's ready, it graduates to a spec. When it's not worth pursuing, you drop it — but you capture the *essence* of what you learned.
 
 Nothing is wasted. Even dropped ideas contribute knowledge.
 
@@ -69,24 +69,30 @@ When the spec passes validation, it publishes as a GitHub Issue. That issue beco
 
 ## Ship — The Execution
 
-Ship takes a GitHub Issue and implements it through a CLI-orchestrated work loop. One command runs the full pipeline:
+Ship takes a GitHub Issue and assembles a team of agents to implement it. One skill runs the full pipeline:
 
-```bash
-mill ship 47
 ```
+/mill:ship 47
+```
+
+**The team:**
+
+1. **Lead** — reads the spec, determines team size, delegates work with explicit file ownership
+2. **Implementer(s)** — 1-4 agents working within assigned boundaries, committing as they go
+3. **Verifier** — a separate agent with clean context that reviews the full changeset against every criterion
 
 **The process:**
 
 1. **Isolate** — create a worktree on a dedicated branch (your main branch stays untouched)
 2. **Load context** — the spec, your project's knowledge, domain guidance
-3. **Iterate** — implement one slice at a time, test after each, signal progress
-4. **Verify independently** — a separate Claude instance checks the work (work can't grade its own homework)
+3. **Delegate** — lead spawns implementers with specific task assignments and file boundaries
+4. **Verify independently** — a separate agent checks the work (work can't grade its own homework)
 5. **Ship** — create a Pull Request with full traceability
 6. **Clean up** — remove the worktree, record history
 
 Ship is mostly autonomous. The spec should be complete enough that implementation doesn't need constant human input. But when genuine ambiguity arises, mill asks rather than guesses.
 
-After shipping, the CLI records the run in history and the implementation writes observations about what it discovered.
+After shipping, mill records the run in history and the implementation writes observations about what it discovered.
 
 ## The Learning Loop
 
@@ -125,8 +131,8 @@ Here's a real example of the full cycle:
 3. You develop the idea over a few days, answering open questions
 4. `/mill:spec` transforms it into a spec with 4 requirements, 6 approach parts, and 8 criteria
 5. The spec publishes as GitHub Issue #47
-6. `mill ship 47` creates a worktree and implements it in 5 slices across model, logic, and interface
-7. Independent verification passes — PR #48 is created, worktree cleaned up
+6. `/mill:ship 47` assembles a team — lead delegates to 2 implementers (backend + frontend), verifier checks independently
+7. Verification passes — PR #48 is created, worktree cleaned up
 8. During implementation, mill observed that "PDF export" isn't in the vocabulary. It also noticed the `ReportService` has no unit tests.
 9. `/mill:ground` reviews these observations. You add "PDF export" to vocabulary and create a new idea for test coverage.
 10. Next cycle starts sharper.

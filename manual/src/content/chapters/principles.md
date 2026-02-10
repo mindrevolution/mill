@@ -37,31 +37,25 @@ Think of it like this:
 | "Looks good to me" | Coverage matrix shows completeness |
 | "Should be fine" | Verification loop confirms behavior |
 
-## Bounded Iterations
+## Team-Based Delivery
 
-mill works in slices. Each slice addresses one concern — a model change, a logic implementation, an interface update, a test suite. After each slice, you verify.
+mill assembles a team for every ship run. The skill session becomes the **lead** — it orchestrates but never implements directly.
 
-This prevents the most common failure mode in software: the big-bang merge. When you implement everything at once and test at the end, failures compound. When you implement in slices and test after each, failures are isolated and obvious.
+| Role | Purpose |
+|------|---------|
+| **Lead** | Reads the spec, determines team size, delegates work, manages contracts |
+| **Implementer(s)** | 1-4 agents with explicit file ownership boundaries |
+| **Verifier** | Separate agent with clean context — reviews the full changeset |
 
-**The loop:**
+The verifier never sees the implementer's reasoning. This structural independence catches what self-review misses. Work can't grade its own homework.
 
-1. Read the plan
-2. Implement one slice
-3. Run verification
-4. Signal: continue, verify, or abort
-5. Repeat
+When verification rejects, the lead routes specific feedback to the responsible implementer. Fix, re-verify, repeat — maximum 3 cycles before escalating to you. This prevents infinite loops while giving honest attempts to resolve issues.
 
-Maximum 20 iterations by default. If you can't ship in 20 slices, the spec needs refinement.
+## Continuous Learning
 
-## Skills + CLI
+Every skill writes observations during execution — patterns discovered, gaps noticed, conventions found. These observations land in a learning inbox that you review and curate into permanent knowledge.
 
-mill has two halves, each doing what it does best:
-
-**Skills** (the LLM side) handle intelligence — asking questions, drafting specs, making implementation decisions, observing patterns. They understand context and nuance.
-
-**CLI** (the structured side) handles data — reading files, writing JSON, managing drafts, publishing issues, tracking history. It's deterministic and reliable.
-
-This separation is deliberate. You want your AI to be creative and intelligent. You want your data layer to be predictable and exact. Mixing them creates tools that are neither.
+The result: each cycle starts from a deeper understanding. Specs get more precise. Implementations get more accurate. The system compounds.
 
 ## Humans Drive Direction
 
@@ -106,8 +100,9 @@ These principles aren't arbitrary rules. They form an interlocking system:
 - **Specs drive execution** tells you *what* to write
 - **Self-containment** tells you *how well* to write it
 - **Decision completeness** tells you *how thoroughly* to write it
-- **Bounded iterations** tells you *how* to implement it
+- **Team-based delivery** tells you *how* to implement it
 - **Contracts over conversation** tells you *when it's done*
+- **Continuous learning** tells you *what to carry forward*
 - **Humans drive direction** tells you *who decides*
 
 Together, they create a delivery system where intent flows cleanly into outcome. No loss in translation. No drift. No surprises.

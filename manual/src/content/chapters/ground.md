@@ -133,21 +133,15 @@ Every skill reads ground before acting:
 
 This is why ground matters. It's not documentation for humans — it's context for every mill operation. The richer your ground, the better your specs and implementations.
 
-## Commands
+## Using Ground
 
-```bash
-# List all knowledge items
-mill ground list --human
+Everything happens through the skill:
 
-# List by category
-mill ground list personas --human
-
-# Get a specific item
-mill ground get decisions auth-strategy --human
-
-# Create an item
-mill ground create vocabulary invoice "# Invoice\n\nA billing document..."
 ```
+/mill:ground
+```
+
+mill asks what you'd like to do — create knowledge, review observations, sync from code — and walks you through it conversationally. All files are managed as markdown in `.mill/ground/`, readable by both humans and skills.
 
 ## Best Practices
 

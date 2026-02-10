@@ -54,8 +54,8 @@ Five principles guide everything:
 
 1. **Specs drive execution** — no ambiguity, no guessing
 2. **Contracts over conversation** — verification, not vibes
-3. **Bounded iterations** — work in slices, prove after each
-4. **Skills + CLI** — AI for intelligence, structure for reliability
+3. **Team-based delivery** — lead orchestrates, verifier checks independently
+4. **Continuous learning** — every cycle feeds knowledge back
 5. **Humans drive direction** — always
 
 Ready to see what that looks like in practice? Let's talk principles.

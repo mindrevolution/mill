@@ -7,19 +7,19 @@ accent: "flame"
 
 ## The Execution Engine
 
-Ship is where intent becomes reality. You point it at a crafted spec — hosted as a GitHub Issue — and it implements that spec through bounded, verified iterations.
+Ship is where intent becomes reality. You point it at a crafted spec — hosted as a GitHub Issue — and it assembles a team of agents to implement that spec, verify it independently, and open a Pull Request.
 
-This isn't "generate some code." This is **CLI-orchestrated execution**: the `mill ship` command runs the entire loop — worktree isolation, bounded iterations, independent verification, PR creation, and cleanup. One command, full pipeline.
+This isn't "generate some code." This is **team-based delivery**: a lead agent reads your spec, determines the right team size, delegates work with explicit file ownership boundaries, and coordinates until an independent verifier confirms every criterion is met.
 
 ## How It Works
 
 ### 1. Launch
 
-```bash
-mill ship 47
+```
+/mill:ship 47
 ```
 
-That's it. The CLI takes over. It reads GitHub Issue #47, parses the spec structure, and validates that everything needed is present. You can also start from the skill (`/mill:ship 47`) which handles pre-flight checks before delegating to the CLI.
+That's it. mill reads GitHub Issue #47, parses the spec structure, and validates that everything needed is present. If no issue number is given, mill shows open spec issues for you to choose from.
 
 ### 2. Isolate
 
@@ -29,11 +29,11 @@ mill creates a **worktree** — an isolated copy of your repo on a dedicated bra
 .mill/ship/work/issue-47/
 ```
 
-Your main branch stays untouched. All implementation happens in isolation. If anything goes wrong, there's nothing to clean up.
+Your main branch stays untouched. All implementation happens in isolation. If anything goes wrong, there's nothing to clean up on main.
 
 ### 3. Load Context
 
-Before writing a single line of code, the CLI loads:
+Before assembling the team, the lead loads:
 
 - **The spec** — parsed from the GitHub Issue
 - **Project context** from `.mill/context.md` — your codebase overview
@@ -41,55 +41,58 @@ Before writing a single line of code, the CLI loads:
 
 This is why ground matters. A ship run with rich ground knowledge produces dramatically better code than one without.
 
-### 4. Iterate
+### 4. Determine Team Size
 
-The CLI invokes Claude with the spec and context, one iteration at a time. Each iteration implements one slice:
+The lead analyzes the spec's requirements and approach to determine how many implementers are needed:
 
-1. **Implement** — write the code for this concern
-2. **Test** — run the loop contract's test command
-3. **Commit** — save the work
-4. **Signal** — tell the CLI what happened
+| Spec Shape | Implementers |
+|------------|-------------|
+| Single domain, 1-4 approach parts | 1 |
+| Single domain, 5+ approach parts | 2 (split by concern) |
+| Fullstack domain | 2-3 (one per layer) |
+| Complex, 10+ parts | 3-4 |
 
-Signals drive the loop:
+Even a simple spec gets a team-of-1. The lead always delegates — it never implements directly.
 
-**MILL_CONTINUE** — slice done, more work remains
-```json
-{ "done": "Implemented data models", "next": "Add business logic" }
-```
+### 5. Delegate
 
-**MILL_VERIFY** — all slices complete, ready for verification
-```json
-{
-  "branch": "issue-47",
-  "title": "#47: Add PDF export",
-  "summary": "Full export flow with template rendering",
-  "verification": "All 14 tests passing"
-}
-```
+The lead spawns implementer agents. Each gets:
 
-**MILL_ABORT** — spec can't be implemented as written
-```
-MILL_ABORT: Required dependency not available
-```
+- Their portion of the spec (specific task assignments)
+- Project context and domain guidance
+- **Explicit file ownership boundaries** — "you may only edit files in `src/api/` and `src/models/`"
+- The worktree path as working directory
 
-The CLI manages up to 20 iterations. Each iteration gets the full context plus any rejection feedback from previous verification attempts.
+File ownership prevents conflicts when multiple implementers work in parallel. The lead manages cross-team contracts — if a backend implementer defines an API shape, the lead communicates that contract to the frontend implementer.
 
-### 5. Verify Independently
+### 6. Verify Independently
 
 This is the key insight: **work can't grade its own homework.**
 
-After `MILL_VERIFY`, the CLI spins up a *separate* Claude instance — one that didn't write the code — to verify the implementation against the spec:
+After all implementers complete their tasks, the lead spawns a **verifier** — a separate agent with clean context that never saw the implementer's reasoning. The verifier:
 
-- Run the full test suite
-- Check every acceptance criterion
-- Review the diff for quality, security, and scope creep
+- Reviews the full `git diff` for the changeset
+- Runs the test suite
+- Checks every acceptance criterion from the spec
+- Looks for quality issues, security concerns, and scope creep
 
 If verification passes → proceed to PR.
-If verification rejects → feed the blockers back to the implementation loop and iterate again.
+If verification rejects → the lead routes specific feedback to the responsible implementer(s).
 
-### 6. Create PR
+### 7. Rejection Cycles
 
-The CLI creates a Pull Request with:
+When the verifier rejects, the cycle is precise:
+
+1. Verifier reports specific blockers with suggestions
+2. Lead identifies which implementer owns the affected code
+3. That implementer receives the feedback and fixes the issues
+4. Verifier re-checks with clean context
+
+Maximum **3 rejection cycles** before escalating to you. This prevents infinite loops while giving honest attempts to resolve issues.
+
+### 8. Create PR
+
+mill creates a Pull Request with:
 
 - Title referencing the issue
 - Description linking the spec
@@ -98,34 +101,29 @@ The CLI creates a Pull Request with:
 
 The PR connects back to the spec issue, creating full traceability from intent → spec → implementation → review.
 
-### 7. Clean Up and Record
+### 9. Clean Up and Record
 
-After completion, the CLI:
+After completion, mill:
 
 - Removes the worktree (clean slate)
 - Records the run in `.mill/ship/history.json`
 
-History tracks everything: issue, PR, iterations, duration, outcome. Over time, this data shows trends — are specs getting smaller? Are ship runs getting faster? Where do failures cluster?
+History tracks everything: issue, PR, team size, duration, outcome. Over time, this data shows trends — are specs getting smaller? Are ship runs getting faster? Where do failures cluster?
 
-## Slicing Philosophy
+## Structural Independence
 
-The slice model is borrowed from the idea of separation of concerns, applied to time:
+The verifier is always a separate agent. This isn't a stylistic choice — it's the only way to get genuine review.
 
-| Concern | What It Covers | Why It's Separate |
-|---------|---------------|-------------------|
-| **Model** | Data structures, schemas | Foundation that everything builds on |
-| **Logic** | Business rules, services | Pure logic, testable in isolation |
-| **Interface** | API/UI layer | Connects logic to users |
-| **Tests** | Verification coverage | Proves everything works |
+When you review your own work, you see what you *intended* to write, not what you *actually* wrote. A fresh pair of eyes catches what self-review misses: edge cases, inconsistencies, scope creep, subtle bugs.
 
-You wouldn't write a function that handles data, UI, and business logic in one blob. Similarly, you shouldn't implement all concerns in one iteration. The plan is written to the worktree for reference across iterations.
+mill enforces this structurally. The verifier has no access to the implementer's reasoning, planning, or intermediate thoughts. It only sees the spec and the resulting code.
 
 ## Autonomy and Judgment
 
 Ship is designed to be mostly autonomous. The spec should be complete enough that implementation doesn't need constant human input. But the system isn't reckless:
 
-- **Genuine ambiguity** → ask the user (e.g., "spec says 'handle errors gracefully' — which approach?")
-- **Implementation details** → decide autonomously (e.g., variable names, internal structure)
+- **Genuine ambiguity** → ask the user
+- **Implementation details** → decide autonomously
 - **Scope creep** → flag it, don't add unrequested features
 
 The rule is simple: honor the spec. Don't add what wasn't asked for. Don't skip what was specified. Build exactly what was contracted.
@@ -139,35 +137,27 @@ While implementing, mill observes:
 - Code patterns not tracked in ground
 - Dependencies not in the stack inventory
 
-These observations are written to `.mill/observations/ship-{issue}-{slug}.md` without interrupting the flow. They'll be reviewed later in the ground review cycle.
+These observations are written to `.mill/observations/` without interrupting the flow. They'll be reviewed later in the ground review cycle.
 
 ## When Things Go Wrong
 
 ### Tests fail
 
-The CLI feeds test failures back into the next iteration. The signal system means the implementation knows exactly what failed and can address it.
+Implementers receive test failures and address them as part of their task. Each implementer commits after getting tests to pass.
 
 ### Verification rejects
 
-The independent verifier found issues. The CLI pipes the rejection blockers back to the implementation loop for another round. This cycle continues until verification passes or the iteration limit is hit.
+The verifier found issues. The lead routes rejection feedback to the responsible implementer(s) for another round. Maximum 3 cycles.
 
 ### Spec has gaps
 
-If the spec is missing information that blocks implementation, the signal `MILL_ABORT` fires with a clear reason. The spec goes back to the drafting stage.
+If the spec is missing information that blocks implementation, the lead escalates to you with a clear description of what's needed. The spec goes back to the drafting stage.
 
-### Too many iterations
+### Fallback mode
 
-If the 20-iteration limit is reached, the CLI stops and reports what was accomplished. This usually means the spec needs to be broken into smaller pieces.
-
-### External dependencies missing
-
-If a required service, library, or API isn't available, the implementation aborts with a description of what's missing rather than working around it.
+If agent teams aren't available (experimental feature disabled), ship falls back to single-session mode: the lead implements directly, then does an explicit self-review phase against the spec. Degraded but functional.
 
 ## History and Trends
-
-```bash
-mill history --human
-```
 
 History tells the story of your project's delivery:
 

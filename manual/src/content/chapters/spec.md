@@ -87,12 +87,6 @@ Before publishing, mill validates your spec against the principles:
 
 When validation passes, mill creates a GitHub Issue. The issue becomes the canonical spec. The local draft is deleted. One source of truth.
 
-```bash
-mill draft publish add-pdf-export --human
-→ Published as issue #47
-→ https://github.com/org/repo/issues/47
-```
-
 ## Domain Awareness
 
 Specs include a domain that shapes execution guidance:
@@ -105,7 +99,7 @@ Specs include a domain that shapes execution guidance:
 | **platform** | Infrastructure-as-code, containers, observability |
 | **fullstack** | All of the above |
 
-Domain guidance isn't just decorative. When `mill ship` implements a backend spec, it follows backend patterns. When it implements a website spec, it optimizes for Web Vitals and visual fidelity.
+Domain guidance isn't just decorative. When `/mill:ship` implements a backend spec, it follows backend patterns. When it implements a website spec, it optimizes for Web Vitals and visual fidelity.
 
 ## Observations During Drafting
 

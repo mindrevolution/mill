@@ -23,11 +23,11 @@ spark → developing → ready → spec (or drop with essence)
 
 The minimum viable idea. A title and an intent — nothing more:
 
-```bash
-mill idea create "Inline code review" "Let reviewers comment directly on specific lines"
+```
+/mill:idea "Inline code review"
 ```
 
-That's it. No requirements. No approach. No criteria. Just enough to not forget.
+mill asks a couple of quick questions, and the idea is saved. No requirements. No approach. No criteria. Just enough to not forget.
 
 ### Developing
 
@@ -54,11 +54,7 @@ An idea is ready when:
 
 **Promote:** The idea graduates to a draft spec. mill carries over the context — title, intent, persona, notes — so the spec workflow starts with everything you've already thought through.
 
-**Drop:** The idea isn't worth pursuing. But the learning isn't lost. You capture the *essence* — why it was considered and why it was dropped:
-
-```bash
-mill idea drop inline-review "Users prefer the existing GitHub review flow. The friction point is actually notification timing, not review interface."
-```
+**Drop:** The idea isn't worth pursuing. But the learning isn't lost. mill asks you to capture the *essence* — why it was considered and why it was dropped.
 
 That essence goes into `dropped.json`. Future ideas can reference past learnings. Next time someone suggests "inline code review," you know what happened last time and why.
 
@@ -82,25 +78,13 @@ These learnings prevent your team from circling the same ideas. And they inform 
 
 mill asks a few quick questions and creates the idea file in `.mill/idea/active/`.
 
-### Browse
+### Browse and Develop
 
-```bash
-mill idea list --human
+```
+/mill:idea
 ```
 
-See all active ideas with their stage and age.
-
-### Develop
-
-Open an idea and continue fleshing it out. mill picks up where you left off, asking about the gaps.
-
-### Review Dropped Ideas
-
-```bash
-mill idea dropped --human
-```
-
-The dropped ideas archive — learnings from the ideas that didn't make it.
+mill shows your active ideas with their stage and age. Pick one to develop — mill picks up where you left off, asking about the gaps. You can also review dropped ideas and their captured learnings.
 
 ## Integration with the Cycle
 
