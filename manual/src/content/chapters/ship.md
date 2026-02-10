@@ -120,11 +120,11 @@ mill enforces this structurally. The verifier has no access to the implementer's
 
 ## Autonomy and Judgment
 
-Ship is designed to be mostly autonomous. The spec should be complete enough that implementation doesn't need constant human input. But the system isn't reckless:
+Ship is autonomous. The spec is the complete instruction set — implementers don't have a line back to you during execution.
 
-- **Genuine ambiguity** → ask the user
-- **Implementation details** → decide autonomously
-- **Scope creep** → flag it, don't add unrequested features
+- **Implementation details** — decided by the implementer within spec boundaries
+- **Scope creep** — the verifier catches anything that wasn't in the spec
+- **Spec gaps** — if something blocks implementation, the lead escalates and the spec goes back to drafting
 
 The rule is simple: honor the spec. Don't add what wasn't asked for. Don't skip what was specified. Build exactly what was contracted.
 
