@@ -1,5 +1,4 @@
 ---
-name: idea
 description: "Capture a rough idea (30-day lifecycle) • https://mill.mindrevolution.com/idea"
 allowed-tools: Read, Write, Glob, Bash(*rm *)
 argument-hint: "[title] - start capturing a new idea"

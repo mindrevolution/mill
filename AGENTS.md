@@ -17,7 +17,7 @@ mill/
 ├── plugin/                     # Plugin distribution root (cached on install)
 │   ├── .claude-plugin/
 │   │   └── plugin.json         # Plugin manifest
-│   ├── skills/                 # Skill prompts
+│   ├── commands/               # Slash commands (user-invoked)
 │   └── templates/              # Archetypes, stacks, specs, domains, teammates
 ├── manual/                     # Documentation site (Astro)
 └── AGENTS.md
@@ -190,7 +190,7 @@ Then in your project:
 
 ## Development
 
-Edit `plugin/skills/*/SKILL.md` and `plugin/templates/**/*.md` directly. Test by running the skills in a project with `.mill/` initialized.
+Edit `plugin/commands/*.md` and `plugin/templates/**/*.md` directly. Test by running the skills in a project with `.mill/` initialized.
 
 ## Key Principles
 

@@ -1,5 +1,4 @@
 ---
-name: init
 description: "Initialize mill in your project • https://mill.mindrevolution.com/init"
 allowed-tools: Read, Write, Glob, Bash(*mkdir *, *git *)
 ---
