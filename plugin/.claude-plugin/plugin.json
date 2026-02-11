@@ -1,6 +1,6 @@
 {
   "name": "mill",
-  "version": "0.6.2-beta",
+  "version": "0.6.3-beta",
   "description": "Skill pack that turns intent into verified PRs — spec drafting, agent teams, independent verification, and continuous learning built into Claude Code",
   "author": {
     "name": "mindrevolution"
