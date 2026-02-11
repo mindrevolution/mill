@@ -19,24 +19,29 @@ You are working in: `{{WORKTREE_PATH}}`
    {{TEST_COMMAND}}
    ```
 
-2. **Review the full changeset:**
+2. **Run verification commands:**
+   ```bash
+   {{VERIFICATION_COMMANDS}}
+   ```
+
+3. **Review the full changeset:**
    ```bash
    git diff {{DEFAULT_BRANCH}}...HEAD
    ```
 
-3. **Check each spec criterion:**
+4. **Check each spec criterion:**
    Go through every acceptance criterion in the spec. For each one, verify:
    - Is it implemented?
    - Does it work correctly?
    - Are edge cases handled?
 
-4. **Review code quality:**
+5. **Review code quality:**
    - Missing edge cases
    - Security concerns
    - Unrequested changes or scope creep
    - Code that contradicts project conventions
 
-5. **Report your findings**
+6. **Report your findings**
 
 ## Verdict
 

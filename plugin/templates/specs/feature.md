@@ -93,7 +93,7 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 - **Success Criteria:** All acceptance criteria pass; all verification commands succeed
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{additional checks}}
-- **Stop Conditions:** {{max iterations}} iterations
+- **Max Iterations:** 5
 
 ---
 

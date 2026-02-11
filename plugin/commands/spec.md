@@ -208,8 +208,9 @@ approach: A
 {commands, manual checks}
 
 ## Loop Contract
-**Test command:** `npm test`
-**Stop conditions:** 20 iterations max
+**Test Command:** `npm test`
+**Max Iterations:** 5
+**Verification Commands:** {additional checks}
 ```
 
 ### 4. Elicit Requirements
@@ -251,7 +252,7 @@ All `core` and `must-have` requirements need both approach parts and criteria.
 - [ ] No ⚠️ flags remain in approach
 - [ ] All criteria are testable conditions
 - [ ] Scope clear (in/out)
-- [ ] Loop Contract present
+- [ ] Loop Contract present with concrete max iterations and test command
 
 **Status:** Set `status: ready` only when all checks pass. Otherwise remains `status: draft`.
 

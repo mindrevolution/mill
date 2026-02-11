@@ -91,7 +91,7 @@ High | Medium | Low
 - **Success Criteria:** All acceptance criteria met; no regressions; verification passes
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{additional checks}}
-- **Stop Conditions:** {{max iterations}} iterations
+- **Max Iterations:** 5
 
 ---
 

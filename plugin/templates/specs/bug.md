@@ -96,7 +96,7 @@ Then: {{should NOT exhibit bug behavior}}
 - **Success Criteria:** Bug no longer reproducible; regression test passes; all existing tests pass
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{additional checks}}
-- **Stop Conditions:** {{max iterations}} iterations
+- **Max Iterations:** 5
 
 ---
 

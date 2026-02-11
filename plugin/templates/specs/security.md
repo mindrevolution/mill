@@ -171,7 +171,7 @@ Expected: {{attack fails, appropriate response}}
 - **Success Criteria:** Attack vector closed; security test passes; no regressions
 - **Test Command:** `{{test runner command}}` — must pass before PR
 - **Verification Commands:** {{security test commands}}
-- **Stop Conditions:** {{max iterations}} iterations
+- **Max Iterations:** 5
 - **Escalation:** Immediately if Critical/High and blocked
 
 ---

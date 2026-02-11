@@ -50,24 +50,41 @@ All file I/O, GitHub integration, and context checking happens through Claude Co
 
 ### How Team Size is Determined
 
-| Spec Shape | Implementers |
-|------------|-------------|
-| Single domain, 1-4 approach parts | 1 |
-| Single domain, 5+ approach parts | 2 (split by concern) |
-| Fullstack domain | 2-3 (one per layer) |
-| Complex, 10+ parts | 3-4 |
+Part count drives team size — no override based on coupling assessment:
+
+| Approach Parts | Domain | Implementers |
+|----------------|--------|-------------|
+| 1–4 | Single | 1 |
+| 5–9 | Single | 2 (split by concern) |
+| Any | Fullstack | 2–3 (one per layer) |
+| 10+ | Any | 3–4 |
 
 ### Structural Independence
 
 The verifier is always a separate agent that never sees the implementer's reasoning. This isn't a stylistic choice — it's the only way to get genuine review. Work can't grade its own homework.
 
-### Rejection Cycles
+### Iteration Loop
 
-Verifier rejects → lead routes specific feedback to the responsible implementer → implementer fixes → verifier re-checks. Maximum 3 cycles before escalating to the user.
+Ship uses the spec's **Loop Contract** to govern iteration cycles instead of a hardcoded limit.
+
+Verifier rejects → lead builds cumulative iteration feedback (blockers, fixes attempted, what passed) → responsible implementer gets full history → implementer fixes → verifier re-checks with clean context (no iteration history). Cycles continue up to the Loop Contract's `max_iterations` (default 5), then escalate to the user with options to continue, PR as-is, or abort.
+
+### Loop Contract
+
+Every spec includes a Loop Contract that controls ship's iteration behavior:
+
+| Field | Purpose | Default |
+|-------|---------|---------|
+| **Max Iterations** | Maximum implement→verify cycles before escalating | 5 |
+| **Test Command** | Must pass before PR | Detected from project |
+| **Verification Commands** | Additional checks run by implementer and verifier | None |
+| **Success Criteria** | What "done" looks like | All acceptance criteria pass |
+
+Ship parses the Loop Contract from the spec body and supports both `Max Iterations` and the legacy `Stop Conditions` field name.
 
 ### Fallback
 
-If agent teams aren't available (experimental feature disabled), ship falls back to single-session mode: lead implements directly, then does an explicit self-review phase against the spec. Degraded but functional.
+If agent teams aren't available (experimental feature disabled), ship falls back to single-session mode: lead implements directly, then does an explicit self-review phase against the spec. Iteration limit still governed by Loop Contract (default 5). Degraded but functional.
 
 ## Domains
 

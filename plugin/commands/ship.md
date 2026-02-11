@@ -8,6 +8,8 @@ argument-hint: "<issue-number> - GitHub issue to implement"
 
 Implement a spec as a team. You are the **lead** — you orchestrate, delegate, and verify. You never implement directly when teammates are available.
 
+**IMPORTANT: `mill` is NOT a CLI tool. Never run `mill` as a shell command. All operations below use Claude Code's native tools (Read, Write, Edit, Glob, Grep, Bash) directly.**
+
 ## Interaction Pattern
 
 Ship is mostly autonomous — the spec should be complete from `/mill:spec`. **Use AskUserQuestion only when:**
@@ -51,6 +53,13 @@ gh issue view {N} --json number,title,body,labels,state,createdAt
 
 Parse the JSON. Confirm the spec is open and has a type label.
 
+**Parse Loop Contract** from the spec body:
+- Extract `max_iterations` — look for `**Max Iterations:**` first, fall back to `**Stop Conditions:**`. Default: `5` if missing or still a placeholder (`{{...}}`).
+- Extract `test_command` — from `**Test Command:**`
+- Extract `verification_commands` — from `**Verification Commands:**`
+
+Store these values for use in steps 4, 7, 9, and 10.
+
 ### 3. Load Context + Domain Guidance
 
 Check context freshness inline:
@@ -72,7 +81,12 @@ git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo "refs/remotes/orig
 ```
 Parse the branch name (last segment).
 
-Detect test command by inspecting the project (e.g., `package.json` scripts, `Makefile`, `pyproject.toml`, CI workflows). If ambiguous, ask the user.
+Detect test command. **Precedence order:**
+1. **Loop Contract** `test_command` from the spec (if concrete, not a placeholder)
+2. **Project files** — inspect `package.json` scripts, `Makefile`, `pyproject.toml`, CI workflows
+3. **Ask the user** — if still ambiguous
+
+Similarly, store `verification_commands` from the Loop Contract for use in implementer and verifier prompts. If empty or placeholder, set to `echo "no additional verification commands"`.
 
 ### 5. Create Worktree
 
@@ -85,23 +99,22 @@ If the branch already exists (from a previous attempt):
 git worktree add .mill/ship/work/issue-{N} issue-{N}
 ```
 
-Copy context to worktree:
-```
-Read(".mill/context.md") → Write(".mill/ship/work/issue-{N}/.mill/context.md", content)
-```
+Copy context to worktree using the Read and Write tools (not `cp`):
+1. Use the **Read** tool on `.mill/context.md`
+2. Use the **Write** tool to save the content to `.mill/ship/work/issue-{N}/.mill/context.md`
 
-### 6. Analyze Spec → Determine Team Size
+### 6. Determine Team Size
 
-Analyze requirements (R) and approach (A) parts from the spec:
+Count the approach parts (A) in the spec and apply this table. Do not override based on coupling assessment — part count is the determinant:
 
-| Spec Shape | Team Size |
-|------------|-----------|
-| Single domain, simple (1-4 approach parts) | 1 implementer |
-| Single domain, moderate (5+ approach parts) | 2 implementers (split by concern) |
-| Fullstack domain | 2-3 implementers (one per layer) |
-| Complex (10+ parts, multiple concerns) | 3-4 implementers |
+| Approach Parts | Domain | Team Size |
+|----------------|--------|-----------|
+| 1–4 | Single | 1 implementer |
+| 5–9 | Single | 2 implementers (split by concern) |
+| Any | Fullstack | 2–3 implementers (one per layer) |
+| 10+ | Any | 3–4 implementers |
 
-Always: +1 verifier (separate from implementers).
+Always +1 verifier (separate from implementers).
 
 ### 7. Spawn Implementers
 
@@ -124,6 +137,8 @@ Use `Task` tool with `subagent_type: "general-purpose"`. Build the prompt by rea
 - `{{DOMAIN_GUIDANCE}}` → domain template content
 - `{{TEST_COMMAND}}` → detected test command
 - `{{WORKTREE_PATH}}` → absolute path to worktree
+- `{{ITERATION_FEEDBACK}}` → cumulative iteration log (see step 10). First run: `"First implementation pass — no prior iteration history."`
+- `{{VERIFICATION_COMMANDS}}` → from Loop Contract (or `echo "no additional verification commands"` if none)
 
 For a team-of-1: single implementer gets the full spec and all files.
 
@@ -147,6 +162,9 @@ Discover verifier template via `Glob("**/templates/teammates/verifier.md")`, rea
 - `{{WORKTREE_PATH}}` → absolute path to worktree
 - `{{TEST_COMMAND}}` → detected test command
 - `{{DEFAULT_BRANCH}}` → detected from git
+- `{{VERIFICATION_COMMANDS}}` → from Loop Contract (or `echo "no additional verification commands"` if none)
+
+The verifier receives NO iteration history — clean context is preserved across all cycles.
 
 Use `Task` tool with `subagent_type: "general-purpose"`.
 
@@ -160,12 +178,49 @@ The verifier:
 
 **Pass** → Proceed to step 11 (Create PR).
 
-**Reject** → Route specific feedback to the relevant implementer(s):
+**Reject** → Loop Contract-driven iteration:
+
+Track cumulative iteration state:
+- `cycle` — current cycle number (starts at 1)
+- `max_iterations` — from Loop Contract (default 5)
+- `history` — list of `{ cycle, blockers, fixes_attempted, what_passed }`
+
+For each rejection cycle:
 1. Parse verifier's blockers
 2. Match each blocker to the implementer who owns those files
-3. Re-launch that implementer with the rejection feedback appended to their prompt
-4. After fix, re-run verifier
-5. Maximum 3 rejection cycles. If still failing after 3, report to user with details.
+3. Append to iteration history: `{ cycle, blockers, fixes_attempted: [], what_passed: [criteria that passed] }`
+4. Build `{{ITERATION_FEEDBACK}}` from cumulative history — a formatted log of all previous cycles:
+   ```
+   ## Iteration History
+   ### Cycle 1
+   **Blockers:** {list}
+   **Fixes attempted:** {list}
+   **What passed:** {list}
+   ### Cycle 2
+   ...
+   **IMPORTANT:** Address all current blockers. Do NOT regress on items that already passed.
+   ```
+5. Re-launch the responsible implementer(s) with updated `{{ITERATION_FEEDBACK}}`
+6. After fix, re-run verifier (always with clean context — no iteration history)
+7. Increment cycle counter
+
+**On exhaustion** (cycle > max_iterations):
+Report to user with full iteration log and offer options:
+
+```yaml
+AskUserQuestion:
+  question: "Reached {max_iterations} iteration cycles. How to proceed?"
+  header: "Iterations"
+  options:
+    - label: "Continue iterating"
+      description: "Grant {N} more cycles"
+    - label: "Create PR as-is"
+      description: "Open PR with known issues documented"
+    - label: "Abort"
+      description: "Remove worktree and stop"
+```
+
+If user chooses "Continue iterating," ask how many additional cycles and resume the loop. If "Create PR as-is," proceed to step 11 with issues noted. If "Abort," skip to step 12 (cleanup only).
 
 ### 11. Create PR
 
@@ -190,6 +245,11 @@ Closes #{N}
 ## Verification
 - All spec criteria verified by independent reviewer
 - Test command: `{test_command}` — passing
+{if cycles > 1:}
+## Iteration Summary
+- **Cycles:** {cycle} of {max_iterations}
+- {brief summary of what was fixed across iterations}
+{end if}
 
 🤖 Claude
 ```
@@ -228,7 +288,7 @@ If agent teams are not available (Task tool limited or experimental features dis
    - Run `git diff {default_branch}...HEAD` and review the full changeset
    - Run test command
    - Check each criterion
-4. If issues found, fix and re-verify (max 3 cycles)
+4. If issues found, fix and re-verify (up to Loop Contract `max_iterations`, default 5)
 5. Create PR as normal
 
 Report to user: "Running in single-session mode (agent teams not available)"
@@ -249,6 +309,6 @@ These are reviewed later via `/mill:ground`. Don't interrupt the ship flow.
 2. **Verifier is always separate** — clean context, never saw implementation reasoning
 3. **Spec drives everything** — implement what's specified, nothing more
 4. **Test before PR** — all tests must pass
-5. **Max 3 rejection cycles** — if still failing, escalate to user
+5. **Loop Contract governs iterations** — max cycles from spec (default 5), then escalate to user
 6. **Always clean up** — worktree removed after PR creation
 7. **Commits reference issue** — every commit message includes `#{N}`
