@@ -66,6 +66,10 @@ Part count drives team size — no override based on coupling assessment:
 | Any | Fullstack | 2–3 (one per layer) |
 | 10+ | Any | 3–4 |
 
+### Polish Pass
+
+After implementation completes, each implementer gets one bounded pass to polish and self-review before the verifier sees the code. Polish the code (simplify, clean up, improve naming), then review against every spec criterion. This raises the floor for the verifier and reduces rejection cycles.
+
 ### Structural Independence
 
 The verifier is always a separate agent that never sees the implementer's reasoning. This isn't a stylistic choice — it's the only way to get genuine review. Work can't grade its own homework.

@@ -151,11 +151,30 @@ Watch task completion. When implementers report:
 - **Need clarification** → Lead resolves or relays to user
 - **Cross-team dependency** → Lead relays contracts between teammates (e.g., "backend teammate says the API shape is `{...}`, use this")
 - **Stuck** → Lead redirects with specific guidance
-- **Done** → Proceed to verification when all implementers complete
+- **Done** → Proceed to polish pass when all implementers complete
+
+### 8b. Polish Pass
+
+After all implementers report done, re-launch each implementer once with a polish-and-review prompt. Rebuild the full prompt from the implementer template (step 7) with all original placeholders, but set `{{ITERATION_FEEDBACK}}` to:
+
+```
+## Polish Pass
+
+Implementation is complete. Before independent verification, you have one pass to:
+
+1. **Polish** — review your full changeset (`git diff {default_branch}...HEAD` in your worktree). Clean up rough edges: simplify logic, improve naming, remove dead code, tighten error handling. Make it code you'd be proud to submit for review.
+2. **Review** — check every spec criterion against the diff. Fix anything that doesn't fully meet the bar.
+3. **Test** — run the test command and verification commands. Ensure everything passes.
+4. **Commit** — commit any polish changes referencing the issue.
+
+This is your last pass before an independent verifier reviews the full changeset.
+```
+
+This is a single bounded pass — not an improvement loop. When implementers report done from the polish pass, proceed to the verifier.
 
 ### 9. Spawn Verifier
 
-After all implementation tasks complete, spawn a verifier — a separate teammate with clean context.
+After the polish pass completes, spawn a verifier — a separate teammate with clean context.
 
 Load the verifier template from [templates/teammates/verifier.md](templates/teammates/verifier.md) and substitute:
 - `{{ISSUE_NUMBER}}` → issue number
@@ -201,8 +220,8 @@ For each rejection cycle:
    ...
    **IMPORTANT:** Address all current blockers. Do NOT regress on items that already passed.
    ```
-5. Re-launch the responsible implementer(s) with updated `{{ITERATION_FEEDBACK}}`
-6. After fix, re-run verifier (always with clean context — no iteration history)
+5. Re-launch the responsible implementer(s) — rebuild the full prompt from the implementer template (step 7) with all original placeholders, substituting the updated `{{ITERATION_FEEDBACK}}`
+6. After fix, re-run verifier — rebuild the full prompt from the verifier template (step 9), always with clean context (no iteration history)
 7. Increment cycle counter
 
 **On exhaustion** (cycle > max_iterations):
