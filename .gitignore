@@ -27,6 +27,9 @@ manual/node_modules/
 manual/.astro/
 manual/dist/
 
+# Dev tooling
+dev-link.ps1
+
 # Temp files
 tmp/
 nul
