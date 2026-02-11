@@ -1,5 +1,6 @@
 ---
 description: "Capture a rough idea (30-day lifecycle) • https://mill.mindrevolution.com/idea"
+disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Bash(*rm *)
 argument-hint: "[title] - start capturing a new idea"
 ---

@@ -1,5 +1,6 @@
 ---
 description: "Initialize mill in your project • https://mill.mindrevolution.com/init"
+disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Bash(*mkdir *, *git *)
 ---
 

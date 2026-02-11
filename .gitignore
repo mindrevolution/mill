@@ -13,7 +13,6 @@ out/
 
 # mill dogfooding — using mill to develop mill itself
 # These artifacts are generated when running mill skills on this repo.
-spec/
 .mill/
 CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
 

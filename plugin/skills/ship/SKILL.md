@@ -1,5 +1,6 @@
 ---
 description: "Implement a spec → Pull Request • https://mill.mindrevolution.com/ship"
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(*gh *, *git *, *rm *, *mkdir *)
 argument-hint: "<issue-number> - GitHub issue to implement"
 ---
@@ -67,11 +68,11 @@ Check context freshness inline:
 2. `git rev-parse HEAD` — compare
 3. If missing or stale, run `/mill:warmup` first
 
-Load domain guidance from the plugin:
-```
-Glob("**/templates/domains/{domain}.md")
-```
-Read the match. Where `{domain}` comes from the spec's labels (backend, application, website, platform).
+Load domain guidance from the skill's supporting files. Read the template matching the spec's domain label:
+- Backend: [templates/domains/backend.md](templates/domains/backend.md)
+- Application: [templates/domains/application.md](templates/domains/application.md)
+- Website: [templates/domains/website.md](templates/domains/website.md)
+- Platform: [templates/domains/platform.md](templates/domains/platform.md)
 
 ### 4. Detect Project Settings
 
@@ -126,7 +127,7 @@ For each implementer, use the Task tool to launch a teammate agent. Each gets:
 4. **File ownership boundaries** — explicit: "you may ONLY edit files in src/api/ and src/models/"
 5. **Working directory** — the worktree path `.mill/ship/work/issue-{N}/`
 6. **Test command** — detected from project
-7. **Teammate prompt template** — load from plugin via `Glob("**/templates/teammates/implementer.md")` and fill placeholders
+7. **Teammate prompt template** — load [templates/teammates/implementer.md](templates/teammates/implementer.md) and fill placeholders
 
 Use `Task` tool with `subagent_type: "general-purpose"`. Build the prompt by reading the discovered implementer template and substituting:
 - `{{ISSUE_NUMBER}}` → issue number
@@ -156,7 +157,7 @@ Watch task completion. When implementers report:
 
 After all implementation tasks complete, spawn a verifier — a separate teammate with clean context.
 
-Discover verifier template via `Glob("**/templates/teammates/verifier.md")`, read it, and substitute:
+Load the verifier template from [templates/teammates/verifier.md](templates/teammates/verifier.md) and substitute:
 - `{{ISSUE_NUMBER}}` → issue number
 - `{{SPEC_CONTENT}}` → full spec body
 - `{{WORKTREE_PATH}}` → absolute path to worktree

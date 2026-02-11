@@ -1,5 +1,6 @@
 ---
 description: "Define who you build for and how • https://mill.mindrevolution.com/ground"
+disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Bash(*rm *, *git *)
 argument-hint: "[category] - personas, rules, decisions, vocabulary, or review"
 ---

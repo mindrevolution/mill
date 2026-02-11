@@ -1,5 +1,6 @@
 ---
 description: "Turn intent into a precise, complete spec • https://mill.mindrevolution.com/spec"
+disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Bash(*gh *, *git *, *rm *)
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 ---
@@ -75,8 +76,11 @@ Write(".mill/spec/drafts/{slug}.md", content)
 # Load ground knowledge
 Glob(".mill/ground/**/*.md") → Read each
 
-# Load spec templates
-Glob("**/templates/specs/*.md") → Read the appropriate template
+# Load spec template for the classified type
+# Feature: see [templates/feature.md](templates/feature.md)
+# Bug: see [templates/bug.md](templates/bug.md)
+# Task: see [templates/task.md](templates/task.md)
+# Security: see [templates/security.md](templates/security.md)
 
 # Check context freshness (inline — see warmup skill)
 Read(".mill/context.md") → extract hash → git rev-parse HEAD → compare
@@ -307,10 +311,11 @@ AskUserQuestion:
 
 ## Templates
 
-Load spec templates from the plugin:
-```
-Glob("**/templates/specs/*.md") → Read the appropriate template
-```
+Load the spec template matching the classified type:
+- Feature: [templates/feature.md](templates/feature.md)
+- Bug: [templates/bug.md](templates/bug.md)
+- Task: [templates/task.md](templates/task.md)
+- Security: [templates/security.md](templates/security.md)
 
 ## Observations
 

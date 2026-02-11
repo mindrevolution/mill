@@ -17,8 +17,15 @@ mill/
 ├── plugin/                     # Plugin distribution root (cached on install)
 │   ├── .claude-plugin/
 │   │   └── plugin.json         # Plugin manifest
-│   ├── commands/               # Slash commands (user-invoked)
-│   └── templates/              # Specs, domains, teammates
+│   └── skills/                 # Skills (SKILL.md + supporting files)
+│       ├── ship/
+│       │   ├── SKILL.md
+│       │   └── templates/      # Teammates, domain guidance
+│       ├── spec/
+│       │   ├── SKILL.md
+│       │   └── templates/      # Spec type templates
+│       └── {init,ground,idea,warmup}/
+│           └── SKILL.md
 ├── manual/                     # Documentation site (Astro)
 └── AGENTS.md
 ```
