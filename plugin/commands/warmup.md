@@ -7,13 +7,15 @@ allowed-tools: Read, Write, Glob, Grep, Bash(*git *)
 
 Orient Claude to your codebase. Loads existing context if fresh, regenerates if stale.
 
-## Step 1: Check Context Status
+**IMPORTANT: `mill` is NOT a CLI tool. Never run `mill` as a shell command. All operations below use Claude Code's Read, Write, Glob, Grep, and Bash(git) tools directly.**
 
-Determine freshness inline:
+## Step 1: Determine Freshness
 
-1. Read `.mill/context.md` — extract hash from first line: `<!-- mill-context-hash: {HASH} -->`
+Use the Read tool and `git` commands only:
+
+1. Use the **Read** tool on `.mill/context.md` — extract hash from first line: `<!-- mill-context-hash: {HASH} -->`
    - If file doesn't exist → freshness is `missing`
-2. Get current commit: `git rev-parse HEAD`
+2. Run `git rev-parse HEAD` to get current commit
 3. If hashes match → freshness is `fresh`
 4. If hashes differ: `git rev-list --count {HASH}..HEAD` to get distance
    - 1–25 commits → freshness is `recent`
