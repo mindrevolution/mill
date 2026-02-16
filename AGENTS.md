@@ -212,6 +212,10 @@ Then in your project:
 
 Edit `plugin/commands/*.md` and `plugin/templates/**/*.md` directly. Test by running the skills in a project with `.mill/` initialized.
 
+## Version Sync
+
+When bumping the plugin version in `plugin/.claude-plugin/plugin.json`, also update the manual hero version badge in `manual/src/pages/index.astro` (minor version only, e.g. `v0.7 beta`).
+
 ## Key Principles
 
 1. **Specs drive execution** — GitHub Issues are source of truth
