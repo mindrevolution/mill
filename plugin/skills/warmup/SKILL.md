@@ -7,8 +7,6 @@ allowed-tools: Read, Write, Glob, Grep, Bash(*git *)
 
 Orient Claude to your codebase. Loads existing context if fresh, regenerates if stale.
 
-**IMPORTANT: `mill` is NOT a CLI tool. Never run `mill` as a shell command. All operations below use Claude Code's Read, Write, Glob, Grep, and Bash(git) tools directly.**
-
 ## Step 1: Determine Freshness
 
 Use the Read tool and `git` commands only:

@@ -9,8 +9,6 @@ argument-hint: "[title] - start capturing a new idea"
 
 Capture ideas with intent. Ideas have a 30-day lifecycle — develop them into specs or drop them with learned essence.
 
-**IMPORTANT: `mill` is NOT a CLI tool. Never run `mill` as a shell command. All operations use Claude Code's tools directly.**
-
 ## Interaction Pattern
 
 **Always use the AskUserQuestion tool** for gathering information. Present 2-4 options plus free text. Before each question round, share a brief perspective — what you think, what you noticed, what you'd recommend. This is a design conversation, not a survey.

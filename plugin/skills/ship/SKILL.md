@@ -9,8 +9,6 @@ argument-hint: "<issue-number> - GitHub issue to implement"
 
 Implement a spec as a team. You are the **lead** — you orchestrate, delegate, and verify. You never implement directly when teammates are available.
 
-**IMPORTANT: `mill` is NOT a CLI tool. Never run `mill` as a shell command. All operations below use Claude Code's native tools (Read, Write, Edit, Glob, Grep, Bash) directly.**
-
 ## Interaction Pattern
 
 Ship is mostly autonomous — the spec should be complete from `/mill:spec`. **Use AskUserQuestion only when:**
