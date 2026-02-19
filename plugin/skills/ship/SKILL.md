@@ -15,9 +15,7 @@ Ship is mostly autonomous — the spec should be complete from `/mill:spec`. **U
 
 - Spec has ambiguity that blocks implementation
 - Multiple valid approaches exist and choice matters
-- Scope clarification needed before proceeding
-
-Don't ask about implementation details you can decide autonomously.
+- Scope clarification needed
 
 ---
 
@@ -25,24 +23,13 @@ Don't ask about implementation details you can decide autonomously.
 
 ### 1. Pick Issue
 
-If no issue number was provided as argument:
+If no issue number provided:
 
 ```bash
 gh issue list --state open --json number,title,labels --limit 100
 ```
 
-Filter for issues with `spec` label. Present choices:
-
-```yaml
-AskUserQuestion:
-  question: "Which spec do you want to ship?"
-  header: "Spec"
-  options:
-    - label: "#42 — Add export feature"
-      description: "feature, backend"
-    - label: "#38 — Fix auth timeout"
-      description: "bug, fullstack"
-```
+Filter for `spec` label. Present choices via AskUserQuestion.
 
 ### 2. Load Spec
 
@@ -50,42 +37,39 @@ AskUserQuestion:
 gh issue view {N} --json number,title,body,labels,state,createdAt
 ```
 
-Parse the JSON. Confirm the spec is open and has a type label.
+Parse JSON. Confirm open and has type label.
 
-**Parse Loop Contract** from the spec body:
-- Extract `max_iterations` — look for `**Max Iterations:**` first, fall back to `**Stop Conditions:**`. Default: `5` if missing or still a placeholder (`{{...}}`).
-- Extract `test_command` — from `**Test Command:**`
-- Extract `verification_commands` — from `**Verification Commands:**`
-
-Store these values for use in steps 4, 7, 9, and 10.
+**Parse Loop Contract** from spec body:
+- `max_iterations` — from `**Max Iterations:**`, fall back to `**Stop Conditions:**`. Default: `5`.
+- `test_command` — from `**Test Command:**`
+- `verification_commands` — from `**Verification Commands:**`
 
 ### 3. Load Context + Domain Guidance
 
-Check context freshness inline:
-1. Read `.mill/context.md` — extract hash from first line
+Check context freshness:
+1. Read `.mill/context.md` — extract hash
 2. `git rev-parse HEAD` — compare
-3. If missing or stale, run `/mill:warmup` first
+3. If missing or stale → run `/mill:warmup`
 
-Load domain guidance from the skill's supporting files. Read the template matching the spec's domain label:
-- Backend: [templates/domains/backend.md](templates/domains/backend.md)
-- Application: [templates/domains/application.md](templates/domains/application.md)
-- Website: [templates/domains/website.md](templates/domains/website.md)
-- Platform: [templates/domains/platform.md](templates/domains/platform.md)
+Load domain template matching spec's domain label:
+- [templates/domains/backend.md](templates/domains/backend.md)
+- [templates/domains/application.md](templates/domains/application.md)
+- [templates/domains/website.md](templates/domains/website.md)
+- [templates/domains/platform.md](templates/domains/platform.md)
 
 ### 4. Detect Project Settings
 
-Detect default branch from git:
+Default branch:
 ```bash
 git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo "refs/remotes/origin/main"
 ```
-Parse the branch name (last segment).
 
-Detect test command. **Precedence order:**
-1. **Loop Contract** `test_command` from the spec (if concrete, not a placeholder)
-2. **Project files** — inspect `package.json` scripts, `Makefile`, `pyproject.toml`, CI workflows
-3. **Ask the user** — if still ambiguous
+Test command precedence:
+1. Loop Contract `test_command` (if concrete)
+2. Project files (`package.json`, `Makefile`, `pyproject.toml`, CI workflows)
+3. Ask the user
 
-Similarly, store `verification_commands` from the Loop Contract for use in implementer and verifier prompts. If empty or placeholder, set to `echo "no additional verification commands"`.
+Store `verification_commands` from Loop Contract. If empty: `echo "no additional verification commands"`.
 
 ### 5. Create Worktree
 
@@ -93,18 +77,13 @@ Similarly, store `verification_commands` from the Loop Contract for use in imple
 git worktree add .mill/ship/work/issue-{N} -b issue-{N}
 ```
 
-If the branch already exists (from a previous attempt):
-```bash
-git worktree add .mill/ship/work/issue-{N} issue-{N}
-```
+If branch exists: `git worktree add .mill/ship/work/issue-{N} issue-{N}`
 
-Copy context to worktree using the Read and Write tools (not `cp`):
-1. Use the **Read** tool on `.mill/context.md`
-2. Use the **Write** tool to save the content to `.mill/ship/work/issue-{N}/.mill/context.md`
+Copy context: Read `.mill/context.md` → Write to `.mill/ship/work/issue-{N}/.mill/context.md`.
 
 ### 6. Determine Team Size
 
-Count the approach parts (A) in the spec and apply this table. Do not override based on coupling assessment — part count is the determinant:
+Count approach parts (A). Part count determines team size — no coupling-based override:
 
 | Approach Parts | Domain | Team Size |
 |----------------|--------|-----------|
@@ -117,74 +96,57 @@ Always +1 verifier (separate from implementers).
 
 ### 7. Spawn Implementers
 
-For each implementer, use the Task tool to launch a teammate agent. Each gets:
+For each implementer, launch via `Task` (`subagent_type: "general-purpose"`). Load [templates/teammates/implementer.md](templates/teammates/implementer.md) and substitute:
 
-1. **Their portion of the spec** — specific requirements and approach parts assigned to them
-2. **Project context** — from `.mill/context.md`
-3. **Domain guidance** — from plugin templates
-4. **File ownership boundaries** — explicit: "you may ONLY edit files in src/api/ and src/models/"
-5. **Working directory** — the worktree path `.mill/ship/work/issue-{N}/`
-6. **Test command** — detected from project
-7. **Teammate prompt template** — load [templates/teammates/implementer.md](templates/teammates/implementer.md) and fill placeholders
+| Placeholder | Value |
+|-------------|-------|
+| `{{ISSUE_NUMBER}}` | Issue number |
+| `{{TASK_ASSIGNMENTS}}` | Assigned approach parts |
+| `{{FILE_BOUNDARIES}}` | Explicit file ownership (e.g., "only edit files in src/api/") |
+| `{{SPEC_CONTENT}}` | Full spec body |
+| `{{CONTEXT}}` | `.mill/context.md` content |
+| `{{DOMAIN_GUIDANCE}}` | Domain template content |
+| `{{TEST_COMMAND}}` | Detected test command |
+| `{{WORKTREE_PATH}}` | Absolute worktree path |
+| `{{ITERATION_FEEDBACK}}` | Cumulative iteration log (step 10). First run: `"First implementation pass — no prior iteration history."` |
+| `{{VERIFICATION_COMMANDS}}` | From Loop Contract, or `echo "no additional verification commands"` |
 
-Use `Task` tool with `subagent_type: "general-purpose"`. Build the prompt by reading the discovered implementer template and substituting:
-- `{{ISSUE_NUMBER}}` → issue number
-- `{{TASK_ASSIGNMENTS}}` → their specific tasks
-- `{{FILE_BOUNDARIES}}` → their file ownership
-- `{{SPEC_CONTENT}}` → full spec body
-- `{{CONTEXT}}` → project context
-- `{{DOMAIN_GUIDANCE}}` → domain template content
-- `{{TEST_COMMAND}}` → detected test command
-- `{{WORKTREE_PATH}}` → absolute path to worktree
-- `{{ITERATION_FEEDBACK}}` → cumulative iteration log (see step 10). First run: `"First implementation pass — no prior iteration history."`
-- `{{VERIFICATION_COMMANDS}}` → from Loop Contract (or `echo "no additional verification commands"` if none)
+Team-of-1: single implementer gets full spec and all files.
 
-For a team-of-1: single implementer gets the full spec and all files.
-
-Launch implementers in parallel when their work doesn't overlap (e.g., backend + frontend). Launch sequentially when one depends on another's output (e.g., API contract needed by frontend).
+Parallel when work doesn't overlap (e.g., backend + frontend). Sequential when dependent (e.g., API contract needed by frontend).
 
 ### 8. Monitor Progress
 
 Watch task completion. When implementers report:
 - **Need clarification** → Lead resolves or relays to user
-- **Cross-team dependency** → Lead relays contracts between teammates (e.g., "backend teammate says the API shape is `{...}`, use this")
+- **Cross-team dependency** → Lead relays contracts between teammates
 - **Stuck** → Lead redirects with specific guidance
-- **Done** → Proceed to polish pass when all implementers complete
+- **Done** → Proceed to polish pass when all complete
 
 ### 8b. Polish Pass
 
-After all implementers report done, re-launch each implementer once with a polish-and-review prompt. Rebuild the full prompt from the implementer template (step 7) with all original placeholders, but set `{{ITERATION_FEEDBACK}}` to:
+Re-launch each implementer once with all original placeholders, but set `{{ITERATION_FEEDBACK}}` to:
 
 ```
 ## Polish Pass
 
-Implementation is complete. Before independent verification, you have one pass to:
+Implementation is complete. Before independent verification, one pass to:
 
-1. **Polish** — review your full changeset (`git diff {default_branch}...HEAD` in your worktree). Clean up rough edges: simplify logic, improve naming, remove dead code, tighten error handling. Make it code you'd be proud to submit for review.
-2. **Review** — check every spec criterion against the diff. Fix anything that doesn't fully meet the bar.
-3. **Test** — run the test command and verification commands. Ensure everything passes.
-4. **Commit** — commit any polish changes referencing the issue.
+1. **Polish** — `git diff {default_branch}...HEAD`. Simplify, improve naming, remove dead code.
+2. **Review** — check every spec criterion against the diff. Fix gaps.
+3. **Test** — run test + verification commands.
+4. **Commit** — commit polish changes referencing the issue.
 
-This is your last pass before an independent verifier reviews the full changeset.
+Last pass before independent verification.
 ```
 
-This is a single bounded pass — not an improvement loop. When implementers report done from the polish pass, proceed to the verifier.
+Single bounded pass — not a loop. When done, proceed to verifier.
 
 ### 9. Spawn Verifier
 
-After the polish pass completes, spawn a verifier — a separate teammate with clean context.
+Spawn a separate teammate with clean context. Load [templates/teammates/verifier.md](templates/teammates/verifier.md) and substitute same placeholders as step 7 (minus `{{ITERATION_FEEDBACK}}`), plus `{{DEFAULT_BRANCH}}`.
 
-Load the verifier template from [templates/teammates/verifier.md](templates/teammates/verifier.md) and substitute:
-- `{{ISSUE_NUMBER}}` → issue number
-- `{{SPEC_CONTENT}}` → full spec body
-- `{{WORKTREE_PATH}}` → absolute path to worktree
-- `{{TEST_COMMAND}}` → detected test command
-- `{{DEFAULT_BRANCH}}` → detected from git
-- `{{VERIFICATION_COMMANDS}}` → from Loop Contract (or `echo "no additional verification commands"` if none)
-
-The verifier receives NO iteration history — clean context is preserved across all cycles.
-
-Use `Task` tool with `subagent_type: "general-purpose"`.
+The verifier receives NO iteration history — clean context preserved across all cycles.
 
 The verifier:
 - Runs tests
@@ -194,20 +156,16 @@ The verifier:
 
 ### 10. Handle Verification Result
 
-**Pass** → Proceed to step 11 (Create PR).
+**Pass** → Step 11.
 
 **Reject** → Loop Contract-driven iteration:
 
-Track cumulative iteration state:
-- `cycle` — current cycle number (starts at 1)
-- `max_iterations` — from Loop Contract (default 5)
-- `history` — list of `{ cycle, blockers, fixes_attempted, what_passed }`
+Track cumulative state: `cycle`, `max_iterations`, `history: [{ cycle, blockers, fixes_attempted, what_passed }]`
 
-For each rejection cycle:
-1. Parse verifier's blockers
-2. Match each blocker to the implementer who owns those files
-3. Append to iteration history: `{ cycle, blockers, fixes_attempted: [], what_passed: [criteria that passed] }`
-4. Build `{{ITERATION_FEEDBACK}}` from cumulative history — a formatted log of all previous cycles:
+For each rejection:
+1. Parse blockers, match to responsible implementer
+2. Append to history
+3. Build `{{ITERATION_FEEDBACK}}`:
    ```
    ## Iteration History
    ### Cycle 1
@@ -218,45 +176,27 @@ For each rejection cycle:
    ...
    **IMPORTANT:** Address all current blockers. Do NOT regress on items that already passed.
    ```
-5. Re-launch the responsible implementer(s) — rebuild the full prompt from the implementer template (step 7) with all original placeholders, substituting the updated `{{ITERATION_FEEDBACK}}`
-6. After fix, re-run verifier — rebuild the full prompt from the verifier template (step 9), always with clean context (no iteration history)
-7. Increment cycle counter
+4. Re-launch responsible implementer(s) with updated feedback
+5. Re-run verifier with clean context (no iteration history)
+6. Increment cycle
 
 **On exhaustion** (cycle > max_iterations):
-Report to user with full iteration log and offer options:
 
-```yaml
-AskUserQuestion:
-  question: "Reached {max_iterations} iteration cycles. How to proceed?"
-  header: "Iterations"
-  options:
-    - label: "Continue iterating"
-      description: "Grant {N} more cycles"
-    - label: "Create PR as-is"
-      description: "Open PR with known issues documented"
-    - label: "Abort"
-      description: "Remove worktree and stop"
-```
+Report to user via AskUserQuestion: Continue iterating (ask how many more) / Create PR as-is / Abort.
 
-If user chooses "Continue iterating," ask how many additional cycles and resume the loop. If "Create PR as-is," proceed to step 11 with issues noted. If "Abort," skip to step 13 (cleanup only).
+If "Continue" → resume loop. If "PR as-is" → step 11 with issues noted. If "Abort" → skip to step 13.
 
 ### 11. Create PR
-
-From the worktree directory:
 
 ```bash
 git -C .mill/ship/work/issue-{N} push -u origin issue-{N}
 ```
 
-Build PR body and write to temp file:
-```
-Write(".mill/.prompt", pr_body)
-```
+Build PR body → `Write(".mill/.prompt", pr_body)`:
 
-PR body format:
 ```markdown
 ## Summary
-{1-3 bullet points summarizing what changed}
+{1-3 bullet points}
 
 Closes #{N}
 
@@ -266,55 +206,38 @@ Closes #{N}
 {if cycles > 1:}
 ## Iteration Summary
 - **Cycles:** {cycle} of {max_iterations}
-- {brief summary of what was fixed across iterations}
+- {brief summary of fixes}
 {end if}
 
 🤖 Claude
 ```
 
-Create PR:
 ```bash
 gh pr create --title "#{N}: {spec title}" --body-file .mill/.prompt --head issue-{N}
 ```
 
-Parse the PR URL from output. Clean up temp file:
-```bash
-rm .mill/.prompt
-```
+Parse PR URL. Clean up: `rm .mill/.prompt`
 
 ### 12. Extract Learnings
 
 After every ship session, extract process knowledge. The question: **"How can we do better next time?"**
 
-Review the session — iteration history, implementer process notes, your own orchestration decisions — and write a single observation:
+Review the session — iteration history, implementer process notes, orchestration decisions — and write a single observation:
 
 - **Path:** `.mill/observations/ship-{N}-learnings.md`
 - **Frontmatter:** `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`
 
-Extract only **non-obvious** learnings. Scan for:
+Extract only **non-obvious** learnings:
 
 | Category | What to capture |
 |----------|----------------|
-| **Hidden relationships** | Files or modules that must change together, not apparent from imports or directory structure |
-| **Debugging breakthroughs** | Cases where error messages pointed elsewhere — what the error said vs. what was actually wrong |
-| **Trial-and-error commands** | Build flags, CLI invocations, or tool configurations that took multiple attempts |
-| **Architectural constraints** | Invariants or coupling not documented anywhere, discovered only by breaking things |
-| **Divergent execution paths** | Runtime behavior that differs from how the code reads statically |
+| **Hidden relationships** | Files/modules that must change together, not apparent from imports |
+| **Debugging breakthroughs** | Error messages that pointed elsewhere — what was actually wrong |
+| **Trial-and-error commands** | Build flags, CLI invocations that took multiple attempts |
+| **Architectural constraints** | Invariants or coupling discovered only by breaking things |
+| **Divergent execution paths** | Runtime behavior that differs from how code reads statically |
 
-Do not fabricate learnings. If the session was clean and nothing surprising emerged, write:
-
-```markdown
----
-source: ship
-type: learning
-issue: {N}
-created: {date}
----
-
-# Ship #{N} — Learnings
-
-Clean session — no non-obvious learnings.
-```
+Don't fabricate. If nothing surprising emerged: `"Clean session — no non-obvious learnings."`
 
 ### 13. Cleanup
 
@@ -328,44 +251,37 @@ Report the PR URL to the user.
 
 ## Fallback: Single-Session Mode
 
-If agent teams are not available (Task tool limited or experimental features disabled), fall back to single-session mode:
+If agent teams unavailable (Task tool limited or experimental features disabled):
 
-**Detection:** If the first Task tool call fails or returns an error about agent capabilities, switch to fallback.
+1. Lead implements directly in the worktree
+2. Approach parts sequentially: implement → test → commit
+3. Explicit verification phase: re-read spec, `git diff`, run tests, check each criterion
+4. Fix and re-verify (up to `max_iterations`, default 5)
+5. Create PR
+6. Extract learnings (same as step 12)
 
-**In fallback mode:**
-1. Lead implements directly (no teammates) in the worktree
-2. Work through approach parts sequentially: implement → test → commit for each
-3. After all parts complete, enter explicit "verification phase":
-   - Re-read the full spec with fresh eyes
-   - Run `git diff {default_branch}...HEAD` and review the full changeset
-   - Run test command
-   - Check each criterion
-4. If issues found, fix and re-verify (up to Loop Contract `max_iterations`, default 5)
-5. Create PR as normal
-6. Extract learnings (same as step 12 above)
-
-Report to user: "Running in single-session mode (agent teams not available)"
+Report: "Running in single-session mode (agent teams not available)"
 
 ---
 
 ## Observations
 
-During implementation, teammates write observations to `.mill/observations/`:
+Teammates write observations during implementation:
 - Path: `.mill/observations/ship-{N}-{slug}.md`
 - Frontmatter: `source: ship`, `type: concern|discovery|suggestion`, `issue: {N}`
 
-After PR creation, the lead writes a learnings observation:
+Lead writes learnings after PR creation (step 12):
 - Path: `.mill/observations/ship-{N}-learnings.md`
 - Frontmatter: `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`
 
-These are reviewed later via `/mill:ground`. Don't interrupt the ship flow.
+Reviewed later via `/mill:ground`.
 
 ## Rules
 
-1. **Lead never implements** when teammates are available — always delegate
+1. **Lead never implements** when teammates available — always delegate
 2. **Verifier is always separate** — clean context, never saw implementation reasoning
 3. **Spec drives everything** — implement what's specified, nothing more
 4. **Test before PR** — all tests must pass
-5. **Loop Contract governs iterations** — max cycles from spec (default 5), then escalate to user
+5. **Loop Contract governs iterations** — max cycles from spec, then escalate
 6. **Always clean up** — worktree removed after PR creation
-7. **Commits reference issue** — every commit message includes `#{N}`
+7. **Commits reference issue** — every message includes `#{N}`

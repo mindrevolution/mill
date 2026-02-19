@@ -9,59 +9,42 @@ Orient Claude to your codebase. Loads existing context if fresh, regenerates if 
 
 ## Step 1: Determine Freshness
 
-Use the Read tool and `git` commands only:
+Read `.mill/context.md` — extract hash from first line: `<!-- mill-context-hash: {HASH} -->`. If file doesn't exist → `missing`.
 
-1. Use the **Read** tool on `.mill/context.md` — extract hash from first line: `<!-- mill-context-hash: {HASH} -->`
-   - If file doesn't exist → freshness is `missing`
-2. Run `git rev-parse HEAD` to get current commit
-3. If hashes match → freshness is `fresh`
-4. If hashes differ: `git rev-list --count {HASH}..HEAD` to get distance
-   - 1–25 commits → freshness is `recent`
-   - \>25 commits → freshness is `stale`
+Run `git rev-parse HEAD`. If hashes match → `fresh`. If different: `git rev-list --count {HASH}..HEAD` → 1–25 = `recent`, >25 = `stale`.
 
-| Freshness | Meaning | Action |
-|-----------|---------|--------|
-| `fresh` | Exact commit match | Load Mode |
-| `recent` | 1-25 commits behind | Update Mode |
-| `stale` | >25 commits behind | Generate Mode |
-| `missing` | No context.md | Generate Mode |
+| Freshness | Action |
+|-----------|--------|
+| `fresh` | Load Mode |
+| `recent` | Update Mode |
+| `stale` / `missing` | Generate Mode |
 
 ---
 
-## Load Mode (freshness: fresh)
-
-Context matches current commit. Just load:
+## Load Mode (fresh)
 
 1. Read `.mill/context.md`
-2. Read ground files:
-   - `Glob(".mill/ground/**/*.md")` to see what exists
-   - Read key ground files (personas, rules, patterns)
+2. `Glob(".mill/ground/**/*.md")` → read key ground files
 3. Report: "Context loaded"
 
-**No file writes. No git commands beyond status check.**
+No writes. No git commands beyond freshness check.
 
 ---
 
-## Update Mode (freshness: recent)
-
-Context is slightly behind. Load and show new commits:
+## Update Mode (recent)
 
 1. Read `.mill/context.md`
 2. Read ground files (personas, rules, patterns)
-3. Show new commits: `git log {HASH}..HEAD --oneline`
+3. `git log {HASH}..HEAD --oneline`
 4. Report: "Context loaded ({N} new commits)"
-
-**No regeneration needed. Just awareness of recent changes.**
 
 ---
 
-## Generate Mode (freshness: stale or missing)
-
-Context needs regeneration. Run full analysis:
+## Generate Mode (stale or missing)
 
 ### Progress Markers
 
-Emit each marker on its own line BEFORE starting that step:
+Emit before each step:
 ```
 [1/8] Capturing commit hash...
 [2/8] Enumerating project files...
@@ -75,29 +58,18 @@ Emit each marker on its own line BEFORE starting that step:
 
 ### Workflow
 
-1. `git rev-parse HEAD` — capture current commit
-2. `git ls-files` — enumerate project files
-3. Read `AGENTS.md` (or `CLAUDE.md` if no AGENTS.md)
+1. `git rev-parse HEAD`
+2. `git ls-files`
+3. Read `AGENTS.md` (or `CLAUDE.md`)
 4. Read `README.md`, `.mill/ground/product.md` if present
-5. `Glob(".mill/ground/standards/*.md")` → Read each
+5. `Glob(".mill/ground/standards/*.md")` → read each
 6. `git log -n 20 --oneline`
-7. Map architecture:
-   - Identify entry points (main files, bootstrapping)
-   - Trace layer boundaries (endpoints → services → providers)
-   - Map key abstractions (interfaces, base classes)
-   - Note data flow patterns
+7. Map architecture — keep concise (orientation, not exhaustive docs):
+   - **Entry points** — main files, API routes, CLI entry (record file:line)
+   - **Layer boundaries** — follow call chains (endpoints → services → providers)
+   - **Abstractions** — interfaces, base classes, extension points
+   - **Data flow** — how data moves through the system
 8. Write `.mill/context.md`
-
-## Architecture Analysis
-
-After reading project files, trace the architectural structure:
-
-1. **Entry points** — Find main program files, API routes, CLI entry. Record with file:line.
-2. **Layer boundaries** — Follow call chains. Identify layers (endpoints → services → providers).
-3. **Abstractions** — Find interfaces and patterns that define extension points.
-4. **Data flow** — How data moves through the system.
-
-Keep concise — orientation, not exhaustive docs.
 
 ## Output Format
 
@@ -118,7 +90,6 @@ Write to `.mill/context.md`:
 
 ### Entry Points
 - `api/Program.cs:1` — API bootstrap
-- `cli/Program.cs:1` — CLI entry
 
 ### Key Abstractions
 - `IProvider` at `api/Services/IProvider.cs:5` — Extension contract
@@ -139,28 +110,24 @@ Write to `.mill/context.md`:
 *Updated: {TIMESTAMP}*
 ```
 
-First line MUST be the HTML comment with git hash (for staleness detection).
+First line MUST be the HTML comment with git hash.
 
 ## Observations
 
-During context generation, note discoveries using LLM judgment:
-- Empty ground folders (no personas, rules, patterns defined)
-- Conventions discovered in code (naming, architecture patterns)
+During generation, note discoveries:
+- Empty ground folders
+- Conventions in code (naming, architecture patterns)
 - Personas implied by role enums or user types
 - Domain vocabulary used consistently
 - New modules not in previous context (update mode)
 
 ### High-confidence gaps (auto-write)
 
-When clearly a gap, write observation immediately:
+Write immediately:
+- Path: `.mill/observations/warmup-{date}-{slug}.md`
+- Frontmatter: `source: warmup`, `type: discovery|concern`, `created: {date}`
 
-1. Write using Write tool:
-   - Path: `.mill/observations/warmup-{date}-{slug}.md`
-   - Frontmatter: source: warmup, type: discovery, created: {date}
-
-2. Continue without interruption
-
-Example — empty ground:
+Example:
 
 ```markdown
 ---
@@ -171,29 +138,14 @@ created: 2025-02-08
 
 # Empty Ground Folders
 
-Project has no ground truth defined yet.
-
-## Missing
-
-- personas/ — no user types defined
-- rules/ — no conventions documented
-- patterns/ — no architecture patterns captured
-
-## Discovered Conventions
-
-From code analysis:
-- No "Async" suffix on methods
-- Enums stored as strings
-- Feature-sliced architecture
-
-## Suggested Action
-
-Run /mill:ground to curate these into ground truth.
+No ground truth defined. Missing: personas/, rules/, patterns/.
+Discovered conventions from code: [list findings].
+Suggested: run /mill:ground to curate.
 ```
 
 ### Uncertain gaps (collect and ask)
 
-When unsure, collect during warmup and ask at end:
+Collect during warmup, ask at end via AskUserQuestion (multiSelect):
 
 ```yaml
 AskUserQuestion:
@@ -205,11 +157,9 @@ AskUserQuestion:
       description: "No Async suffix, enums as strings, kebab-case routes"
     - label: "Personas implied"
       description: "Producer, Director, Camera roles found in MuxRole enum"
-    - label: "Architecture pattern"
-      description: "Feature-sliced vertical architecture"
 ```
 
-For selected items, write observation files. For unselected, ignore.
+For selected items, write observation files.
 
 ## Report
 

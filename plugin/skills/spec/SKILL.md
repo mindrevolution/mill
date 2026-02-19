@@ -11,7 +11,7 @@ Transform user intent into a complete, loop-ready specification.
 
 ## Interaction Pattern
 
-**Always use the AskUserQuestion tool** — never ask questions as raw text. Present 2-4 options plus free text ("Other"). One question per tool call.
+**Always use AskUserQuestion** — never raw text questions. 2-4 options plus free text. One question per call.
 
 ```yaml
 AskUserQuestion:
@@ -26,107 +26,66 @@ AskUserQuestion:
       description: "Refactor, migrate, cleanup"
 ```
 
-Never output raw numbered lists and ask "pick one" — use the tool.
+All subsequent AskUserQuestion calls follow this format.
 
 ## Principles
 
-A specification that requires clarifying questions is a draft, not a specification.
-
 | Principle | Definition |
 |-----------|------------|
-| **Self-Containment** | ∀ statement σ ∈ spec: an implementer unfamiliar with the system can execute σ without querying the author. Test: "Could someone unfamiliar execute this without asking me anything?" |
-| **Language Independence** | Specs describe WHAT and WHY at an abstraction level invariant under language transformation. Implementation hints are explicitly marked as language-specific. |
+| **Self-Containment** | ∀ statement σ ∈ spec: an implementer unfamiliar with the system can execute σ without querying the author |
+| **Language Independence** | WHAT and WHY at an abstraction level invariant under language transformation. Implementation hints marked language-specific. |
 | **Decision Completeness** | Every parameter bound to a concrete value. No TBD. For conditionals: `default UNLESS predicate → alternative`. |
 | **Explicit Non-Applicability** | Silent omission conflates "rejected" with "overlooked." When N/A, state: `N/A: {reason}`. |
 | **Binary State** | Document is either **draft** (requires clarification) or **ready** (self-contained). No intermediate states. |
 
-### Clarifying Question Failures
+### Self-Containment Test
 
-If a reader asks any of these, the spec has failed:
+If a reader must ask, the spec has failed:
 
 | Fails | Passes |
 |-------|--------|
 | "Configure the stream endpoint" | "Set `RTMP_INGEST=rtmp://ingest.example.com:1935/live` in `encoder/.env`" |
 | "Use the appropriate codec" | "Encode with H.264 Main Profile, 1080p@30fps, 4500kbps CBR" |
-| "The API returns video metadata" | "The API returns `{streamId, resolution, bitrate, codec, status, viewerCount}`" |
-| "Handle transcoding errors" | "On transcode failure: retry 3x, then emit `stream.failed` event with `{streamId, error, timestamp}`" |
-| "Update the content status" | "Set `content.status = 'published'` and `content.publishedAt = NOW()` in `cms_entries` table" |
+| "Handle transcoding errors" | "On transcode failure: retry 3x, then emit `stream.failed` with `{streamId, error, timestamp}`" |
 
 ## Overview
 
-Spec takes an idea and produces a GitHub Issue with:
+Spec produces a GitHub Issue with:
 - **Requirements (R)** — what the solution must achieve
 - **Approach (A)** — how we'll build it (parts + mechanisms)
 - **Criteria (C)** — testable verification conditions
-- **Coverage (R x A x C)** — proof that approach implements requirements and criteria verify them
-- **Loop Contract** — test command, stop conditions
+- **Coverage (R x A x C)** — proof chain: approach implements requirements, criteria verify them
+- **Loop Contract** — test command, max iterations, verification commands
 
 ## File Operations
 
 ```
-# List drafts
-Glob(".mill/spec/drafts/*.md") → Read each for frontmatter
-
-# Get draft content
-Read(".mill/spec/drafts/{slug}.md")
-
-# Write/update draft
-Write(".mill/spec/drafts/{slug}.md", content)
-
-# Load ground knowledge
-Glob(".mill/ground/**/*.md") → Read each
-
-# Load spec template for the classified type
-# Feature: see [templates/feature.md](templates/feature.md)
-# Bug: see [templates/bug.md](templates/bug.md)
-# Task: see [templates/task.md](templates/task.md)
-# Security: see [templates/security.md](templates/security.md)
-
-# Check context freshness (inline — see warmup skill)
-Read(".mill/context.md") → extract hash → git rev-parse HEAD → compare
+Glob(".mill/spec/drafts/*.md")              # list drafts
+Read(".mill/spec/drafts/{slug}.md")         # get draft
+Write(".mill/spec/drafts/{slug}.md", ...)   # create/update
+Glob(".mill/ground/**/*.md")                # load ground knowledge
+Read(".mill/context.md")                    # check context freshness
 ```
+
+Spec templates by type:
+- [templates/feature.md](templates/feature.md), [templates/bug.md](templates/bug.md), [templates/task.md](templates/task.md), [templates/security.md](templates/security.md)
 
 ## Workflow
 
 ### 0. Check Existing Drafts
 
-```
-Glob(".mill/spec/drafts/*.md")
-```
+`Glob(".mill/spec/drafts/*.md")` — read each for title and last-modified.
 
-Read each draft's frontmatter for title and last-modified info.
-
-If drafts exist, offer to resume:
-
-```yaml
-AskUserQuestion:
-  question: "Continue an existing draft or start new?"
-  header: "Drafts"
-  options:
-    - label: "{draft-slug-1}"
-      description: "Last updated {time ago}"
-    - label: "{draft-slug-2}"
-      description: "Last updated {time ago}"
-    - label: "Start new spec"
-      description: "Create a fresh specification"
-```
-
-If user selects a draft → Read `.mill/spec/drafts/{slug}.md` and continue from where it left off.
-If user selects "Start new" or no drafts exist → proceed to step 1.
+If drafts exist, ask via AskUserQuestion: resume a draft or start new.
 
 ### 1. Ensure Context
 
-Check context freshness inline:
-1. Read `.mill/context.md` — extract hash from first line
+Check context freshness:
+1. Read `.mill/context.md` — extract hash
 2. `git rev-parse HEAD` — compare
-3. If missing or stale, run `/mill:warmup` first
+3. If missing or stale → run `/mill:warmup`
 
-Then load ground knowledge:
-```
-Glob(".mill/ground/**/*.md") → Read key files
-```
-
-Search codebase for relevant files.
+Load ground knowledge: `Glob(".mill/ground/**/*.md")` → read key files. Search codebase for relevant files.
 
 ### 2. Classify Intent
 
@@ -139,6 +98,8 @@ Search codebase for relevant files.
 
 ### 2b. Classify Domain
 
+Ask via AskUserQuestion:
+
 | Domain | Focus |
 |--------|-------|
 | `backend` | APIs, services, data layer |
@@ -147,26 +108,9 @@ Search codebase for relevant files.
 | `platform` | Infrastructure, containers, CI/CD |
 | `fullstack` | Multiple layers |
 
-```yaml
-AskUserQuestion:
-  question: "What part of the system does this affect?"
-  header: "Domain"
-  options:
-    - label: "Backend"
-      description: "APIs, services, data layer"
-    - label: "Application"
-      description: "Interactive apps — web, mobile, desktop"
-    - label: "Website"
-      description: "Pages — landing, marketing, content"
-    - label: "Platform"
-      description: "Infrastructure, containers, CI/CD, scripts"
-    - label: "Full-stack"
-      description: "Touches multiple layers"
-```
-
 ### 3. Create Draft Early
 
-Write draft file using the Write tool at `.mill/spec/drafts/{slug}.md`:
+Write to `.mill/spec/drafts/{slug}.md`:
 
 ```markdown
 ---
@@ -219,124 +163,74 @@ approach: A
 
 ### 4. Elicit Requirements
 
-**Use AskUserQuestion** for each layer. One question at a time:
+One question at a time via AskUserQuestion:
 1. Problem — what pain exists?
 2. Core goal — what must this solve?
 3. Constraints — what rules apply?
 4. Nice-to-haves — what's bonus?
 
-Add each requirement to the table with status (`core`, `must-have`, `nice-to-have`, `out`).
+Add each to table with status (`core`, `must-have`, `nice-to-have`, `out`).
 
 ### 4b. Define Approach
 
-Once requirements are clear, define approach:
 1. Each part = mechanism (what we build/change)
 2. Flag unknowns with ⚠️
 3. Investigate ⚠️ before proceeding
 
 ### 4c. Coverage Check
 
-Build coverage table (R x A x C):
-- Approach column: list parts (A1, A2) or ❌ if not covered
-- Criteria column: list criteria (C1, C2) or — if no verification
+Build R x A x C table:
+- Approach column: parts (A1, A2) or ❌ if not covered
+- Criteria column: criteria (C1, C2) or — if no verification
 
 All `core` and `must-have` requirements need both approach parts and criteria.
 
 ### 5. Validate
 
-**Principles check:**
-- [ ] Self-Containment — no statement requires clarification to execute
-- [ ] Language Independence — describes WHAT/WHY, not language-specific HOW
-- [ ] Decision Completeness — no TBD, no "it depends," all values concrete
-- [ ] Explicit Non-Applicability — omitted sections marked `N/A: {reason}`
+**Principles:** Self-Containment, Language Independence, Decision Completeness, Explicit Non-Applicability — all must pass.
 
-**Structure check:**
-- [ ] All core/must-have requirements have approach parts (no ❌)
-- [ ] All core/must-have requirements have criteria (no —)
-- [ ] No ⚠️ flags remain in approach
-- [ ] All criteria are testable conditions
-- [ ] Scope clear (in/out)
-- [ ] Loop Contract present with concrete max iterations and test command
+**Structure:**
+- All core/must-have requirements have approach parts (no ❌)
+- All core/must-have requirements have criteria (no —)
+- No ⚠️ flags remain
+- All criteria are testable conditions
+- Scope clear (in/out)
+- Loop Contract present with concrete values
 
-**Status:** Set `status: ready` only when all checks pass. Otherwise remains `status: draft`.
+Set `status: ready` only when all checks pass.
 
-### 6. Challenge (for complex specs)
+### 6. Challenge (complex specs)
 
-Probe for gaps:
-- Assumptions — what if X isn't available?
-- Edge cases — empty input? concurrent access?
-- Failure modes — what if service is down?
-- Integration — conflicts with existing features?
+Probe for gaps: assumptions, edge cases (empty input, concurrency), failure modes, integration conflicts.
 
 ### 7. Confirm and Publish
 
-Present the spec, show validation summary, then **use AskUserQuestion** for approval:
+Present spec + validation summary. Ask via AskUserQuestion: "Create GitHub issue?" — Yes / Needs changes.
 
-```yaml
-AskUserQuestion:
-  question: "Spec ready. Create GitHub issue?"
-  header: "Approve"
-  options:
-    - label: "Yes, create issue"
-      description: "Publish spec to GitHub Issues"
-    - label: "No, needs changes"
-      description: "I'll provide feedback"
-```
-
-**Wait for explicit approval before publishing.**
+**Wait for explicit approval.**
 
 ### 8. Publish
 
-1. Read the draft: `Read(".mill/spec/drafts/{slug}.md")`
-2. Extract title, type, domain from frontmatter
-3. Build the issue body from the draft content (strip frontmatter)
-4. Write body to a temp file using the Write tool:
-   ```
-   Write(".mill/.prompt", body_content)
-   ```
-5. Create GitHub issue:
-   ```bash
-   gh issue create --title "{title}" --body-file .mill/.prompt --label "spec,{type},{domain}"
-   ```
-6. Parse the issue URL from output
-7. Delete the draft:
-   ```bash
-   rm .mill/spec/drafts/{slug}.md
-   ```
-8. Clean up temp file:
-   ```bash
-   rm .mill/.prompt
-   ```
-9. Report the issue URL to the user
-
-## Templates
-
-Load the spec template matching the classified type:
-- Feature: [templates/feature.md](templates/feature.md)
-- Bug: [templates/bug.md](templates/bug.md)
-- Task: [templates/task.md](templates/task.md)
-- Security: [templates/security.md](templates/security.md)
+1. Read draft, extract frontmatter
+2. Write body to `.mill/.prompt`
+3. `gh issue create --title "{title}" --body-file .mill/.prompt --label "spec,{type},{domain}"`
+4. Parse issue URL
+5. `rm .mill/spec/drafts/{slug}.md && rm .mill/.prompt`
+6. Report issue URL
 
 ## Observations
 
-During drafting, notice gaps in ground truth using LLM judgment:
-- Unknown personas mentioned (e.g., "finance admin" not in ground/personas/)
-- New domain terms used (not in ground/vocabulary/)
-- Requirements conflicting with ground/rules/
-- Features implying new entities (not in ground/schema/)
+During drafting, notice ground truth gaps:
+- Unknown personas mentioned
+- New domain terms not in vocabulary
+- Requirements conflicting with rules
+- Features implying new entities not in schema
 
 ### High-confidence gaps (auto-write)
 
-When clearly a gap (e.g., "As a finance admin..." with no matching persona):
-
-1. Write observation immediately using the Write tool:
-   - Path: `.mill/observations/spec-{slug}-{gap}.md`
-   - Include frontmatter with source, type, created
-   - Describe what was discovered
-
-2. Continue drafting without interruption
-
-Example observation:
+Write immediately:
+- Path: `.mill/observations/spec-{slug}-{gap}.md`
+- Frontmatter: `source: spec`, `type: discovery`, `created: {date}`
 
 ```markdown
 ---
@@ -347,57 +241,29 @@ created: 2025-02-08
 
 # Unknown Persona: "Finance Admin"
 
-User referenced "finance admin" during spec drafting.
-
-## Context
-
-- Spec: Export Monthly Reports
-- Quote: "The finance admin should be able to export monthly reports"
-
-## Current Personas
-
-- developer
-- admin
-- operator
-
-## Suggested Action
-
-Add persona to ground/personas/ or clarify if alias for existing.
+Referenced during spec drafting for "Export Monthly Reports."
+Current personas: developer, admin, operator.
+Suggested: add to ground/personas/ or clarify if alias.
 ```
 
 ### Uncertain gaps (collect and ask)
 
-When unsure if it's a gap, collect during drafting and ask at the end:
-
-```yaml
-# At end of spec drafting, before final confirmation:
-AskUserQuestion:
-  question: "Found potential gaps in ground truth. Note any for review?"
-  header: "Observations"
-  multiSelect: true
-  options:
-    - label: "'Finance Admin' — possible persona"
-      description: "Not found in ground/personas/"
-    - label: "'Invoice' — domain term"
-      description: "Not defined in ground/vocabulary/"
-```
-
-For selected items, write observation files. For unselected, ignore.
+Collect during drafting, ask at end via AskUserQuestion (multiSelect): which gaps to write as observations.
 
 ## Rules
 
 **Process:**
-1. One question at a time — always use AskUserQuestion tool, never raw text prompts
+1. Always use AskUserQuestion — never raw text prompts
 2. Create draft early, update often
 3. Security always wins classification
 4. Scope creep → separate spec
 5. Never publish without explicit approval
-6. GitHub is source of truth — no local spec files after publish
-7. Write observations for ground truth gaps — don't interrupt flow
+6. GitHub is source of truth — no local specs after publish
+7. Write observations for ground truth gaps
 
 **Quality (non-negotiable):**
 8. Self-Containment — if reader must ask, spec has failed
-9. Language Independence — WHAT/WHY universal, HOW marked as language-specific
+9. Language Independence — WHAT/WHY universal, HOW marked language-specific
 10. Decision Completeness — no TBD, no placeholders, all values concrete
 11. Explicit Non-Applicability — state `N/A: {reason}`, never silently omit
 12. Binary State — `status: draft` until all principles pass, then `status: ready`

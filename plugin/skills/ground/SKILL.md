@@ -11,30 +11,13 @@ Build and manage product knowledge in `.mill/ground/`. Review observations from 
 
 ## Interaction Pattern
 
-**Always use the AskUserQuestion tool** for gathering knowledge. Present 2-4 options plus free text. One question at a time.
+**Always use AskUserQuestion** — 2-4 options plus free text. One question at a time.
 
 ## Entry Point
 
-Check observations first:
+Check observations first: `Glob(".mill/observations/*.md")` — read each for title and count.
 
-```
-Glob(".mill/observations/*.md")
-```
-
-Read each observation file to get titles and count.
-
-```yaml
-AskUserQuestion:
-  question: "What do you want to work on?"
-  header: "Ground"
-  options:
-    - label: "Review observations"
-      description: "{N} observations to review"
-    - label: "Create knowledge"
-      description: "Add personas, rules, decisions"
-    - label: "Sync codebase"
-      description: "Extract changes from code"
-```
+Ask via AskUserQuestion: Review observations ({N} pending) / Create knowledge / Sync codebase.
 
 ---
 
@@ -42,143 +25,62 @@ AskUserQuestion:
 
 ### 1. List Observations
 
-```
-Glob(".mill/observations/*.md")
-```
-
-Read each file to display title and type from frontmatter.
+`Glob(".mill/observations/*.md")` → read each for title and type from frontmatter.
 
 ### 2. For Each Observation
 
-Read the full observation:
-
-```
-Read(".mill/observations/{id}.md")
-```
-
-Then present action options:
-
-```yaml
-AskUserQuestion:
-  question: "{id}: {title}"
-  header: "Action"
-  options:
-    - label: "Curate to ground"
-      description: "Add to ground truth"
-    - label: "Create spec"
-      description: "Write to idea/active/"
-    - label: "Add to debt"
-      description: "Track in ground/debt/"
-    - label: "Dismiss"
-      description: "Delete, not actionable"
-```
+Read full observation. Ask via AskUserQuestion:
+- **Curate to ground** — add to ground truth
+- **Create spec** — write to idea/active/
+- **Add to debt** — track in ground/debt/
+- **Dismiss** — delete, not actionable
 
 ### 3. Handle Each Action
 
 **Curate to ground:**
-1. Infer target folder from observation content:
-   - `type: discovery` + mentions persona → `ground/personas/`
-   - `type: discovery` + mentions term → `ground/vocabulary/`
-   - `type: extraction` + about deps → `ground/stack/`
+1. Infer target folder:
+   - `type: discovery` + persona → `ground/personas/`
+   - `type: discovery` + term → `ground/vocabulary/`
+   - `type: extraction` + deps → `ground/stack/`
    - `type: concern` → often `ground/debt/`
-   - `type: discovery` + about decisions → `ground/decisions/`
-   - `type: learning` + about file couplings or architecture → `ground/patterns/`
-   - `type: learning` + about conventions, commands, or config → `ground/rules/`
-
-2. Ask clarifying question to gather details:
-   ```yaml
-   AskUserQuestion:
-     question: "What does '{term}' mean?"
-     header: "Define"
-     options:
-       - label: "{option1}"
-       - label: "{option2}"
-       - label: "{option3}"
-   ```
-
-3. Write to appropriate ground folder using the Write tool:
-   ```
-   Write(".mill/ground/{category}/{id}.md", content)
-   ```
-
-4. Delete observation file:
-   ```bash
-   rm .mill/observations/{id}.md
-   ```
+   - `type: discovery` + decision → `ground/decisions/`
+   - `type: learning` + file couplings/architecture → `ground/patterns/`
+   - `type: learning` + conventions/commands/config → `ground/rules/`
+2. Ask clarifying questions to gather details
+3. `Write(".mill/ground/{category}/{id}.md", content)`
+4. `rm .mill/observations/{id}.md`
 
 **Create spec:**
-1. Transform observation into idea — write directly:
-   ```
-   Write(".mill/idea/active/{slug}.md", content)
-   ```
-   Use frontmatter: title, stage: spark, intent, created date.
-
-2. Delete observation file:
-   ```bash
-   rm .mill/observations/{id}.md
-   ```
+1. Transform to idea → `Write(".mill/idea/active/{slug}.md", ...)` with frontmatter: title, stage: spark, intent, created
+2. `rm .mill/observations/{id}.md`
 
 **Add to debt:**
-1. Read existing `ground/debt/{topic}.md` (if any), append content, Write back
-2. Delete observation file:
-   ```bash
-   rm .mill/observations/{id}.md
-   ```
+1. Read existing `ground/debt/{topic}.md`, append, Write back
+2. `rm .mill/observations/{id}.md`
 
 **Dismiss:**
-1. Delete observation file:
-   ```bash
-   rm .mill/observations/{id}.md
-   ```
+1. `rm .mill/observations/{id}.md`
 
 ### 4. Continue
 
-After processing, check for more observations:
-
-```
-Glob(".mill/observations/*.md")
-```
-
-If more exist, continue. Otherwise, exit or offer other actions.
+`Glob(".mill/observations/*.md")` — if more exist, continue. Otherwise exit or offer other actions.
 
 ---
 
 ## Categories
 
-| Category | Purpose | Examples |
-|----------|---------|----------|
-| **strategic** | Vision, mission, goals | Product direction, business objectives |
-| **personas** | Who you build for | Primary user, admin, operator |
-| **rules** | Constraints and conventions | Tech policies, quality bars |
-| **decisions** | Architectural decisions | Why we chose X over Y |
-| **vocabulary** | Domain terminology | Key terms, business entities |
-| **stack** | Technology stack | Languages, frameworks, dependencies |
-| **schema** | Data structures | Entities, relationships, types |
-| **design** | Visual language | Colors, typography, components |
-| **patterns** | Code patterns | Common solutions, idioms |
-| **debt** | Technical debt | Known issues, future work |
-
-## File Operations
-
-```
-# List all knowledge items
-Glob(".mill/ground/**/*.md") → Read each for frontmatter
-
-# List by category
-Glob(".mill/ground/{category}/*.md") → Read each
-
-# Get item content
-Read(".mill/ground/{category}/{id}.md")
-
-# Create item
-Write(".mill/ground/{category}/{id}.md", content)
-
-# List observations
-Glob(".mill/observations/*.md") → Read each
-
-# Get observation
-Read(".mill/observations/{id}.md")
-```
+| Category | Purpose |
+|----------|---------|
+| **strategic** | Vision, mission, goals |
+| **personas** | Who you build for |
+| **rules** | Constraints and conventions |
+| **decisions** | Architectural decisions (why X over Y) |
+| **vocabulary** | Domain terminology |
+| **stack** | Technology stack |
+| **schema** | Data structures and relationships |
+| **design** | Visual language (colors, typography) |
+| **patterns** | Code patterns and idioms |
+| **debt** | Known issues, future work |
 
 ## Create Knowledge Flow
 
@@ -186,106 +88,29 @@ When creating new knowledge (not from observation):
 
 ### 1. Ask Category
 
-```yaml
-AskUserQuestion:
-  question: "What category of knowledge?"
-  header: "Category"
-  options:
-    - label: "Personas"
-      description: "Who you build for"
-    - label: "Rules"
-      description: "Constraints and conventions"
-    - label: "Decisions"
-      description: "Architectural decisions"
-    - label: "Vocabulary"
-      description: "Domain terminology"
-```
+Ask via AskUserQuestion: Personas / Rules / Decisions / Vocabulary (extend to other categories as needed).
 
 ### 2. Elicit Details
 
-For each category, ask appropriate questions:
+Ask category-appropriate questions via AskUserQuestion:
 
-**Personas** — Ask about users:
-```yaml
-AskUserQuestion:
-  question: "What type of user is this?"
-  header: "User type"
-  options:
-    - label: "End user"
-      description: "Primary product user"
-    - label: "Admin"
-      description: "Manages settings/users"
-    - label: "Operator"
-      description: "Runs/maintains the system"
-```
-
-Then elicit: job-to-be-done, pain points, triggers.
-
-**Rules** — Ask about constraints:
-```yaml
-AskUserQuestion:
-  question: "What kind of rule?"
-  header: "Rule"
-  options:
-    - label: "Tech policy"
-      description: "Languages, frameworks, tools"
-    - label: "Quality bar"
-      description: "Testing, coverage, performance"
-    - label: "Convention"
-      description: "Naming, structure, patterns"
-```
-
-**Decisions** — Ask about choices made:
-```yaml
-AskUserQuestion:
-  question: "What decision are you documenting?"
-  header: "Decision"
-  options:
-    - label: "Technology choice"
-      description: "Why we chose X over Y"
-    - label: "Architecture pattern"
-      description: "How we structure X"
-    - label: "Process decision"
-      description: "How we do X"
-```
-
-**Vocabulary** — Ask about domain terms.
+| Category | Elicit |
+|----------|--------|
+| **Personas** | User type (end user/admin/operator), job-to-be-done, pain points, triggers |
+| **Rules** | Kind (tech policy/quality bar/convention), specifics |
+| **Decisions** | What was decided (technology/architecture/process), choice, rationale, alternatives rejected |
+| **Vocabulary** | Term, definition, context, related terms |
 
 ### 3. Write Knowledge Files
 
-Write using the Write tool to `.mill/ground/{category}/{id}.md`:
-
-```markdown
----
-category: personas
-id: primary-user
----
-
-# Primary User
-
-{Description of the persona}
-
-## Job to be Done
-{What they're trying to accomplish}
-
-## Pain Points
-{Current frustrations}
-
-## Triggers
-{What causes them to use the product}
-```
+Write to `.mill/ground/{category}/{id}.md` with frontmatter (`category`, `id`) and structured content.
 
 ### 4. Verify
 
-```
-Glob(".mill/ground/**/*.md")
-```
-
-Read and confirm the new file was written correctly.
+`Glob(".mill/ground/**/*.md")` — confirm written correctly.
 
 ## Integration with Specs
 
-Knowledge items inform spec drafting:
 - Personas → user stories reference real users
 - Rules → acceptance criteria align with quality bars
 - Vocabulary → specs use consistent terminology
@@ -293,21 +118,4 @@ Knowledge items inform spec drafting:
 
 ## Kickstart (New Projects)
 
-For new projects, ask the user directly:
-
-```yaml
-AskUserQuestion:
-  question: "What kind of product is this?"
-  header: "Product"
-  options:
-    - label: "SaaS"
-      description: "Web app with subscriptions"
-    - label: "API / Platform"
-      description: "Developer-facing service"
-    - label: "Marketing site"
-      description: "Content, landing pages"
-    - label: "Internal tool"
-      description: "Team-facing utility"
-```
-
-Then ask about their stack, conventions, and key personas. Create initial ground files from the conversation — no templates needed.
+Ask via AskUserQuestion: product type (SaaS / API-Platform / Marketing site / Internal tool). Then elicit stack, conventions, key personas. Create initial ground files from conversation.

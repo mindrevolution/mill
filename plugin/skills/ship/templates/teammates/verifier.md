@@ -58,7 +58,6 @@ After your review, report one of:
 
 ## Rules
 
-- Be thorough but fair
 - Every blocker must reference a specific spec criterion or a real defect
 - If tests pass and all criteria are met, the code passes
 - You are structurally independent — you never saw the implementer's reasoning
