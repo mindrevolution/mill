@@ -1,6 +1,6 @@
 ---
 title: "Ship"
-number: 7
+number: 6
 subtitle: "From spec to pull request"
 accent: "flame"
 ---

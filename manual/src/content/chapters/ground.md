@@ -1,6 +1,6 @@
 ---
 title: "Ground"
-number: 4
+number: 3
 subtitle: "Your project's knowledge base"
 accent: "electric"
 ---

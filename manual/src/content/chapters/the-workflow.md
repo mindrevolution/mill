@@ -1,6 +1,6 @@
 ---
 title: "The Workflow"
-number: 3
+number: 2
 subtitle: "From intent to verified delivery"
 accent: "gold"
 ---
@@ -70,7 +70,7 @@ Criteria (C)         → testable conditions
 
 The **coverage matrix** proves every core requirement has an approach implementing it and criteria verifying it. No gaps.
 
-The spec workflow is conversational — mill asks one question at a time, challenges ambiguity, and validates against the [principles](/principles) (self-containment, decision completeness, language independence). When the spec passes, it publishes as a GitHub Issue. That issue is the source of truth.
+The spec workflow is conversational — mill asks one question at a time, challenges ambiguity, and [validates](/spec#validation) the result (self-containment, decision completeness, language independence). When the spec passes, it publishes as a GitHub Issue. That issue is the source of truth.
 
 ## Ship — The Execution
 

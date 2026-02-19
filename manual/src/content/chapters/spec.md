@@ -1,6 +1,6 @@
 ---
 title: "Spec"
-number: 6
+number: 5
 subtitle: "Turn intent into precision"
 accent: "cyan"
 ---
@@ -117,7 +117,7 @@ A draft is saved early and updated as you go. You can stop mid-conversation and 
 
 ### Validation
 
-Before publishing, mill validates against the [principles](/principles):
+Before publishing, mill validates your spec against these checks:
 
 - **Self-Containment** — no statement requires external clarification
 - **Language Independence** — describes *what* and *why*, not language-specific *how*
@@ -126,7 +126,28 @@ Before publishing, mill validates against the [principles](/principles):
 - **Coverage** — all core/must-have requirements have approach and criteria
 - **No open flags** — all uncertainties resolved
 
-> **Example** — Language independence means "validate the email format" (what), not "use a regex to validate the email" (how). The implementer chooses the mechanism based on the stack.
+The first three deserve examples — they're the ones most often violated.
+
+**Self-containment** means every statement can be executed by someone unfamiliar with the system:
+
+| Fails | Passes |
+|-------|--------|
+| "Configure the stream endpoint" | "Set `RTMP_INGEST=rtmp://ingest.example.com:1935/live` in `encoder/.env`" |
+| "Use the appropriate codec" | "Encode with H.264 Main Profile, 1080p@30fps, 4500kbps CBR" |
+| "Handle errors gracefully" | "On failure: retry 3x with exponential backoff, then emit `stream.failed` with payload `{streamId, error, timestamp}`" |
+
+If a reader has to ask "which endpoint?" or "what codec?" — the spec isn't ready.
+
+**Language independence** means "validate the email format" (what), not "use a regex to validate the email" (how). The implementer chooses the mechanism based on the stack.
+
+**Decision completeness** means every parameter is bound to a concrete value. When a decision depends on a condition:
+
+```
+Retry count: default 3 unless network is cellular → 5
+Cache TTL: default 60s unless user is admin → 0 (no cache)
+```
+
+No TBDs. No "it depends." The implementer never has to guess.
 
 ### Publishing
 

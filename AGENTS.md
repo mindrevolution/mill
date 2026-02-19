@@ -219,7 +219,13 @@ Edit `plugin/commands/*.md` and `plugin/templates/**/*.md` directly. Test by run
 
 ## Version Sync
 
-When bumping the plugin version in `plugin/.claude-plugin/plugin.json`, also update the manual hero version badge in `manual/src/pages/index.astro` (minor version only, e.g. `v0.7 beta`).
+Three files must stay in sync when bumping versions:
+
+| File | Field | Example |
+|------|-------|---------|
+| `plugin/.claude-plugin/plugin.json` | `"version"` | `"0.7.0-beta"` |
+| `manual/package.json` | `"version"` | `"0.7.0-beta"` |
+| `manual/src/pages/index.astro` | Hero badge | `v0.7 beta` (minor only) |
 
 ## Key Principles
 

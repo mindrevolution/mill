@@ -1,6 +1,6 @@
 ---
 title: "Getting Started"
-number: 8
+number: 7
 subtitle: "From zero to first ship"
 accent: "electric"
 ---

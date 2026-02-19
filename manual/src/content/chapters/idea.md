@@ -1,6 +1,6 @@
 ---
 title: "Idea"
-number: 5
+number: 4
 subtitle: "Capture sparks before they fade"
 accent: "violet"
 ---
