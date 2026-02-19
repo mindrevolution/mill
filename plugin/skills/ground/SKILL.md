@@ -46,6 +46,7 @@ Read full observation. Ask via AskUserQuestion:
    - `type: discovery` + decision → `ground/decisions/`
    - `type: learning` + file couplings/architecture → `ground/patterns/`
    - `type: learning` + conventions/commands/config → `ground/rules/`
+   - If observation has `suggested:` frontmatter (from ship auto-tag), use as routing hint but confirm with user
 2. Ask clarifying questions to gather details
 3. `Write(".mill/ground/{category}/{id}.md", content)`
 4. `rm .mill/observations/{id}.md`

@@ -222,12 +222,7 @@ Parse PR URL. Clean up: `rm .mill/.prompt`
 
 After every ship session, extract process knowledge. The question: **"How can we do better next time?"**
 
-Review the session — iteration history, implementer process notes, orchestration decisions — and write a single observation:
-
-- **Path:** `.mill/observations/ship-{N}-learnings.md`
-- **Frontmatter:** `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`
-
-Extract only **non-obvious** learnings:
+Review the session — iteration history, implementer process notes, orchestration decisions. Extract only **non-obvious** learnings:
 
 | Category | What to capture |
 |----------|----------------|
@@ -237,7 +232,24 @@ Extract only **non-obvious** learnings:
 | **Architectural constraints** | Invariants or coupling discovered only by breaking things |
 | **Divergent execution paths** | Runtime behavior that differs from how code reads statically |
 
-Don't fabricate. If nothing surprising emerged: `"Clean session — no non-obvious learnings."`
+**Default: no learnings.** Most sessions produce nothing worth recording. Only write if a learning passes the bar: *"Would a developer reading this change how they work on this codebase next time?"* If nothing passes, write nothing — don't fabricate.
+
+All learnings go to the observation inbox with a `suggested:` routing hint for `/mill:ground`:
+
+- Path: `.mill/observations/ship-{N}-learnings.md`
+- Frontmatter: `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`, `suggested: ground/{category}/`
+
+| Learning about | `suggested:` value |
+|----------------|--------------------|
+| File couplings, architecture patterns | `ground/patterns/` |
+| Conventions, commands, config | `ground/rules/` |
+| Mixed or uncertain | omit `suggested:` |
+
+Human decides final routing via `/mill:ground`.
+
+**Report observation count:**
+
+`Glob(".mill/observations/*.md")` — if observations exist, report: "{N} observations in the learning inbox. Review via `/mill:ground` or they'll surface at next `/mill:spec`."
 
 ### 13. Cleanup
 
@@ -270,11 +282,11 @@ Teammates write observations during implementation:
 - Path: `.mill/observations/ship-{N}-{slug}.md`
 - Frontmatter: `source: ship`, `type: concern|discovery|suggestion`, `issue: {N}`
 
-Lead writes learnings after PR creation (step 12):
-- Path: `.mill/observations/ship-{N}-learnings.md`
-- Frontmatter: `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`
+After PR creation, the lead extracts learnings (step 12):
+- All learnings → `.mill/observations/ship-{N}-learnings.md` with `suggested:` routing hint
+- Human decides final routing via `/mill:ground`
 
-Reviewed later via `/mill:ground`.
+All observations reviewed via `/mill:ground` or during `/mill:spec` pre-flight.
 
 ## Rules
 

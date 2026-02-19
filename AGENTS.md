@@ -111,7 +111,7 @@ Specs include a `domain` field that loads execution guidance from the plugin's `
 
 ## Observations
 
-The **learning inbox**. Skills write observations during execution — discoveries, concerns, suggestions. `/mill:ground` reviews and curates them into permanent ground truth.
+The **learning inbox**. Skills write observations during execution — discoveries, concerns, suggestions. Observations reach ground truth through three paths:
 
 ```
 Skills (spec, ship, warmup)
@@ -119,7 +119,11 @@ Skills (spec, ship, warmup)
         ▼ write .md files
 .mill/observations/*.md
         │
-        ▼ review via /mill:ground
+        ├──→ /mill:ground (dedicated review — human routes to ground)
+        ├──→ /mill:spec pre-flight (count + nudge before drafting)
+        └──→ /mill:ship auto-tag (suggested: routing hint for ground)
+        │
+        ▼
 .mill/ground/* (curated truth)
 ```
 

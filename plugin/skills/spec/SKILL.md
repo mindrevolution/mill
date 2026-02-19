@@ -80,7 +80,9 @@ If drafts exist, ask via AskUserQuestion: resume a draft or start new.
 
 ### 1. Ensure Context
 
-Check context freshness:
+**Check observations** — `Glob(".mill/observations/*.md")`. If any exist, report: "{N} observations in the learning inbox — consider `/mill:ground` before drafting." Continue without blocking.
+
+**Check context freshness:**
 1. Read `.mill/context.md` — extract hash
 2. `git rev-parse HEAD` — compare
 3. If missing or stale → run `/mill:warmup`
