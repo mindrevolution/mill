@@ -49,7 +49,7 @@ mill assembles a team for every ship run. The skill session becomes the **lead**
 
 The verifier never sees the implementer's reasoning. This structural independence catches what self-review misses. Work can't grade its own homework.
 
-When verification rejects, the lead routes specific feedback to the responsible implementer. Fix, re-verify, repeat — maximum 3 cycles before escalating to you. This prevents infinite loops while giving honest attempts to resolve issues.
+When verification rejects, the lead routes specific feedback to the responsible implementer. Fix, re-verify, repeat — governed by the spec's Loop Contract (default 5 cycles) before escalating to you.
 
 ## Continuous Learning
 

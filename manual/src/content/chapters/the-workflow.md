@@ -92,7 +92,7 @@ Ship takes a GitHub Issue and assembles a team of agents to implement it. One sk
 
 Ship is autonomous. The spec should be complete enough that implementation doesn't need human input. If the spec has gaps that block implementation, the lead escalates to you — the spec goes back to drafting.
 
-During implementation, mill writes observations about what it discovered — patterns, gaps, concerns — which feed the learning loop.
+During implementation, mill writes observations about what it discovered — patterns, gaps, concerns. After the PR is created, the lead extracts process learnings: debugging breakthroughs, file couplings, commands that took trial and error. All of it feeds the learning loop.
 
 ## The Learning Loop
 
@@ -119,8 +119,9 @@ These observations land in the **learning inbox** — a collection of markdown f
 | **discovery** | New information found |
 | **concern** | Potential problem spotted |
 | **suggestion** | Improvement idea |
+| **learning** | Process knowledge from ship (debugging insights, file couplings, workarounds) |
 
-When you run `/mill:ground`, you review these observations. Curate them into ground truth, create new specs from them, track them as debt, or dismiss them. The ones that matter become permanent knowledge that informs the next cycle.
+Observations reach ground truth through `/mill:ground` for dedicated review. `/mill:spec` nudges you when observations are pending, and ship tags learnings with routing suggestions — but the human always makes the final call on what becomes permanent knowledge.
 
 ## End to End
 

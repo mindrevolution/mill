@@ -31,15 +31,14 @@ mill asks a couple of quick questions, and the idea is saved. No requirements. N
 
 ### Developing
 
-When you have time, flesh it out. mill asks questions to help you think:
+When you have time, flesh it out. mill starts by **orienting in your codebase** — finding relevant files, modules, and patterns — then walks you through 3-5 rounds of dialogue:
 
-- What type of idea is this? (Feature / Improvement / Exploration)
-- What problem does this solve?
-- Who experiences this problem? (references personas from ground)
-- What would success look like?
-- What's the rough scope?
+- **Scope** — what's in, what's out?
+- **Approach** — what are the main building blocks?
+- **Decisions** — key design choices and alternatives
+- **Trade-offs** — what are we optimizing for?
 
-Each answer enriches the idea file. Open questions are tracked explicitly — they're the gaps that need closing before promotion.
+Each round is informed by what mill found in your code. Decisions are documented with rationale. Open questions are tracked explicitly — they're the gaps that need closing before promotion.
 
 ### Ready
 

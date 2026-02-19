@@ -7,9 +7,9 @@ accent: "flame"
 
 ## The Execution Engine
 
-Ship is where intent becomes reality. You point it at a crafted spec — hosted as a GitHub Issue — and it assembles a team of agents to implement that spec, verify it independently, and open a Pull Request.
+Ship is where intent becomes reality. You point it at a spec — a GitHub Issue — and it assembles a team of agents to implement, verify, and open a Pull Request.
 
-This isn't "generate some code." This is **team-based delivery**: a lead agent reads your spec, determines the right team size, delegates work with explicit file ownership boundaries, and coordinates until an independent verifier confirms every criterion is met.
+This isn't "generate some code." This is **team-based delivery**: a lead reads your spec, sizes the team, delegates work with file ownership boundaries, and coordinates until an independent verifier confirms every criterion.
 
 ## How It Works
 
@@ -19,7 +19,7 @@ This isn't "generate some code." This is **team-based delivery**: a lead agent r
 /mill:ship 47
 ```
 
-That's it. mill reads GitHub Issue #47, parses the spec structure, and validates that everything needed is present. If no issue number is given, mill shows open spec issues for you to choose from.
+mill reads Issue #47, parses the spec structure, and validates everything needed is present. No issue number? mill shows open specs for you to choose from.
 
 ### 2. Isolate
 
@@ -29,126 +29,92 @@ mill creates a **worktree** — an isolated copy of your repo on a dedicated bra
 .mill/ship/work/issue-47/
 ```
 
-Your main branch stays untouched. All implementation happens in isolation. If anything goes wrong, there's nothing to clean up on main.
+Your main branch stays untouched. If anything goes wrong, there's nothing to clean up.
 
 ### 3. Load Context
 
-Before assembling the team, the lead loads:
+Before assembling the team, the lead loads the spec, project context from `.mill/context.md`, and domain guidance matching the spec's domain. This is why ground matters — rich ground knowledge produces dramatically better code.
 
-- **The spec** — parsed from the GitHub Issue
-- **Project context** from `.mill/context.md` — your codebase overview
-- **Domain guidance** — execution template for the spec's domain (backend, application, etc.)
+### 4. Size the Team
 
-This is why ground matters. A ship run with rich ground knowledge produces dramatically better code than one without.
-
-### 4. Determine Team Size
-
-The lead analyzes the spec's requirements and approach to determine how many implementers are needed:
+The lead analyzes the spec's approach to determine how many implementers are needed:
 
 | Spec Shape | Implementers |
 |------------|-------------|
-| Single domain, 1-4 approach parts | 1 |
-| Single domain, 5+ approach parts | 2 (split by concern) |
-| Fullstack domain | 2-3 (one per layer) |
+| Single domain, 1-4 parts | 1 |
+| Single domain, 5+ parts | 2 (split by concern) |
+| Fullstack | 2-3 (one per layer) |
 | Complex, 10+ parts | 3-4 |
 
 Even a simple spec gets a team-of-1. The lead always delegates — it never implements directly.
 
 ### 5. Delegate
 
-The lead spawns implementer agents. Each gets:
+Each implementer gets their portion of the spec, project context, domain guidance, and **explicit file ownership** — "you may only edit files in `src/api/` and `src/models/`." This prevents conflicts when multiple implementers work in parallel.
 
-- Their portion of the spec (specific task assignments)
-- Project context and domain guidance
-- **Explicit file ownership boundaries** — "you may only edit files in `src/api/` and `src/models/`"
-- The worktree path as working directory
+The lead manages cross-team contracts. If a backend implementer defines an API shape, the lead communicates that contract to the frontend implementer.
 
-File ownership prevents conflicts when multiple implementers work in parallel. The lead manages cross-team contracts — if a backend implementer defines an API shape, the lead communicates that contract to the frontend implementer.
+### 6. Polish
 
-### 6. Verify Independently
+After all implementers complete their tasks, each gets one bounded pass to self-review: clean up rough edges, check every spec criterion against their diff, run tests. This raises the floor before the independent verifier sees the code.
 
-This is the key insight: **work can't grade its own homework.**
+### 7. Verify Independently
 
-After all implementers complete their tasks, the lead spawns a **verifier** — a separate agent with clean context that never saw the implementer's reasoning. The verifier:
+**Work can't grade its own homework.**
 
-- Reviews the full `git diff` for the changeset
-- Runs the test suite
-- Checks every acceptance criterion from the spec
-- Looks for quality issues, security concerns, and scope creep
+The lead spawns a **verifier** — a separate agent with clean context that never saw the implementer's reasoning. The verifier reviews the full `git diff`, runs the test suite, checks every acceptance criterion, and looks for quality issues, security concerns, and scope creep.
 
-If verification passes → proceed to PR.
-If verification rejects → the lead routes specific feedback to the responsible implementer(s).
+Pass → PR. Reject → feedback routed to the responsible implementer.
 
-### 7. Rejection Cycles
+### 8. Iteration Cycles
 
-When the verifier rejects, the cycle is precise:
+When the verifier rejects:
 
 1. Verifier reports specific blockers with suggestions
 2. Lead identifies which implementer owns the affected code
-3. That implementer receives the feedback and fixes the issues
-4. Verifier re-checks with clean context
+3. That implementer gets the feedback plus cumulative history of past fixes
+4. Verifier re-checks with clean context (no memory of previous rounds)
 
-Maximum **3 rejection cycles** before escalating to you. This prevents infinite loops while giving honest attempts to resolve issues.
+Every spec includes a **Loop Contract** that governs how many cycles are allowed (default 5). After that, mill escalates to you with options: continue iterating, PR as-is, or abort.
 
-### 8. Create PR
+### 9. Create PR
 
-mill creates a Pull Request with:
+mill creates a Pull Request linking back to the spec issue — full traceability from intent to implementation.
 
-- Title referencing the issue
-- Description linking the spec
-- Summary of changes
-- Verification results
+### 10. Extract Learnings
 
-The PR connects back to the spec issue, creating full traceability from intent → spec → implementation → review.
+After every ship run, the lead pauses to ask: **"How can we do better next time?"**
 
-### 9. Clean Up
+It reviews the session — iteration history, implementer notes, orchestration decisions — and writes a learnings observation. Not a formality: these capture the non-obvious stuff that makes the next ship smarter:
 
-After completion, mill removes the worktree — clean slate. Your git log and GitHub PRs are the history.
+- Files that turned out to be coupled in ways you wouldn't guess from the directory structure
+- Error messages that were misleading and what they actually meant
+- Commands or configs that took trial and error to get right
+
+All learnings land in the **learning inbox** with a suggested routing hint. You decide what becomes permanent knowledge — either via `/mill:ground` or when `/mill:spec` nudges you before drafting. mill suggests where each learning belongs (patterns, rules, etc.) but the human makes the final call.
+
+### 11. Clean Up
+
+Worktree removed. Your git log and GitHub PRs are the history.
 
 ## Structural Independence
 
-The verifier is always a separate agent. This isn't a stylistic choice — it's the only way to get genuine review.
+The verifier is always a separate agent. When you review your own work, you see what you *intended* to write, not what you *actually* wrote. A fresh pair of eyes catches what self-review misses.
 
-When you review your own work, you see what you *intended* to write, not what you *actually* wrote. A fresh pair of eyes catches what self-review misses: edge cases, inconsistencies, scope creep, subtle bugs.
-
-mill enforces this structurally. The verifier has no access to the implementer's reasoning, planning, or intermediate thoughts. It only sees the spec and the resulting code.
+mill enforces this structurally. The verifier has no access to the implementer's reasoning or planning. It only sees the spec and the resulting code.
 
 ## Autonomy and Judgment
 
-Ship is autonomous. The spec is the complete instruction set — implementers don't have a line back to you during execution.
+Ship is autonomous. The spec is the complete instruction set. The rule: honor the spec. Don't add what wasn't asked for. Don't skip what was specified.
 
-- **Implementation details** — decided by the implementer within spec boundaries
-- **Scope creep** — the verifier catches anything that wasn't in the spec
-- **Spec gaps** — if something blocks implementation, the lead escalates and the spec goes back to drafting
-
-The rule is simple: honor the spec. Don't add what wasn't asked for. Don't skip what was specified. Build exactly what was contracted.
-
-## Observations During Ship
-
-While implementing, mill observes:
-
-- Missing test coverage in existing code
-- Undocumented APIs being used
-- Code patterns not tracked in ground
-- Dependencies not in the stack inventory
-
-These observations are written to `.mill/observations/` without interrupting the flow. They'll be reviewed later in the ground review cycle.
+If something blocks implementation, the lead escalates and the spec goes back to drafting.
 
 ## When Things Go Wrong
 
-### Tests fail
+**Tests fail** — Implementers address test failures as part of their task, committing only after tests pass.
 
-Implementers receive test failures and address them as part of their task. Each implementer commits after getting tests to pass.
+**Verification rejects** — The lead routes feedback to the responsible implementer. Iteration continues up to the Loop Contract limit.
 
-### Verification rejects
+**Spec has gaps** — The lead escalates with a clear description of what's missing. The spec goes back to drafting.
 
-The verifier found issues. The lead routes rejection feedback to the responsible implementer(s) for another round. Maximum 3 cycles.
-
-### Spec has gaps
-
-If the spec is missing information that blocks implementation, the lead escalates to you with a clear description of what's needed. The spec goes back to the drafting stage.
-
-### Fallback mode
-
-If agent teams aren't available (experimental feature disabled), ship falls back to single-session mode: the lead implements directly, then does an explicit self-review phase against the spec. Degraded but functional.
-
+**Fallback mode** — If agent teams aren't available, ship falls back to single-session mode: the lead implements directly, then self-reviews against the spec. Degraded but functional.

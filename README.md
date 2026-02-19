@@ -42,7 +42,7 @@ flowchart LR
 
 | Skill | What it does |
 |-------|-------------|
-| `/mill:init` | Initialize `.mill/` — directory structure, config, templates |
+| `/mill:init` | Initialize `.mill/` — directory structure and gitignore |
 | `/mill:ground` | Build your project's knowledge base — personas, conventions, decisions |
 | `/mill:idea` | Capture a rough thought — 30 days to develop into a spec or drop with learnings |
 | `/mill:spec` | Turn intent into a precise, self-contained spec → published as GitHub Issue |

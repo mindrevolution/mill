@@ -120,8 +120,9 @@ Every spec ends with a loop contract:
 
 ```markdown
 ## Loop Contract
-**Test command:** `npm test`
-**Rejection cycles:** 3 max
+**Test Command:** `npm test`
+**Max Iterations:** 5
+**Verification Commands:** `npm run lint`
 ```
 
 This tells ship exactly how to verify and when to stop. No ambiguity about what "passing" means.

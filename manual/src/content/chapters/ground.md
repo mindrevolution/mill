@@ -101,7 +101,7 @@ The process is conversational. mill asks one question at a time, offering option
 
 ### 2. Observation Review
 
-When specs are drafted and features are shipped, mill observes gaps in ground truth. These observations land in the learning inbox:
+When specs are drafted and features are shipped, mill observes gaps in ground truth. After every ship run, it also extracts process learnings — debugging insights, file couplings, commands that took trial and error. All of these observations land in the learning inbox:
 
 ```
 /mill:ground

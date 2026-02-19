@@ -105,45 +105,12 @@ mill [assembles a team](/ship) — a lead orchestrates, implementers build withi
 
 ## The Daily Rhythm
 
-Once mill is set up, here's what a typical workflow looks like:
+Once mill is set up, the workflow is simple:
 
-### Morning
-
-```
-/mill:ground
-→ Review observations from yesterday's ship runs
-→ Curate new knowledge into ground
-```
-
-### During the Day
-
-```
-/mill:idea "Quick thought about caching"
-→ Capture it in 30 seconds, develop later
-```
-
-### When Ready to Build
-
-```
-/mill:spec "Add response caching to API"
-→ 10-minute conversation to produce a complete spec
-→ Published as GitHub Issue #55
-```
-
-```
-/mill:ship 55
-→ Team assembled: 1 implementer + 1 verifier
-→ Independent verification passed
-→ PR #56 created, ready for review
-```
-
-### Weekly
-
-```
-/mill:idea
-→ Review active ideas
-→ Promote the ready ones, drop the stale ones
-```
+- **Start of day:** `/mill:ground` — review observations from yesterday's ship runs, curate into knowledge
+- **Anytime:** `/mill:idea "Quick thought"` — capture in 30 seconds, develop later
+- **Ready to build:** `/mill:spec` → `/mill:ship 55` — spec to PR in one flow
+- **Weekly:** `/mill:idea` — review active ideas, promote or drop the stale ones
 
 ## Skills Reference
 
@@ -170,12 +137,4 @@ Once mill is set up, here's what a typical workflow looks like:
 
 ## What's Next?
 
-You've learned the full mill workflow. Here's your path forward:
-
-1. **Install and initialize** — get set up
-2. **Build ground** — start with personas and rules
-3. **Draft a spec** — turn an idea into a contract
-4. **Ship it** — run the full cycle and get a PR
-5. **Review and learn** — check observations, refine ground
-
-Each cycle makes the next one sharper. That's the promise. Now go build something great.
+Install → init → ground → spec → ship → review observations → repeat. Each cycle makes the next one sharper. Now go build something great.
