@@ -25,10 +25,10 @@ const accentTextMap: Record<string, string> = {
 };
 
 const workflowSteps = [
-  { label: 'Ground', desc: 'Know your world', icon: '◆', color: 'accent-electric' },
-  { label: 'Idea', desc: 'Capture the spark', icon: '✦', color: 'accent-violet' },
-  { label: 'Spec', desc: 'Define precisely', icon: '▣', color: 'accent-cyan' },
-  { label: 'Ship', desc: 'Build & verify', icon: '▲', color: 'accent-flame' },
+  { label: 'Ground', desc: 'Know your world', icon: '◆', color: 'accent-electric', href: '/ground' },
+  { label: 'Idea', desc: 'Capture the spark', icon: '✦', color: 'accent-violet', href: '/idea' },
+  { label: 'Spec', desc: 'Define precisely', icon: '▣', color: 'accent-cyan', href: '/spec' },
+  { label: 'Ship', desc: 'Build & verify', icon: '▲', color: 'accent-flame', href: '/ship' },
 ];
 ---
 
@@ -166,7 +166,7 @@ const workflowSteps = [
       <!-- Workflow steps -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {workflowSteps.map((step, i) => (
-          <div class={`reveal delay-${i + 1}`}>
+          <a href={step.href} class={`reveal delay-${i + 1} no-underline`}>
             <div class="group relative p-8 rounded-2xl border border-mill-graphite/30 bg-mill-carbon/30
                         hover:bg-mill-carbon/60 hover:border-mill-slate/50 transition-all duration-500 card-hover h-full">
               <!-- Step number -->
@@ -184,7 +184,7 @@ const workflowSteps = [
               <!-- Hover glow -->
               <div class={`absolute inset-0 rounded-2xl bg-${step.color}/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}></div>
             </div>
-          </div>
+          </a>
         ))}
       </div>
 
