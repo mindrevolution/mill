@@ -7,11 +7,9 @@ accent: "electric"
 
 ## What Ground Is
 
-Ground is the shared brain of your project. Everything mill knows about your domain, your users, your conventions, your stack — it lives here.
+Ground is the shared knowledge of your project — domain, users, conventions, stack. Every mill skill reads ground before acting: specs check it for consistency, ship loads it for implementation guidance, ideas reference it to connect sparks to real users.
 
-Unlike documentation that rots in a wiki, ground is *active*. It's read by specs to ensure consistency. It's referenced by ship for implementation guidance. It's enriched by observations from every cycle.
-
-```bash
+```
 .mill/ground/
 ├── strategic/      # Vision, mission, goals
 ├── personas/       # Who you build for
@@ -29,63 +27,115 @@ Unlike documentation that rots in a wiki, ground is *active*. It's read by specs
 
 ### Strategic
 
-The big picture. Why does this project exist? Where is it going?
+```markdown
+# Product Vision
+SaaS platform for construction project management.
+Primary metric: time from bid submission to project kickoff.
+North star: under 48 hours for standard residential projects.
+```
 
-This isn't a business plan. It's the compass that helps mill understand which features matter and why. When a spec references "improving user onboarding," strategic context tells mill what good onboarding means for *your* product.
+Why does this project exist? Where is it going? This is the compass that helps mill understand which features matter.
 
 ### Personas
 
-Real users, not abstractions. Each persona has:
+```markdown
+# Site Foreman
+**Job:** Coordinate subcontractors and track daily progress on-site.
+**Pain:** Paper timesheets, no real-time visibility into material deliveries.
+**Trigger:** Opens the app at 6am to check today's crew assignments.
+```
 
-- **Job to be done** — what they're trying to accomplish
-- **Pain points** — current frustrations
-- **Triggers** — what causes them to use your product
-
-When you write specs, requirements reference these personas. "As a *finance admin*..." means something specific because the persona is defined.
+Real users, not abstractions. When a spec says "As a *site foreman*...", it means something specific because the persona is defined.
 
 ### Rules
 
-The constraints your team has agreed on. Technology policies. Quality bars. Naming conventions. Performance budgets.
+```markdown
+# API Error Format
+All API errors return `{code, message, trace?}`.
+No naked strings. No stack traces in production.
+```
 
-Rules are enforceable. When a spec proposes something that conflicts with a rule, mill flags it. When an implementation doesn't meet a quality bar, verification catches it.
+Enforceable constraints. When a spec proposes something that conflicts with a rule, mill flags it. When an implementation violates a quality bar, verification catches it.
 
 ### Decisions
 
-Why you chose X over Y. Not just the choice — the reasoning.
+```markdown
+# Database: PostgreSQL over MongoDB
+Chose relational model for strong consistency on financial data.
+Revisit if we add real-time collaboration (MongoDB's change streams).
+```
 
-Decisions have a half-life. Some are permanent ("we use PostgreSQL"). Some may be revisited ("we chose REST over GraphQL because..."). Documenting the *why* means future you can evaluate whether the reasoning still holds.
+Not just the choice — the reasoning. Documenting the *why* means future you can evaluate whether the reasoning still holds.
 
 ### Vocabulary
 
-Domain terms defined once, used consistently everywhere. When your spec says "invoice," everyone knows exactly what that means — the fields, the states, the lifecycle.
+```markdown
+# Invoice
+A billing document tied to a single project phase.
+States: draft → sent → paid → void.
+Fields: amount, tax, lineItems[], dueDate, projectPhaseId.
+```
 
-This is subtle but powerful. Ambiguous terminology is one of the biggest sources of implementation bugs. Ground vocabulary eliminates it.
+Domain terms defined once, used consistently. Ambiguous terminology is one of the biggest sources of implementation bugs.
 
 ### Stack
 
-Your technology stack, explicitly documented. Languages, frameworks, dependencies, versions. When mill generates implementation guidance, it knows your tools.
+```markdown
+# Backend
+Runtime: Node.js 20 LTS
+Framework: Fastify 4.x
+ORM: Prisma 5.x
+Database: PostgreSQL 16
+```
+
+Explicitly documented technologies. When mill generates implementation guidance, it knows your tools.
 
 ### Schema
 
-Data structures and their relationships. Entities, fields, types, constraints. This is the structural truth that both specs and implementations must respect.
+```markdown
+# Project
+Fields: id (uuid), name (string), status (enum: active|paused|completed),
+        ownerId (FK → User), createdAt (timestamp).
+Constraints: name unique per owner. Status transitions: active↔paused, active→completed.
+```
+
+Data structures and relationships — the structural truth that specs and implementations must respect.
 
 ### Design
 
-Your visual language. Colors, typography, spacing, component patterns. For website and application domains, design ground ensures consistent UI without a 200-page style guide.
+```markdown
+# Color System
+Primary: #2563EB (blue-600). Surface: #FAFAFA. Error: #DC2626.
+Border radius: 8px (cards), 4px (inputs).
+Font: Inter 400/500/700.
+```
+
+Your visual language. For application and website domains, design ground ensures consistent UI.
 
 ### Patterns
 
-Code idioms your team uses. Error handling patterns. Logging conventions. API response structures. These become implicit standards that mill follows during implementation.
+```markdown
+# Repository Pattern
+All database access goes through repository classes.
+Never call Prisma directly from route handlers.
+Example: UserRepository.findById(id) — not prisma.user.findUnique().
+```
+
+Code idioms your team uses. These become implicit standards that mill follows during implementation.
 
 ### Debt
 
-Known issues, technical compromises, future work. Tracked explicitly so they don't get lost. When debt items affect new features, mill includes them in spec context.
+```markdown
+# Missing ReportService Tests
+ReportService has 0% test coverage. Added during sprint 12 rush.
+Risk: PDF export changes will have no safety net.
+```
+
+Known issues tracked explicitly. When debt items affect new features, mill includes them in spec context.
 
 ## Building Ground Knowledge
 
-Ground is built in three ways:
-
-### 1. Direct Creation
+### Direct Creation
 
 You tell mill what you know:
 
@@ -97,11 +147,11 @@ You tell mill what you know:
 → mill writes the persona file
 ```
 
-The process is conversational. mill asks one question at a time, offering options where sensible. You provide the substance; mill handles the structure.
+The process is conversational. mill asks one question at a time, offering options where sensible.
 
-### 2. Observation Review
+### Observation Review
 
-When specs are drafted and features are shipped, mill observes gaps in ground truth. After every ship run, it also extracts process learnings — debugging insights, file couplings, commands that took trial and error. All of these observations land in the learning inbox:
+When specs are drafted and features shipped, mill observes gaps. After ship runs, it also extracts process learnings — debugging insights, file couplings, commands that took trial and error.
 
 ```
 /mill:ground
@@ -110,9 +160,11 @@ When specs are drafted and features are shipped, mill observes gaps in ground tr
 → Choose: Curate to ground / Create spec / Add to debt / Dismiss
 ```
 
-This is the primary growth mechanism. You don't have to remember to document things. mill notices what's missing and asks you to fill the gaps.
+Ship learnings arrive with a `suggested:` routing hint (e.g., `suggested: ground/patterns/`) based on what was learned. You confirm or override the suggestion.
 
-### 3. Codebase Sync
+> **Tip** — This is the primary growth mechanism. You don't have to remember to document things — mill notices what's missing and asks you to fill the gaps.
+
+### Codebase Sync
 
 For technical categories (stack, patterns, schema), mill can extract knowledge directly from your code:
 
@@ -131,24 +183,12 @@ Every skill reads ground before acting:
 - **Ship** loads stack, patterns, and schema to guide implementation
 - **Idea** references personas to connect ideas to real users
 
-This is why ground matters. It's not documentation for humans — it's context for every mill operation. The richer your ground, the better your specs and implementations.
-
-## Using Ground
-
-Everything happens through the skill:
-
-```
-/mill:ground
-```
-
-mill asks what you'd like to do — create knowledge, review observations, sync from code — and walks you through it conversationally. All files are managed as markdown in `.mill/ground/`, readable by both humans and skills.
+The richer your ground, the better your specs and implementations.
 
 ## Best Practices
 
-**Start small.** You don't need all ten categories on day one. Begin with personas and rules. Add categories as they become relevant.
+> **Tip** — Start small. You don't need all ten categories on day one. Begin with personas and rules — they inform specs most directly. Add categories as they become relevant.
 
-**Review observations regularly.** The learning inbox is where ground grows organically. Make it a habit.
+> **Tip** — Review observations regularly. The learning inbox is where ground grows organically. Make it a habit after ship runs.
 
-**Keep entries focused.** One persona per file. One decision per file. Granularity makes knowledge reusable.
-
-**Update, don't hoard.** If a decision changes, update the file. Ground should reflect current truth, not historical record.
+> **Rule** — One persona per file. One decision per file. Granularity makes knowledge reusable across specs.

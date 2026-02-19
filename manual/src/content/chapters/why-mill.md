@@ -7,19 +7,37 @@ accent: "flame"
 
 ## The Problem
 
-You describe what you want. What gets built is... close. But not quite right.
+You describe what you want. What gets built is close — but not quite right.
 
-The gap between what you *meant* and what got *built* is where quality dies. Most tools try to make building faster. mill focuses on making building *accurate*.
+```
+You: "Add a retry mechanism for failed API calls"
+
+What you meant:
+  Retry 3x with exponential backoff, circuit-break after 5 failures,
+  log each attempt, emit a metric on final failure.
+
+What got built:
+  A while loop that retries forever with no backoff.
+```
+
+The gap between what you *meant* and what got *built* is where quality dies. Most tools try to make building faster. mill focuses on making building **accurate**.
 
 ## How mill Works
 
-mill starts with intent, not code.
+mill turns intent into a spec, then executes the spec with a team of agents:
 
-Before anything is written, mill helps you think through what you actually want — challenging assumptions, finding gaps, asking the questions you'd skip. Once your intent is precise, it assembles a team of agents to build it. A separate verifier checks every criterion independently.
+```
+/mill:idea   "Retry mechanism for API calls"     → capture the spark
+/mill:spec   "Retry with backoff and circuit-break" → precise contract
+/mill:ship 47                                     → team implements + verifies
+                                                  → PR ready for review
+```
 
-Every cycle, mill observes what it learns — patterns, gaps, terminology — and feeds it back into your project's knowledge base. The more you ship, the sharper it gets.
+Before anything is written, mill helps you think through what you actually want — challenging assumptions, finding gaps, asking the questions you'd skip. Once your intent is precise, it assembles a team: a lead orchestrates, implementers build within file boundaries, and a separate verifier checks every criterion independently.
 
-> You drive direction. mill handles precision.
+Every cycle, mill observes what it learned — patterns, gaps, terminology — and feeds it back into your project's knowledge base.
+
+> **What mill is NOT** — not a code generator, not a project manager. It's a delivery system that uses specification as the interface between intent and implementation.
 
 ## Who It's For
 
@@ -34,8 +52,8 @@ If you've ever:
 
 ## Five Principles
 
-1. **Specs drive execution** — no ambiguity, no guessing
-2. **Contracts over conversation** — verification, not vibes
-3. **Team-based delivery** — lead orchestrates, verifier checks independently
-4. **Continuous learning** — every cycle feeds knowledge back
-5. **Humans drive direction** — always
+1. **Specs drive execution** — the spec is the complete instruction set, not a rough outline
+2. **Contracts over conversation** — an independent verifier confirms criteria, not "looks good"
+3. **Team-based delivery** — a lead orchestrates, implementers build, a verifier checks
+4. **Continuous learning** — every cycle feeds observations back into project knowledge
+5. **Humans drive direction** — mill handles precision, you make the decisions

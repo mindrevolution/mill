@@ -5,11 +5,11 @@ subtitle: "Turn intent into precision"
 accent: "cyan"
 ---
 
-## The Art of Specification
+## The Bar
 
-A specification that requires clarifying questions is a draft, not a specification.
+A specification that requires clarifying questions has failed.
 
-This single test separates mill specs from every other requirements document you've written. The bar is high because the payoff is high: a spec that passes this test can be implemented without back-and-forth, without "what did you mean by...?", without rework.
+This single test determines whether a spec is ready. The bar is high because the payoff is high: a spec that passes this test can be implemented without back-and-forth, without "what did you mean by...?", without rework.
 
 ## The Structure
 
@@ -17,10 +17,10 @@ Every mill spec has four sections that form a provable chain:
 
 ### Requirements (R)
 
-What the solution must achieve. Each requirement gets an ID, a description, and a status:
+What the solution must achieve. Each requirement gets an ID, a description, and a priority:
 
-| Status | Meaning |
-|--------|---------|
+| Priority | Meaning |
+|----------|---------|
 | **core** | Must be implemented. No ship without it. |
 | **must-have** | Required but could be deferred to a follow-up. |
 | **nice-to-have** | Valuable but not blocking. |
@@ -30,24 +30,67 @@ What the solution must achieve. Each requirement gets an ID, a description, and 
 
 How you'll build it. Broken into parts, each describing a specific mechanism — a model change, an API endpoint, a UI component, a migration script.
 
-Approach parts can be flagged with ⚠️ when uncertainty exists. These flags must be resolved before the spec is ready. You can't ship ambiguity.
+Approach parts can be flagged with a warning when uncertainty exists. These flags must be resolved before the spec is ready.
 
 ### Criteria (C)
 
-Testable conditions that prove each requirement is met. Not "it should work" — but "given X input, the system returns Y with status Z in under 500ms."
+Testable conditions that prove each requirement is met. Good criteria are:
 
-Good criteria are:
 - **Binary** — they pass or fail, no "kind of"
 - **Automated** — they can be verified by a test command
 - **Independent** — each criterion tests one thing
 
-### Coverage (R × A × C)
+### Coverage (R x A x C)
 
-The proof matrix. Every core and must-have requirement must have:
-- At least one approach part implementing it
-- At least one criterion verifying it
+The proof matrix. Every core and must-have requirement must have at least one approach part implementing it and at least one criterion verifying it.
 
-If a row in the matrix has ❌ in the approach column or — in the criteria column, the spec isn't complete.
+---
+
+### A Complete Example
+
+Here's a small spec for adding PDF export to a reporting system:
+
+**Requirements:**
+
+| ID | Description | Priority |
+|----|-------------|----------|
+| R1 | Users can export any saved report as a PDF file | core |
+| R2 | The PDF preserves the report's table formatting and charts | core |
+| R3 | Export works for reports up to 500 rows without timeout | must-have |
+
+**Approach:**
+
+| ID | Mechanism |
+|----|-----------|
+| A1 | Add `GET /api/reports/:id/pdf` endpoint that accepts `format=pdf` query param |
+| A2 | Use Puppeteer to render the report HTML template server-side and print to PDF |
+| A3 | Stream the PDF response with `Content-Disposition: attachment` header |
+| A4 | Add a 30-second timeout; return 504 if rendering exceeds it |
+
+**Criteria:**
+
+| ID | Condition |
+|----|-----------|
+| C1 | `GET /api/reports/1/pdf` returns a valid PDF with status 200 and `Content-Type: application/pdf` |
+| C2 | The PDF contains all table rows and chart images from the source report |
+| C3 | A 500-row report completes export in under 25 seconds |
+| C4 | A 1000-row report returns 504 after 30 seconds |
+
+**Coverage:**
+
+| | A1 | A2 | A3 | A4 |
+|---|---|---|---|---|
+| **R1** | x | x | x | |
+| **R2** | | x | | |
+| **R3** | | | | x |
+
+| | C1 | C2 | C3 | C4 |
+|---|---|---|---|---|
+| **R1** | x | | | |
+| **R2** | | x | | |
+| **R3** | | | x | x |
+
+Every requirement has approach parts implementing it. Every requirement has criteria verifying it. No gaps.
 
 ## The Workflow
 
@@ -57,7 +100,7 @@ If a row in the matrix has ❌ in the approach column or — in the criteria col
 /mill:spec "Add PDF export for monthly reports"
 ```
 
-mill checks your project context, loads ground knowledge, and begins the conversation.
+mill checks your project context, loads ground knowledge, and begins the conversation. If observations are pending in the learning inbox, mill nudges you — a reminder to run `/mill:ground` before drafting so your spec benefits from the latest learnings.
 
 ### The Conversation
 
@@ -68,20 +111,22 @@ mill asks one question at a time, using structured options where sensible:
 3. **What's the core problem?** (your words)
 4. **What must the solution achieve?** (requirements emerge)
 5. **How should we build it?** (approach forms)
-6. **How do we prove it works?** (criteria crystalize)
+6. **How do we prove it works?** (criteria crystallize)
 
-A draft is saved early and updated as you go. You can stop mid-conversation and resume later — mill picks up where you left off.
+A draft is saved early and updated as you go. You can stop mid-conversation and resume later.
 
 ### Validation
 
-Before publishing, mill validates your spec against the principles:
+Before publishing, mill validates against the [principles](/principles):
 
-- [ ] **Self-Containment** — no statement requires external clarification
-- [ ] **Language Independence** — describes what/why, not language-specific how
-- [ ] **Decision Completeness** — no TBDs, all parameters bound
-- [ ] **Explicit Non-Applicability** — omitted sections marked N/A with reason
-- [ ] **Coverage** — all core/must-have requirements have approach and criteria
-- [ ] **No ⚠️ flags** — all uncertainties resolved
+- **Self-Containment** — no statement requires external clarification
+- **Language Independence** — describes *what* and *why*, not language-specific *how*
+- **Decision Completeness** — no TBDs, all parameters bound
+- **Explicit Non-Applicability** — omitted sections marked N/A with reason
+- **Coverage** — all core/must-have requirements have approach and criteria
+- **No open flags** — all uncertainties resolved
+
+> **Example** — Language independence means "validate the email format" (what), not "use a regex to validate the email" (how). The implementer chooses the mechanism based on the stack.
 
 ### Publishing
 
@@ -97,26 +142,13 @@ Specs include a domain that shapes execution guidance:
 | **application** | Component architecture, state management, UX patterns |
 | **website** | Page architecture, responsive design, Core Web Vitals |
 | **platform** | Infrastructure-as-code, containers, observability |
-| **fullstack** | All of the above |
+| **fullstack** | Combined guidance from all relevant layers |
 
-Domain guidance isn't just decorative. When `/mill:ship` implements a backend spec, it follows backend patterns. When it implements a website spec, it optimizes for Web Vitals and visual fidelity.
-
-## Observations During Drafting
-
-As you draft, mill watches for gaps in your ground knowledge:
-
-- A persona referenced but not defined ("As a *finance admin*..." — who?)
-- A domain term used without a vocabulary entry
-- A requirement that conflicts with a documented rule
-- An entity implied but not in the schema
-
-High-confidence gaps get written as observations automatically. Uncertain ones are collected and shown at the end for your review.
-
-This is the learning loop in action. Drafting a spec doesn't just produce a spec — it enriches the knowledge base.
+> **Why domain matters** — A backend spec loads API design patterns. A website spec loads Core Web Vitals guidance. The domain shapes what the verifier checks and what implementation patterns ship follows.
 
 ## The Loop Contract
 
-Every spec ends with a loop contract:
+Every spec ends with a loop contract that governs how [ship](/ship) iterates:
 
 ```markdown
 ## Loop Contract
@@ -125,22 +157,49 @@ Every spec ends with a loop contract:
 **Verification Commands:** `npm run lint`
 ```
 
-This tells ship exactly how to verify and when to stop. No ambiguity about what "passing" means.
+| Field | Purpose | Default |
+|-------|---------|---------|
+| **Test Command** | Must pass before PR | Detected from project |
+| **Max Iterations** | Maximum implement-verify cycles before escalating | 5 |
+| **Verification Commands** | Additional checks run by implementer and verifier | None |
+
+After `Max Iterations` cycles, ship escalates to you with options: continue iterating, create PR as-is, or abort.
+
+## Observations During Drafting
+
+As you draft, mill watches for gaps in ground knowledge:
+
+- A persona referenced but not defined
+- A domain term used without a vocabulary entry
+- A requirement that conflicts with a documented rule
+- An entity implied but not in the schema
+
+High-confidence gaps get written as observations automatically. Uncertain ones are collected and shown at the end for your review. Drafting a spec doesn't just produce a spec — it enriches the knowledge base.
 
 ## Common Patterns
 
 ### Bug Specs
 
-Bug specs are surgical: what's broken, what's expected, how to reproduce, how to verify the fix.
+Bug specs are surgical. They focus on reproduction and verification:
+
+```
+R1: The checkout total no longer double-counts tax on discounted items.
+
+Approach: Fix the tax calculation in OrderService.calculateTotal() to apply
+tax after discount, not before.
+
+C1: Given a $100 item with 10% discount and 8% tax, total is $97.20
+    (not $98.00).
+```
 
 ### Feature Specs
 
-Feature specs are the most common. Requirements → approach → criteria, with coverage proving completeness.
+The most common type. Full R→A→C chain with coverage proving completeness. The [example above](#a-complete-example) is a feature spec.
 
 ### Task Specs
 
-Refactoring, migration, cleanup. Task specs focus on approach and before/after verification. Requirements are often simpler ("migrate from X to Y without regression").
+Refactoring, migration, cleanup. Requirements are often simpler ("migrate from X to Y without regression"), but approach and before/after criteria are detailed.
 
 ### Security Specs
 
-Security always wins classification. If a change has security implications, it's a security spec regardless of what else it does. Security specs include threat model, attack vectors, and security-specific criteria.
+Security always wins classification. If a change has security implications, it's a security spec regardless of what else it does. These include threat model, attack vectors, and security-specific criteria.

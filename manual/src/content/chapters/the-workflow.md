@@ -7,7 +7,7 @@ accent: "gold"
 
 ## The Big Picture
 
-mill's workflow is a cycle, not a pipeline. Knowledge feeds delivery. Delivery feeds knowledge. Each rotation makes the system sharper.
+mill's workflow is a cycle, not a pipeline. Knowledge feeds delivery. Delivery feeds knowledge.
 
 ```
    Ground (knowledge)
@@ -17,7 +17,7 @@ mill's workflow is a cycle, not a pipeline. Knowledge feeds delivery. Delivery f
                     learnings → Ground
 ```
 
-Four skills, one cycle. Let's walk through the whole flow.
+> **Why a cycle?** — Each rotation makes the system sharper. The spec you write after three ship runs is more precise than your first because ground knowledge has grown with every delivery.
 
 ## Ground — The Knowledge Layer
 
@@ -38,67 +38,64 @@ It's organized into ten categories:
 | **patterns** | Code idioms your team uses |
 | **debt** | Known issues and future work |
 
-Ground isn't static. It grows with every cycle. When mill ships a feature, it observes what it learned and feeds it back for your review.
+> **Tip** — Start with personas and rules. The other eight categories grow naturally as you ship.
+
+Ground isn't static. When mill ships a feature, it observes what it learned and feeds it back for your review.
 
 ## Idea — The Spark
 
-Not everything starts as a specification. Sometimes it's just a hunch. A thought in the shower. A feature request that *might* be worth pursuing.
+Not everything starts as a specification. Sometimes it's a hunch, a feature request, a thought mid-code-review.
 
-**Idea** gives these sparks a home. Capture them quickly:
+**Idea** gives sparks a home with a 30-day lifecycle:
 
 ```
-/mill:idea "Inline code review"
+spark → developing → ready → spec (or drop with essence)
 ```
 
-mill asks a few questions and saves the idea with a 30-day lifecycle. During that time, you develop it — add context, explore scope, answer open questions. When it's ready, it graduates to a spec. When it's not worth pursuing, you drop it — but you capture the *essence* of what you learned.
+Capture fast (`/mill:idea "Inline code review"`), develop at your pace. During the **developing** stage, mill orients in your codebase — finding relevant files and patterns — then walks you through scope, approach, and open questions informed by what it found.
 
-Nothing is wasted. Even dropped ideas contribute knowledge.
+When an idea is ready, it graduates to a spec. When it's not worth pursuing, you drop it — but capture the *essence* of why, so future ideas can reference past learnings.
 
 ## Spec — The Contract
 
-This is where intent becomes precision. A spec takes your idea and transforms it into an unambiguous contract:
+This is where intent becomes precision. A spec links three layers into a provable chain:
 
-- **Requirements** — what the solution must achieve
-- **Approach** — how you'll build it, broken into parts
-- **Criteria** — testable conditions that prove each requirement is met
-- **Coverage** — the matrix proving requirements → approach → criteria
+```
+Requirements (R)     → what the solution must achieve
+        ↓ implemented by
+Approach (A)         → how we'll build it (parts + mechanisms)
+        ↓ verified by
+Criteria (C)         → testable conditions
+```
 
-The spec workflow is conversational. mill asks you questions, one at a time, to tease out the details. It challenges ambiguity. It checks your spec against the principles (self-containment, decision completeness, language independence).
+The **coverage matrix** proves every core requirement has an approach implementing it and criteria verifying it. No gaps.
 
-When the spec passes validation, it publishes as a GitHub Issue. That issue becomes the source of truth. No local files. No stale documents. One canonical location.
+The spec workflow is conversational — mill asks one question at a time, challenges ambiguity, and validates against the [principles](/principles) (self-containment, decision completeness, language independence). When the spec passes, it publishes as a GitHub Issue. That issue is the source of truth.
 
 ## Ship — The Execution
 
-Ship takes a GitHub Issue and assembles a team of agents to implement it. One skill runs the full pipeline:
+Ship takes a GitHub Issue and assembles a team to implement it:
 
 ```
 /mill:ship 47
 ```
 
-**The team:**
+| Role | Count | Purpose |
+|------|-------|---------|
+| **Lead** | 1 | Reads spec, sizes team, delegates with file ownership boundaries |
+| **Implementer(s)** | 1-4 | Build within assigned boundaries, commit as they go |
+| **Verifier** | 1 | Separate agent, clean context, reviews full changeset against every criterion |
 
-1. **Lead** — reads the spec, determines team size, delegates work with explicit file ownership
-2. **Implementer(s)** — 1-4 agents working within assigned boundaries, committing as they go
-3. **Verifier** — a separate agent with clean context that reviews the full changeset against every criterion
+The process in four phases:
 
-**The process:**
+1. **Setup** — create an isolated worktree, load spec + ground + domain guidance
+2. **Implement** — lead delegates to implementers with explicit file ownership; after completion, each implementer gets a bounded **polish pass** to clean up and self-review
+3. **Verify** — an independent verifier checks the full diff against every criterion; rejects route back through the lead for iteration (governed by the spec's [Loop Contract](/spec#the-loop-contract), default 5 cycles)
+4. **Finalize** — create a PR linking to the spec issue, extract process learnings, clean up the worktree
 
-1. **Isolate** — create a worktree on a dedicated branch (your main branch stays untouched)
-2. **Load context** — the spec, your project's knowledge, domain guidance
-3. **Delegate** — lead spawns implementers with specific task assignments and file boundaries
-4. **Verify independently** — a separate agent checks the work (work can't grade its own homework)
-5. **Ship** — create a Pull Request with full traceability
-6. **Clean up** — remove the worktree
-
-Ship is autonomous. The spec should be complete enough that implementation doesn't need human input. If the spec has gaps that block implementation, the lead escalates to you — the spec goes back to drafting.
-
-During implementation, mill writes observations about what it discovered — patterns, gaps, concerns. After the PR is created, the lead extracts process learnings: debugging breakthroughs, file couplings, commands that took trial and error. All of it feeds the learning loop.
+Ship is autonomous. If the spec has gaps that block implementation, the lead escalates — the spec goes back to drafting.
 
 ## The Learning Loop
-
-This is what makes mill different from every other tool.
-
-Most systems are stateless. They forget everything between runs. mill remembers. Here's how:
 
 During spec drafting, mill notices:
 - Personas referenced that don't exist in ground
@@ -108,10 +105,9 @@ During spec drafting, mill notices:
 During shipping, mill notices:
 - Code patterns not documented in ground
 - Dependencies not tracked in the stack
-- Missing test coverage
-- Undocumented APIs
+- Debugging insights and file couplings discovered through implementation
 
-These observations land in the **learning inbox** — a collection of markdown files in `.mill/observations/`. Each tagged with its type:
+These observations land in the **learning inbox** (`.mill/observations/`), each tagged with a type:
 
 | Type | Meaning |
 |------|---------|
@@ -121,11 +117,17 @@ These observations land in the **learning inbox** — a collection of markdown f
 | **suggestion** | Improvement idea |
 | **learning** | Process knowledge from ship (debugging insights, file couplings, workarounds) |
 
-Observations reach ground truth through `/mill:ground` for dedicated review. `/mill:spec` nudges you when observations are pending, and ship tags learnings with routing suggestions — but the human always makes the final call on what becomes permanent knowledge.
+Observations reach ground truth through three paths:
+
+- `/mill:ground` — dedicated review where you route each observation to a knowledge category, create a spec from it, add it to debt, or dismiss it
+- `/mill:spec` — nudges you when observations are pending before drafting
+- `/mill:ship` — auto-tags learnings with a `suggested:` routing hint (e.g., `suggested: ground/patterns/`)
+
+> **Rule** — The human always decides what becomes permanent knowledge. mill suggests routing, you confirm or override.
 
 ## End to End
 
-Here's a real example of the full cycle:
+Here's a full cycle:
 
 1. You have an idea: "Users should be able to export reports as PDF"
 2. `/mill:idea` captures it with intent and persona
@@ -133,11 +135,9 @@ Here's a real example of the full cycle:
 4. `/mill:spec` transforms it into a spec with 4 requirements, 6 approach parts, and 8 criteria
 5. The spec publishes as GitHub Issue #47
 6. `/mill:ship 47` assembles a team — lead delegates to 2 implementers (backend + frontend), verifier checks independently
-7. Verification passes — PR #48 is created, worktree cleaned up
-8. During implementation, mill observed that "PDF export" isn't in the vocabulary. It also noticed the `ReportService` has no unit tests.
-9. `/mill:ground` reviews these observations. You add "PDF export" to vocabulary and create a new idea for test coverage.
-10. Next cycle starts sharper.
-
-That's mill. Not a magic wand. A system that compounds. Every cycle, the specs are more precise. The implementations are more accurate. The knowledge is more complete.
-
-And it's just getting started.
+7. Each implementer runs a polish pass, then the verifier reviews
+8. Verification passes — PR #48 is created, worktree cleaned up
+9. The lead extracts process learnings: "The `ReportService` and `PdfRenderer` are tightly coupled — changes to one require changes to the other"
+10. During implementation, mill also observed that "PDF export" isn't in the vocabulary
+11. `/mill:ground` reviews these observations — you add "PDF export" to vocabulary, route the coupling insight to patterns, and create a new idea for `ReportService` test coverage
+12. Next cycle starts sharper
