@@ -82,6 +82,8 @@ AskUserQuestion:
    - `type: extraction` + about deps → `ground/stack/`
    - `type: concern` → often `ground/debt/`
    - `type: discovery` + about decisions → `ground/decisions/`
+   - `type: learning` + about file couplings or architecture → `ground/patterns/`
+   - `type: learning` + about conventions, commands, or config → `ground/rules/`
 
 2. Ask clarifying question to gather details:
    ```yaml

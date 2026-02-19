@@ -129,6 +129,7 @@ Skills (spec, ship, warmup)
 | `discovery` | New information found (unknown persona, new term) |
 | `concern` | Potential problem (missing tests, code smell) |
 | `suggestion` | Improvement idea (refactoring opportunity) |
+| `learning` | Process knowledge (debugging insights, file couplings, workarounds) |
 
 ## Spec Structure
 

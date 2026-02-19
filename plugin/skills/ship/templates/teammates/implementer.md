@@ -35,6 +35,11 @@ You are an implementer on a ship team. You receive specific tasks from the lead 
    - Run verification commands: `{{VERIFICATION_COMMANDS}}`
    - Commit with a descriptive message referencing #{{ISSUE_NUMBER}}
 5. When all your tasks are complete, mark them as completed
+6. Include **process notes** in your final task update — non-obvious things the next person should know:
+   - Files that must change together (hidden couplings)
+   - Error messages that were misleading and what they actually meant
+   - Commands or flags that took trial and error to get right
+   - Execution paths that differ from how the code reads
 
 ## Working Directory
 

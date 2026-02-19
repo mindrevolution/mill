@@ -238,7 +238,7 @@ AskUserQuestion:
       description: "Remove worktree and stop"
 ```
 
-If user chooses "Continue iterating," ask how many additional cycles and resume the loop. If "Create PR as-is," proceed to step 11 with issues noted. If "Abort," skip to step 12 (cleanup only).
+If user chooses "Continue iterating," ask how many additional cycles and resume the loop. If "Create PR as-is," proceed to step 11 with issues noted. If "Abort," skip to step 13 (cleanup only).
 
 ### 11. Create PR
 
@@ -282,7 +282,41 @@ Parse the PR URL from output. Clean up temp file:
 rm .mill/.prompt
 ```
 
-### 12. Cleanup
+### 12. Extract Learnings
+
+After every ship session, extract process knowledge. The question: **"How can we do better next time?"**
+
+Review the session — iteration history, implementer process notes, your own orchestration decisions — and write a single observation:
+
+- **Path:** `.mill/observations/ship-{N}-learnings.md`
+- **Frontmatter:** `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`
+
+Extract only **non-obvious** learnings. Scan for:
+
+| Category | What to capture |
+|----------|----------------|
+| **Hidden relationships** | Files or modules that must change together, not apparent from imports or directory structure |
+| **Debugging breakthroughs** | Cases where error messages pointed elsewhere — what the error said vs. what was actually wrong |
+| **Trial-and-error commands** | Build flags, CLI invocations, or tool configurations that took multiple attempts |
+| **Architectural constraints** | Invariants or coupling not documented anywhere, discovered only by breaking things |
+| **Divergent execution paths** | Runtime behavior that differs from how the code reads statically |
+
+Do not fabricate learnings. If the session was clean and nothing surprising emerged, write:
+
+```markdown
+---
+source: ship
+type: learning
+issue: {N}
+created: {date}
+---
+
+# Ship #{N} — Learnings
+
+Clean session — no non-obvious learnings.
+```
+
+### 13. Cleanup
 
 ```bash
 git worktree remove --force .mill/ship/work/issue-{N}
@@ -308,6 +342,7 @@ If agent teams are not available (Task tool limited or experimental features dis
    - Check each criterion
 4. If issues found, fix and re-verify (up to Loop Contract `max_iterations`, default 5)
 5. Create PR as normal
+6. Extract learnings (same as step 12 above)
 
 Report to user: "Running in single-session mode (agent teams not available)"
 
@@ -318,6 +353,10 @@ Report to user: "Running in single-session mode (agent teams not available)"
 During implementation, teammates write observations to `.mill/observations/`:
 - Path: `.mill/observations/ship-{N}-{slug}.md`
 - Frontmatter: `source: ship`, `type: concern|discovery|suggestion`, `issue: {N}`
+
+After PR creation, the lead writes a learnings observation:
+- Path: `.mill/observations/ship-{N}-learnings.md`
+- Frontmatter: `source: ship`, `type: learning`, `issue: {N}`, `created: {date}`
 
 These are reviewed later via `/mill:ground`. Don't interrupt the ship flow.
 
