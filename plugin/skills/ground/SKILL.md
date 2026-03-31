@@ -1,7 +1,7 @@
 ---
 description: "Define who you build for and how • https://mill.mindrevolution.com/ground"
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Grep, Bash(*rm *, *git *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*rm *, *git *, *start *, *open *, *xdg-open *)
 argument-hint: "[category] - personas, rules, decisions, vocabulary, or review"
 ---
 
@@ -29,7 +29,15 @@ Ask via AskUserQuestion: Review observations ({N} pending) / Create knowledge / 
 
 ### 2. For Each Observation
 
-Read full observation. Ask via AskUserQuestion:
+Read full observation, then **present content before asking for a decision**:
+
+- **≤25 lines:** Print the full observation content inline in the terminal so the user can read it without leaving the conversation.
+- **>25 lines:** Ask the user via AskUserQuestion: "This observation is {N} lines — open in your editor, or print here anyway?" If the user chooses to open, run the platform-appropriate command:
+  - Windows: `start {filepath}`
+  - macOS: `open {filepath}`
+  - Linux: `xdg-open {filepath}`
+
+After the user has seen the content, ask via AskUserQuestion:
 - **Curate to ground** — add to ground truth
 - **Create spec** — write to idea/active/
 - **Add to debt** — track in ground/debt/
