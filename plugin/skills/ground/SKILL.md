@@ -27,6 +27,27 @@ Ask via AskUserQuestion: Review observations ({N} pending) / Create knowledge / 
 
 `Glob(".mill/observations/*.md")` → read each for title and type from frontmatter.
 
+### 1b. Batch Preview
+
+Before diving into individual decisions, print a numbered summary of all pending observations so the user sees the full picture:
+
+```
+Pending observations:
+
+  1. Technology decisions — rationale for MassTransit, Orleans, Kamal (discovery)
+  2. Stack details — full NuGet versions and local dev stack (discovery)
+  3. Missing vocabulary — 8 terms used but not in glossary (discovery)
+```
+
+For observations that contain lists of items (e.g. vocabulary terms, schema entities, stack entries), expand the items inline:
+
+```
+  3. Missing vocabulary — 8 terms:
+     Grain, Silo, Reminder, Saga, Outbox, Backplane, Sidecar, Tombstone
+```
+
+This lets the user see what they're about to review and decide on batch actions ("curate all", "dismiss 2 and 5") before walking through individually.
+
 ### 2. For Each Observation
 
 Read full observation, then **present content before asking for a decision**:
