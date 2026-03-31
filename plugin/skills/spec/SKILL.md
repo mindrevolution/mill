@@ -1,7 +1,7 @@
 ---
 description: "Turn intent into a precise, complete spec • https://mill.mindrevolution.com/spec"
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Grep, Bash(*gh *, *git *, *rm *)
+allowed-tools: Read, Write, Glob, Grep, Bash(*gh *, *git *, *rm *, *start *, *open *, *xdg-open *)
 argument-hint: "[intent] - what you want to build, or [draft-slug] to resume"
 ---
 
@@ -207,7 +207,12 @@ Probe for gaps: assumptions, edge cases (empty input, concurrency), failure mode
 
 ### 7. Confirm and Publish
 
-Present spec + validation summary. Ask via AskUserQuestion: "Create GitHub issue?" — Yes / Needs changes.
+**Open the draft for review** — specs are always long enough to benefit from rendered markdown:
+- Windows: `start .mill/spec/drafts/{slug}.md`
+- macOS: `open .mill/spec/drafts/{slug}.md`
+- Linux: `xdg-open .mill/spec/drafts/{slug}.md`
+
+Present a brief validation summary inline (principles passed, coverage completeness). Then ask via AskUserQuestion: "Spec is open in your editor — create GitHub issue?" — Yes / Needs changes.
 
 **Wait for explicit approval.**
 
