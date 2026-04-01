@@ -65,6 +65,9 @@ ship/work/
 
 # Prompt scratchpad
 .prompt
+
+# Preview render
+.preview.html
 ```
 
 ### 4. Report

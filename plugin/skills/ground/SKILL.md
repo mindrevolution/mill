@@ -53,10 +53,7 @@ This lets the user see what they're about to review and decide on batch actions 
 Read full observation, then **present content before asking for a decision**:
 
 - **≤25 lines:** Print the full observation content inline in the terminal so the user can read it without leaving the conversation.
-- **>25 lines:** Ask the user via AskUserQuestion: "This observation is {N} lines — open in your editor, or print here anyway?" If the user chooses to open, run the platform-appropriate command:
-  - Windows: `start {filepath}`
-  - macOS: `open {filepath}`
-  - Linux: `xdg-open {filepath}`
+- **>25 lines:** Ask the user via AskUserQuestion: "This observation is {N} lines — open rendered preview, or print here anyway?" If the user chooses to open, use the [Preview Template](#preview-template) to render it in the browser.
 
 After the user has seen the content, ask via AskUserQuestion:
 - **Curate to ground** — add to ground truth
@@ -149,3 +146,19 @@ Write to `.mill/ground/{category}/{id}.md` with frontmatter (`category`, `id`) a
 ## Kickstart (New Projects)
 
 Ask via AskUserQuestion: product type (SaaS / API-Platform / Marketing site / Internal tool). Then elicit stack, conventions, key personas. Create initial ground files from conversation.
+
+## Preview Template
+
+To open a markdown file as a rendered preview in the browser:
+
+1. `Read` the template from `plugin/templates/preview.html` (resolve via `${CLAUDE_PLUGIN_ROOT}/templates/preview.html`)
+2. `Read` the markdown file to preview
+3. Replace placeholders in the template:
+   - `{{TITLE}}` → document title (from frontmatter or first heading)
+   - `{{CONTEXT}}` → brief context string, e.g. "observation review" or "spec draft"
+   - `{{CONTENT}}` → the raw markdown content (the template renders it client-side via marked.js)
+4. `Write` the result to `.mill/.preview.html`
+5. Open in browser:
+   - Windows: `start .mill/.preview.html`
+   - macOS: `open .mill/.preview.html`
+   - Linux: `xdg-open .mill/.preview.html`

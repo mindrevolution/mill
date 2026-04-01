@@ -57,6 +57,24 @@ High | Medium | Low
 
 ---
 
+## Failure Modes
+
+| Trigger | Detection | Response | Recovery |
+|---------|-----------|----------|----------|
+| {{what goes wrong}} | {{how we know}} | {{immediate action}} | {{return to good state}} |
+
+---
+
+<details>
+<summary>Alternatives Considered</summary>
+
+### {{Alternative Approach Title}}
+{{Tradeoff summary and why it was rejected}}
+
+</details>
+
+---
+
 ## Verification
 
 ### Automated Checks

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}} — mill</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown.min.css">
+<link rel="stylesheet" media="(prefers-color-scheme: dark)" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+<link rel="stylesheet" media="(prefers-color-scheme: light)" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
+<style>
+  body {
+    background: #fff;
+    color: #1f2328;
+    margin: 0;
+    padding: 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0d1117; color: #e6edf3; }
+  }
+  .markdown-body {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .mill-header {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 2rem 1rem;
+    border-bottom: 1px solid #d0d7de;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #656d76;
+    font-size: 0.85rem;
+  }
+  .mill-header strong {
+    color: #1f2328;
+    font-size: 0.95rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    .mill-header { border-bottom-color: #30363d; color: #8b949e; }
+    .mill-header strong { color: #e6edf3; }
+  }
+</style>
+</head>
+<body>
+<div class="mill-header">
+  <strong>mill</strong> <span>{{CONTEXT}}</span>
+</div>
+<article class="markdown-body">
+{{CONTENT}}
+</article>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({ startOnLoad: false, theme: prefersDark ? 'dark' : 'default' });
+
+  const raw = document.querySelector('article').textContent;
+  const renderer = new marked.Renderer();
+  const defaultCode = renderer.code.bind(renderer);
+  renderer.code = function({ text, lang }) {
+    if (lang === 'mermaid') {
+      return `<pre class="mermaid">${text}</pre>`;
+    }
+    return defaultCode({ text, lang });
+  };
+
+  marked.setOptions({
+    renderer,
+    gfm: true,
+    breaks: false,
+    highlight: (code, lang) => {
+      if (lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, { language: lang }).value;
+      }
+      return hljs.highlightAuto(code).value;
+    }
+  });
+
+  document.querySelector('article').innerHTML = marked.parse(raw);
+  await mermaid.run({ querySelector: '.mermaid' });
+</script>
+</body>
+</html>

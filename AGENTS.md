@@ -141,13 +141,23 @@ Specs link **what** → **how** → **proof**:
 
 ```
 Requirements (R)     → what the solution must achieve
-        ↓ implemented by
-Approach (A)         → how we'll build it (parts + mechanisms)
+        ↓ sharpened by
+Forcing Questions    → narrowest wedge, demand evidence
+        ↓ explored as
+Approaches (A, B)    → alternative ways to build it (pick one)
         ↓ verified by
 Criteria (C)         → testable conditions
+        ↓ reviewed by
+Spec Review          → scored self-review + independent subagent review
 ```
 
 **Coverage (R x A x C)** proves the chain: every requirement has approach parts, and criteria verify them.
+
+Feature and task specs require **alternative approaches** — at least two options with tradeoffs before the user picks one. Rejected approaches are preserved in "Alternatives Considered." Bug and security specs may skip alternatives.
+
+Specs include a **Failure Modes** table (trigger → detection → response → recovery) proportional to complexity.
+
+Before publishing, every spec goes through a **two-phase review**: a scored self-review (feasibility, completeness, scope discipline, testability, clarity — all must score ≥ 7) followed by an independent subagent review with clean context.
 
 A spec that requires clarifying questions has failed. The bar: could someone unfamiliar implement this without asking the author anything?
 

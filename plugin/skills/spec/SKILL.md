@@ -150,6 +150,19 @@ approach: A
 | R1 | {description} | A1 | C1 |
 | R2 | {description} | A2 | C2 |
 
+## Failure Modes
+| Trigger | Detection | Response | Recovery |
+|---------|-----------|----------|----------|
+| {what goes wrong} | {how we know} | {immediate action} | {return to good state} |
+
+<details>
+<summary>Alternatives Considered</summary>
+
+### Approach B: {title}
+{tradeoff summary and why it was rejected}
+
+</details>
+
 ## Scope
 **In:** {included}
 **Out:** {excluded}
@@ -173,13 +186,76 @@ One question at a time via AskUserQuestion:
 
 Add each to table with status (`core`, `must-have`, `nice-to-have`, `out`).
 
-### 4b. Define Approach
+### 4a. Forcing Questions (feature and task only)
 
-1. Each part = mechanism (what we build/change)
-2. Flag unknowns with ⚠️
-3. Investigate ⚠️ before proceeding
+Before jumping to approach, ask these via AskUserQuestion to sharpen the problem:
 
-### 4c. Coverage Check
+| Question | Purpose |
+|----------|---------|
+| **Narrowest wedge** — "What's the smallest version of this that still matters?" | Prevents over-scoping. The answer often becomes the actual spec scope. |
+| **Demand evidence** — "Who already wants this, and how do they solve it today?" | Grounds the spec in real need. If nobody is working around the absence, question priority. |
+
+Skip for bug and security specs — the problem is already concrete.
+
+If the user's answers reveal the scope should shrink, update requirements accordingly before proceeding. Move deferred scope to **Out** with a note like "future spec."
+
+### 4b. Define Approaches (plural for feature/task)
+
+**Feature and task specs require at least 2 approaches** before choosing one:
+
+1. Draft Approach A and Approach B (optionally C)
+2. Each approach: parts + mechanisms + brief tradeoff note
+3. Present approaches side-by-side with tradeoffs via AskUserQuestion
+4. User picks one → that becomes the spec's approach
+5. Record rejected approaches in a collapsed `<details>` block under "Alternatives Considered"
+
+```markdown
+## Approach A: {title}
+| Part | Mechanism | Flag |
+|------|-----------|:----:|
+| A1 | ... | |
+
+**Tradeoff:** {1-2 sentences: what you gain, what you give up}
+
+## Approach B: {title}
+| Part | Mechanism | Flag |
+|------|-----------|:----:|
+| B1 | ... | |
+
+**Tradeoff:** {1-2 sentences}
+```
+
+After selection, the chosen approach stays as `## Approach` and rejected ones collapse:
+
+```markdown
+<details>
+<summary>Alternatives Considered</summary>
+
+### Approach B: {title}
+{tradeoff summary and why it was rejected}
+
+</details>
+```
+
+**Bug and security specs** may skip alternatives — there's usually one obvious fix. Still flag if a meaningful alternative exists.
+
+6. Flag unknowns with ⚠️ in the chosen approach
+7. Investigate ⚠️ before proceeding
+
+### 4c. Failure Modes (feature and task only)
+
+For each approach part that touches error paths, data, or external systems, add a failure mode table:
+
+```markdown
+## Failure Modes
+| Trigger | Detection | Response | Recovery |
+|---------|-----------|----------|----------|
+| {what goes wrong} | {how we know} | {immediate action} | {return to good state} |
+```
+
+Keep it proportional — a 2-part UI spec needs 0-1 rows. A 6-part backend spec might need 4-5.
+
+### 4d. Coverage Check
 
 Build R x A x C table:
 - Approach column: parts (A1, A2) or ❌ if not covered
@@ -201,22 +277,70 @@ All `core` and `must-have` requirements need both approach parts and criteria.
 
 Set `status: ready` only when all checks pass.
 
-### 6. Challenge (complex specs)
+### 6. Self-Review (scored dimensions)
 
-Probe for gaps: assumptions, edge cases (empty input, concurrency), failure modes, integration conflicts.
+**Always runs** — not just for complex specs.
 
-### 7. Confirm and Publish
+Score the draft on 5 dimensions (1-10). Any dimension below 7 must be fixed before proceeding.
 
-**Open the draft for review** — specs are always long enough to benefit from rendered markdown:
-- Windows: `start .mill/spec/drafts/{slug}.md`
-- macOS: `open .mill/spec/drafts/{slug}.md`
-- Linux: `xdg-open .mill/spec/drafts/{slug}.md`
+| Dimension | Question | Threshold |
+|-----------|----------|-----------|
+| **Feasibility** | Can this be built with the current stack and codebase? Are there hidden prerequisites? | ≥ 7 |
+| **Completeness** | Are failure modes, edge cases, and error paths covered? | ≥ 7 |
+| **Scope Discipline** | Is there scope creep? Is this the narrowest wedge? | ≥ 7 |
+| **Testability** | Can every criterion be verified mechanically (no "looks right" judgments)? | ≥ 7 |
+| **Clarity** | Would an implementer unfamiliar with this codebase understand every statement? | ≥ 7 |
 
-Present a brief validation summary inline (principles passed, coverage completeness). Then ask via AskUserQuestion: "Spec is open in your editor — create GitHub issue?" — Yes / Needs changes.
+Present scores to user. For any below 7, explain the gap and fix it.
+
+### 7. Independent Spec Review (subagent)
+
+Launch a **spec-review subagent** that receives only:
+- The draft spec markdown
+- Ground knowledge files (`.mill/ground/**/*.md`)
+- The project context (`.mill/context.md`)
+
+The subagent does **not** see the drafting conversation. It reviews against:
+1. Self-Containment — flag any statement that requires asking the author
+2. Decision Completeness — flag any TBD, vague value, or unbound parameter
+3. Coverage gaps — requirements without approach parts or criteria
+4. Testability — criteria that can't be mechanically verified
+5. Assumption surfacing — implicit assumptions that should be explicit
+
+The subagent returns a structured review:
+```markdown
+## Spec Review
+
+**Verdict:** Pass | Pass with notes | Needs revision
+
+### Findings
+| # | Severity | Section | Finding |
+|---|----------|---------|---------|
+| 1 | {block/warn/note} | {section} | {what's wrong and suggested fix} |
+
+### Summary
+{1-2 sentences}
+```
+
+**block** findings must be fixed before publishing. **warn** findings are presented to the user for decision. **note** findings are informational.
+
+If the subagent returns "Needs revision," fix the blocking findings, update the draft, and re-run only the subagent (not the full self-review).
+
+### 8. Confirm and Publish
+
+**Open the draft as a rendered preview** using the [Preview Template](#preview-template):
+
+1. Read `${CLAUDE_PLUGIN_ROOT}/templates/preview.html`
+2. Read `.mill/spec/drafts/{slug}.md`
+3. Replace `{{TITLE}}` → spec title, `{{CONTEXT}}` → "spec draft", `{{CONTENT}}` → raw markdown
+4. Write to `.mill/.preview.html`
+5. Open: `start`/`open`/`xdg-open .mill/.preview.html`
+
+Present a brief validation summary inline (principles passed, coverage completeness). Then ask via AskUserQuestion: "Spec is open in your browser — create GitHub issue?" — Yes / Needs changes.
 
 **Wait for explicit approval.**
 
-### 8. Publish
+### 9. Publish
 
 1. Read draft, extract frontmatter
 2. Write body to `.mill/.prompt`
@@ -274,3 +398,7 @@ Collect during drafting, ask at end via AskUserQuestion (multiSelect): which gap
 10. Decision Completeness — no TBD, no placeholders, all values concrete
 11. Explicit Non-Applicability — state `N/A: {reason}`, never silently omit
 12. Binary State — `status: draft` until all principles pass, then `status: ready`
+
+## Preview Template
+
+Shared template at `${CLAUDE_PLUGIN_ROOT}/templates/preview.html`. Renders markdown in the browser with GitHub-style CSS, syntax highlighting, and Mermaid diagram support. Replace `{{TITLE}}`, `{{CONTEXT}}`, `{{CONTENT}}` placeholders, write to `.mill/.preview.html`, and open with `start`/`open`/`xdg-open`.

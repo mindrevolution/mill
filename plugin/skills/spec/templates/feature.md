@@ -56,6 +56,24 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 
 ---
 
+## Failure Modes
+
+| Trigger | Detection | Response | Recovery |
+|---------|-----------|----------|----------|
+| {{what goes wrong}} | {{how we know}} | {{immediate action}} | {{return to good state}} |
+
+---
+
+<details>
+<summary>Alternatives Considered</summary>
+
+### {{Approach B Title}}
+{{Tradeoff summary and why it was rejected}}
+
+</details>
+
+---
+
 ## Scope
 
 ### In Scope
