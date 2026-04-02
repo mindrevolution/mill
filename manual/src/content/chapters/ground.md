@@ -164,15 +164,15 @@ Ship learnings arrive with a `suggested:` routing hint (e.g., `suggested: ground
 
 > **Tip** — This is the primary growth mechanism. You don't have to remember to document things — mill notices what's missing and asks you to fill the gaps.
 
-### Codebase Sync
+### Verify Ground
 
-For technical categories (stack, patterns, schema), mill can extract knowledge directly from your code:
+For technical categories (stack, patterns, schema), mill can verify ground truth against your code:
 
 ```
 /mill:ground
-→ "Sync codebase"
-→ mill reads package.json, analyzes patterns, identifies entities
-→ Creates or updates ground files
+→ "Verify ground"
+→ mill checks each ground file against the codebase
+→ Auto-fixes trivial drift, asks you about anything substantial
 ```
 
 ## Ground as Context

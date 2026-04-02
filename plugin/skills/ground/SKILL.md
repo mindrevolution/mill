@@ -17,7 +17,7 @@ Build and manage product knowledge in `.mill/ground/`. Review observations from 
 
 Check observations first: `Glob(".mill/observations/*.md")` — read each for title and count.
 
-Ask via AskUserQuestion: Review observations ({N} pending) / Create knowledge / Sync codebase.
+Ask via AskUserQuestion: Review observations ({N} pending) / Create knowledge / Verify ground (validate ground truth against code).
 
 ---
 
@@ -135,6 +135,105 @@ Write to `.mill/ground/{category}/{id}.md` with frontmatter (`category`, `id`) a
 ### 4. Verify
 
 `Glob(".mill/ground/**/*.md")` — confirm written correctly.
+
+## Verify Ground Flow
+
+Check that ground truth is still grounded in reality. Auto-fix trivial drift; ask the user for anything requiring judgment.
+
+### 1. Inventory
+
+`Glob(".mill/ground/**/*.md")` → group files by category. Print a summary:
+
+```
+Ground truth sync — 23 files across 8 categories:
+  stack (5) · vocabulary (6) · decisions (3) · rules (4) · patterns (2) · schema (2) · debt (1)
+```
+
+### 2. Category-Specific Validation
+
+Process each category with targeted checks. For every file, read its content, then validate:
+
+| Category | Validation Strategy |
+|----------|-------------------|
+| **stack** | Grep for each technology/package name in project files, lock files, and configs. Check version claims against lock files. |
+| **vocabulary** | Grep each defined term across the codebase. Flag terms with zero references. |
+| **decisions** | Check that the chosen option's artifacts exist (packages, files, patterns). Check that rejected alternatives haven't crept in. |
+| **rules** | Spot-check stated conventions against actual code. For naming rules, Grep for violations. For structural rules, Glob for counterexamples. |
+| **patterns** | Grep/Glob for the described pattern. Flag if the pattern no longer appears or has clearly changed shape. |
+| **schema** | Compare described entities/fields against actual model definitions (Grep for class/type/table names). |
+| **debt** | Check if the referenced problem still exists. Flag items that appear resolved (file deleted, code changed, test added). |
+| **personas** | Skip — personas are business context, not code-verifiable. |
+| **strategic** | Skip — vision/mission are not code-verifiable. |
+| **design** | Grep for referenced design tokens, color values, font names in stylesheets/configs. Flag missing references. |
+
+### 3. Classify Each Finding
+
+Every discrepancy gets one of two classifications:
+
+**Auto-fix** (apply silently, report after) — only when ALL of these are true:
+- The correct value is unambiguous from the codebase (e.g., version `8.0.1` → lock file shows `8.2.0`)
+- The change is a single fact update, not a rewrite
+- No judgment needed — a machine diff would reach the same conclusion
+
+Examples of auto-fixes:
+- Version number in a stack file doesn't match the lock file → update to lock file version
+- A term in vocabulary has a minor casing change in the codebase → update the ground file
+- A debt item references a file that no longer exists and the fix is noted in git log → mark resolved
+
+**Ask user** — everything else:
+- Technology listed in stack but not found in codebase (removed? renamed? optional?)
+- Decision's chosen option has no artifacts but rejected alternative does (reversed?)
+- Rule appears widely violated (outdated rule? or widespread non-compliance?)
+- Vocabulary term has zero hits (removed concept? or just not in code?)
+- Pattern described but code uses a different approach now
+- Any ambiguity at all
+
+### 4. Execute
+
+Process all files. Collect results into three buckets:
+
+1. **Auto-fixed** — changes already applied
+2. **Needs input** — discrepancies requiring user judgment
+3. **Verified** — ground truth confirmed accurate
+
+Print the auto-fixed items as a batch summary:
+
+```
+Auto-fixed (3):
+  ✓ stack/dotnet.md — updated EF Core version 8.0.1 → 8.2.0 (from packages.lock.json)
+  ✓ debt/legacy-auth.md — marked resolved (auth/ directory removed in commit abc1234)
+  ✓ vocabulary/terms.md — updated casing "WorkItem" → "Workitem" (matches codebase)
+```
+
+Then walk through each "needs input" item one at a time via AskUserQuestion:
+
+```
+stack/messaging.md says "MassTransit 8.x" but no MassTransit references found.
+Found "Wolverine" in 12 files — possible replacement?
+
+→ Update ground file (replace MassTransit with Wolverine)
+→ Remove ground file (no longer relevant)
+→ Keep as-is (still accurate, just not referenced in code)
+→ Create observation (needs deeper investigation)
+```
+
+### 5. Report
+
+After all items are processed, print a short console summary:
+
+```
+Ground verified — 23 files checked
+  ✓ 14 verified · 3 auto-fixed · 4 updated · 2 removed · 1 observation created
+```
+
+If there were auto-fixes, list them in one line each:
+
+```
+Auto-fixed:
+  stack/dotnet.md — EF Core 8.0.1 → 8.2.0
+  debt/legacy-auth.md — marked resolved
+  vocabulary/terms.md — casing "WorkItem" → "Workitem"
+```
 
 ## Integration with Specs
 
