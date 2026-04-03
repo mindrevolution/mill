@@ -11,10 +11,8 @@ out/
 # OS
 .DS_Store
 
-# mill dogfooding — using mill to develop mill itself
-# These artifacts are generated when running mill skills on this repo.
-.mill/
-CLAUDE.md             # Shim (@AGENTS.md) — AGENTS.md is source of truth
+# CLAUDE.md shim (@AGENTS.md) — AGENTS.md is source of truth
+CLAUDE.md
 
 # Claude Code local settings
 .claude/

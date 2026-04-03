@@ -1,0 +1,17 @@
+# Learning inbox — local, reviewed via /mill:ground
+observations/
+
+# Ideas — personal WIP
+idea/active/
+
+# Spec drafts — local until published to GitHub Issues
+spec/drafts/
+
+# Ship worktrees — ephemeral execution sandboxes
+ship/work/
+
+# Prompt scratchpad
+.prompt
+
+# Preview render
+.preview.html
