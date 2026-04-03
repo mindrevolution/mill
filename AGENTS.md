@@ -4,140 +4,150 @@ Turning intent into verified deliverables, continuously.
 
 > **Branding:** Always "mill" in lowercase. Never "MILL" or "Mill".
 
-> **Focus:** The Photino desktop app is the primary target. Web/container deployment will come later.
-
 ## Overview
 
-mill is a specification-first delivery system with two main workflows:
+mill is a specification-first delivery system that runs as Claude Code skills. No desktop app, no web UI, no API server — just skills, prompts, and your git repository.
+
+Two main workflows:
 
 1. **Spec Process** — Chat-to-spec: Transform user intent into complete, loop-ready specifications
-2. **Work Loop** — Ralph-style execution: Bounded iteration until verification passes
+2. **Work Loop** — Agent team execution: Bounded iteration until verification passes
+
+## Architecture
+
+mill is a Claude Code skill pack. Skills are the interface; prompts are the engine; `.mill/` is the state.
+
+```mermaid
+flowchart LR
+    subgraph Skills
+        Init["/mill:init"]
+        Warmup["/mill:warmup"]
+        Ground["/mill:ground"]
+        Idea["/mill:idea"]
+        Spec["/mill:spec"]
+        Ship["/mill:ship"]
+    end
+
+    subgraph State[".mill/"]
+        GD[ground/]
+        OBS[observations/]
+        ID[idea/active/]
+        SD[spec/drafts/]
+        SW[ship/work/]
+    end
+
+    subgraph External
+        GH[GitHub Issues]
+        PR[Pull Requests]
+    end
+
+    Ground --> GD
+    Ground --> OBS
+    Idea --> ID
+    Spec --> SD
+    Spec --> GH
+    Ship --> SW
+    Ship --> PR
+```
+
+### Dependencies
+
+| Component | Purpose |
+|-----------|---------|
+| **Claude Code CLI** | Runtime — skills execute inside Claude Code sessions |
+| **`gh` CLI** | GitHub integration — issues as published specs, PRs from ship |
+| **git** | Collaboration layer — `.mill/` state syncs via git |
 
 ## Structure
 
 ```
-mill/
-├── workbench/              # React UI (primary interface)
-│   └── src/
-├── api/                    # ASP.NET Minimal API (backend)
-│   └── Mill.Api/
-├── ground/                 # Ground workspace assets (bundled with app)
+mill/                               # Skill pack repo
+├── ground/                         # Ground phase assets
 │   ├── prompts/
-│   │   └── kickstart.md        # Generate initial ground files
+│   │   └── kickstart.md
 │   └── templates/
-│       ├── archetypes/         # Product archetypes (saas, marketplace, etc.)
-│       └── stacks/             # Tech stack profiles (web-react-node, etc.)
-├── brief/                  # Brief workspace assets (future)
-│   └── prompts/
-├── shape/                  # Shape workspace assets
+│       ├── archetypes/             # Product archetypes (saas, marketplace, etc.)
+│       └── stacks/                 # Tech stack profiles (web-react-node, etc.)
+├── shape/                          # Spec phase assets (legacy name in repo)
 │   ├── prompts/
-│   │   ├── context-warmup.md   # Generates .mill/context.md
-│   │   ├── spec-draft.md       # Interactive spec elicitation
-│   │   └── spec-refine.md      # Update spec against current codebase
-│   └── templates/              # Spec output templates
+│   │   ├── spec-draft.md           # Interactive spec elicitation
+│   │   ├── spec-refine.md          # Update spec against current codebase
+│   │   └── context-warmup.md       # Generates .mill/context.md
+│   └── templates/
 │       ├── feature.md
 │       ├── bug.md
 │       ├── security.md
 │       └── task.md
-├── ship/                   # Ship workspace assets
+├── ship/                           # Ship phase assets
 │   └── prompts/
 │       ├── loop-iterate.md         # Work prompt (implement, signal MILL_VERIFY)
 │       ├── loop-verify.md          # Verify prompt (review, approve/reject)
-│       ├── loop-verify-criterion.md # Parallel: verify one criterion
-│       └── run-autopick.md         # Intelligent issue selection
-├── cli/                    # Deprecated
-└── README.md
+│       ├── loop-verify-criterion.md
+│       ├── run-autopick.md         # Intelligent issue selection
+│       └── run-observations.md     # Post-run learning extraction
+└── brief/                          # Placeholder (ideas handled by /mill:idea skill)
 
-.mill/                              # Target repo's mill folder
-├── project.json                    # Global config
+.mill/                              # Per-repo state directory
 ├── context.md                      # Auto-generated project context
-
-├── ground/                         # Shared product knowledge
-│   ├── personas/                   # Who you build for
-│   ├── standards/                  # How you build
-│   ├── concepts/                   # Domain vocabulary
-│   ├── design/                     # Visual language
-│   └── observations.json           # AI-generated learnings, pending review
-
-├── brief/
-│   ├── active/                     # Live briefs (30-day time-box) [gitignored]
+├── ground/                         # Product knowledge (committed, shared)
+│   ├── strategic/
+│   ├── personas/
+│   ├── rules/
+│   ├── decisions/
+│   ├── vocabulary/
+│   ├── stack/
+│   ├── schema/
+│   ├── design/
+│   ├── patterns/
+│   └── debt/
+├── observations/                   # AI learning inbox (gitignored)
+├── idea/
+│   ├── active/                     # Ideas in progress (gitignored)
 │   └── dropped.json                # Condensed essences of dropped ideas
-
-├── shape/
-│   └── drafts/                     # Specs before publishing [gitignored]
-
+├── spec/
+│   └── drafts/                     # Specs before publishing (gitignored)
 └── ship/
-    ├── work/                       # Worktrees [gitignored]
-    └── history.json                # Completed runs (includes git user)
+    └── work/                       # Worktrees (gitignored)
 
-# Completed specs live in GitHub Issues (single source of truth)
+# Published specs live in GitHub Issues (single source of truth)
 ```
 
 ### What's in Git
 
-The `.mill/` folder uses git as the collaboration layer. Shared knowledge is committed; personal WIP is gitignored.
+`.mill/` uses git as the collaboration layer. Shared knowledge is committed; personal WIP is gitignored.
 
 **Committed (shared):**
-- `project.json` — config
 - `context.md` — kickstarts new clones
-- `ground/` — all product knowledge (personas, standards, concepts, design, observations)
-- `brief/dropped.json` — team knowledge of explored-but-dropped ideas
-- `ship/history.json` — execution history with git usernames
+- `ground/` — all product knowledge
+- `idea/dropped.json` — team knowledge of explored-but-dropped ideas
 
 **Gitignored (local WIP):**
-- `brief/active/` — personal briefs in progress
-- `shape/drafts/` — personal spec drafts before publishing
+- `observations/` — learning inbox, reviewed via `/mill:ground`
+- `idea/active/` — personal ideas in progress
+- `spec/drafts/` — personal spec drafts before publishing
 - `ship/work/` — ephemeral worktrees
 
-```gitignore
-# .mill gitignore
-.mill/brief/active/
-.mill/shape/drafts/
-.mill/ship/work/
-```
+## Phases
 
-## Prompt and Template Organization
-
-Prompts and templates are organized by workspace:
+mill organizes work into four phases:
 
 ```
-{workspace}/
-├── prompts/       # LLM prompts for this workspace
-└── templates/     # Output templates (if applicable)
+Ground → Idea → Spec → Ship
 ```
 
-### Prompt Naming
+| Phase | Skill | Purpose |
+|-------|-------|---------|
+| **Ground** | `/mill:ground` | Build product knowledge — personas, rules, decisions, vocabulary, stack, patterns |
+| **Idea** | `/mill:idea` | Capture ideas with intent — 30-day lifecycle, develop or drop |
+| **Spec** | `/mill:spec` | Refine into verified specs — RAC framework, publish to GitHub Issues |
+| **Ship** | `/mill:ship` | Execute as agent teams — bounded iteration until verification passes |
 
-Format: `[subject]-[verb].md`
+Two utility skills:
 
-| Workspace | File | Purpose |
-|-----------|------|---------|
-| shape | `context-warmup.md` | Build project context |
-| shape | `spec-draft.md` | Interactive spec elicitation |
-| shape | `spec-refine.md` | Update spec against current codebase |
-| ship | `loop-iterate.md` | Work prompt — implement, signal MILL_VERIFY |
-| ship | `loop-verify.md` | Verify prompt — review, approve/reject |
-| ship | `loop-verify-criterion.md` | Parallel verification — check one criterion |
-| ship | `run-autopick.md` | Intelligent issue selection |
-| ground | `kickstart.md` | Generate initial ground files |
-
-### Templates
-
-Templates use noun form and live under `{workspace}/templates/`:
-- `shape/templates/` — spec output templates: `feature.md`, `bug.md`, `security.md`, `task.md`
-- `ground/templates/archetypes/` — product archetypes: `saas.md`, `marketplace.md`, etc.
-- `ground/templates/stacks/` — tech stack profiles: `web-react-node.md`, etc.
-
-## Workspaces
-
-The workbench organizes work into four workspaces:
-
-| Workspace | Purpose |
-|-----------|---------|
-| **Ground** | Build product knowledge — personas, standards, concepts, design |
-| **Brief** | Capture ideas with intent — 30-day time-box |
-| **Shape** | Refine into verified specs — publish to GitHub Issues |
-| **Ship** | Execute bounded loops — until tests pass |
+| Skill | Purpose |
+|-------|---------|
+| `/mill:init` | Initialize `.mill/` in a git repository |
+| `/mill:warmup` | Orient Claude to the codebase — generate/refresh `.mill/context.md` |
 
 ## Intent Types
 
@@ -152,201 +162,166 @@ The workbench organizes work into four workspaces:
 
 ```mermaid
 flowchart TD
-    A[User Intent] --> B["Shape workspace<br>(classify, elicit, generate)"]
-    B --> C["GitHub Issue #N"]
-    C --> D{"Ship workspace"}
-    D -->|"select"| E["Work prompt<br>(loop-iterate.md)"]
-    D -->|"autopick"| F["score & select<br>(health, priority, theme)"]
-    F --> E
-    E -->|MILL_VERIFY| G["Verify prompt<br>(loop-verify.md)"]
-    G -->|MILL_REJECTED| E
-    G -->|MILL_DONE| H["Create PR"]
-    H --> I{Human reviews}
-    I -->|approve| J[Merge → Deploy]
-    I -->|request changes| E
+    A[User Intent] --> B["Idea phase<br>(/mill:idea)"]
+    B -->|promote| C["Spec phase<br>(/mill:spec)"]
+    B -->|drop| D["dropped.json<br>(essence preserved)"]
+    C --> E["GitHub Issue #N"]
+    E --> F["Ship phase<br>(/mill:ship)"]
+    F -->|agent team| G["Implementers<br>(1-4 agents)"]
+    G --> H["Verifier<br>(independent)"]
+    H -->|MILL_REJECTED| G
+    H -->|MILL_DONE| I["Create PR"]
+    I --> J{Human reviews}
+    J -->|approve| K[Merge]
+    J -->|request changes| G
 ```
+
+### Spec Process (RAC Framework)
+
+Specs use a Requirements-Approach-Criteria framework:
+
+- **Requirements (R)** — what the solution must achieve
+- **Approach (A)** — how we'll build it (parts + mechanisms)
+- **Criteria (C)** — testable verification conditions
+- **Coverage (R x A x C)** — proof chain: approach implements requirements, criteria verify them
+
+Feature and task specs require **at least 2 approaches** before choosing one. Rejected approaches are preserved in a collapsed "Alternatives Considered" section.
+
+Quality gates:
+1. **Self-review** — 5 dimensions scored 1-10 (Feasibility, Completeness, Scope Discipline, Testability, Clarity). All must be ≥ 7.
+2. **Independent spec review** — a subagent reviews the spec without seeing the drafting conversation.
+3. **User approval** — explicit approval required before publishing to GitHub Issues.
+
+### Domain Classification
+
+Every spec is classified by domain, which loads domain-specific guidance during Ship:
+
+| Domain | Focus |
+|--------|-------|
+| `backend` | APIs, services, data layer |
+| `application` | Interactive apps (web, mobile, desktop) |
+| `website` | Pages (landing, marketing, content) |
+| `platform` | Infrastructure, containers, CI/CD |
+| `fullstack` | Multiple layers |
+
+### Agent Team Execution
+
+Ship runs specs as agent teams. The lead orchestrates; implementers and verifier are separate agents.
+
+| Approach Parts | Team Size |
+|----------------|-----------|
+| 1–4 | 1 implementer |
+| 5–9 (single domain) | 2 implementers (split by concern) |
+| Any (fullstack) | 2–3 implementers (one per layer) |
+| 10+ | 3–4 implementers |
+
+Always +1 independent verifier. The verifier receives clean context — never saw the implementation reasoning.
 
 ### Two-Prompt Verification
 
-Work and verification are separated into distinct prompts:
+Work and verification are separated into distinct agents:
 
-1. **Work prompt** (`loop-iterate.md`) — Implements the slice, runs tests, signals `MILL_VERIFY` with metadata
-2. **Verify prompt** (`loop-verify.md`) — Independent principal-engineer review, runs tests again, checks criteria, signals `MILL_DONE` or `MILL_REJECTED`
+1. **Implementers** — implement slices, commit, run tests
+2. **Verifier** — independent principal-engineer review, runs tests again, checks each criterion
 
-Only the verify prompt can authorize completion. The work prompt cannot grade its own homework.
+Only the verifier can authorize completion. Implementers cannot grade their own homework.
 
-### Criterion-Based Verification
+### Signals
 
-Verification runs one agent per acceptance criterion:
+Machine-readable signals flow between agents:
 
-1. **CLI runs tests once** (gate before criterion checks)
-2. **Agents verify criteria in parallel** (up to 4 concurrent)
-3. **Results aggregated** → `MILL_DONE` or `MILL_REJECTED` with specific failures
+| Signal | Emitted By | Meaning |
+|--------|-----------|---------|
+| `MILL_CONTINUE` | Implementer | More slices remain |
+| `MILL_VERIFY` | Implementer | Ready for verification |
+| `MILL_DONE` | Verifier | All criteria met, create PR |
+| `MILL_REJECTED` | Verifier | Criteria not met, iterate with feedback |
+| `MILL_ABORT` | Implementer | Spec is invalid or impossible |
 
-Benefits:
-- Faster verification for complex specs
-- Granular feedback (know exactly which criterion failed)
-- Multiple independent reviewers strengthen "can't grade own homework"
+### Learning Loop
 
-**Note:** Specs without parseable criteria skip verification with a warning — fix the spec to include structured acceptance criteria.
+After each ship run, the lead extracts non-obvious learnings into observations:
 
-## Requirements
+```
+Ship → Observations → /mill:ground review → Ground knowledge → better specs → better shipping
+```
 
-- Claude Code CLI (or OpenCode in future)
-- `gh` CLI (GitHub CLI) — authenticated
-- Git repository
+Observations are routed with `suggested:` hints (e.g., `ground/patterns/`, `ground/rules/`) but humans decide final placement via `/mill:ground`.
+
+## Ground Knowledge Categories
+
+| Category | Purpose |
+|----------|---------|
+| **strategic** | Vision, mission, goals |
+| **personas** | Who you build for |
+| **rules** | Constraints and conventions |
+| **decisions** | Architectural decisions (why X over Y) |
+| **vocabulary** | Domain terminology |
+| **stack** | Technology stack |
+| **schema** | Data structures and relationships |
+| **design** | Visual language (colors, typography) |
+| **patterns** | Code patterns and idioms |
+| **debt** | Known issues, future work |
+
+## Idea Lifecycle
+
+Ideas have a 30-day window to mature or get dropped:
+
+```mermaid
+flowchart LR
+    A[Spark] -->|"dialogue (3-5 rounds)"| B[Develop]
+    B -->|"scope + approach clear"| C[Ready]
+    C -->|promote| D["/mill:spec"]
+
+    A -.->|neglected| E[Drop]
+    B -.->|neglected| E
+    E -->|essence preserved| F["dropped.json"]
+```
+
+**Dropped ideas** get condensed to a single sentence — a searchable log of "whys that didn't survive," not a backlog to manage.
 
 ## Key Principles
 
 1. **Model is source of truth** — Specs drive execution, not conversation
 2. **Contracts over conversation** — No "done" without verification; work can't grade its own homework
 3. **Limits are mandatory** — Bounded work prevents runaway loops
-4. **Learning is explicit** — Memory improves the model, not the agent
-5. **Hybrid worktree inheritance** — Config and standards are shared from parent; context and memory are per-worktree (rebuilt only if stale)
-6. **Humans drive product direction** — Humans decide what gets built and when it ships; AI improves the code
+4. **Learning is explicit** — Observations improve the model, not the agent
+5. **Humans drive product direction** — Humans decide what gets built and when it ships; AI improves the code
 
-## Architecture
+## Prompt and Template Organization
 
-The workbench is the primary interface. The CLI is deprecated.
+Prompts and templates are organized by phase:
 
 ```
-mill/
-├── workbench/                    # React UI (primary interface)
-├── api/                          # ASP.NET Minimal API (backend)
-├── ground/, brief/, shape/, ship/   # Workspace assets (prompts, templates)
-└── cli/                          # Deprecated
+{phase}/
+├── prompts/       # LLM prompts
+└── templates/     # Output templates (if applicable)
 ```
 
-```mermaid
-flowchart LR
-    subgraph Workbench
-        UI[React UI]
-    end
+### Prompt Naming
 
-    subgraph Backend
-        API[ASP.NET API]
-    end
+Format: `[subject]-[verb].md`
 
-    subgraph LLM Providers
-        Claude[Claude Code CLI]
-        OpenCode[OpenCode CLI]
-    end
+| Phase | File | Purpose |
+|-------|------|---------|
+| shape | `context-warmup.md` | Build project context |
+| shape | `spec-draft.md` | Interactive spec elicitation |
+| shape | `spec-refine.md` | Update spec against current codebase |
+| ship | `loop-iterate.md` | Work prompt — implement, signal MILL_VERIFY |
+| ship | `loop-verify.md` | Verify prompt — review, approve/reject |
+| ship | `loop-verify-criterion.md` | Parallel verification — check one criterion |
+| ship | `run-autopick.md` | Intelligent issue selection |
+| ship | `run-observations.md` | Post-run learning extraction |
+| ground | `kickstart.md` | Generate initial ground files |
 
-    UI -->|non-interactive| API
-    API -->|spawn| Claude
-    API -.->|future| OpenCode
+### Templates
 
-    UI -->|interactive| PTY[Photino + PTY]
-    PTY -->|spawn| Claude
-    PTY -.->|future| OpenCode
-```
-
-### LLM Runtime
-
-mill abstracts LLM execution behind a provider interface to support multiple CLI tools (Claude Code now, OpenCode planned).
-
-| Mode | Path | Use Cases |
-|------|------|-----------|
-| **Non-interactive** | Workbench → API → CLI | Context warmup, verification, observations, autopick |
-| **Interactive** | Workbench → Photino + PTY → CLI | Spec elicitation, work loops with user input |
-
-**Non-interactive:** API spawns the CLI with `--print` flag, awaits completion, returns structured response. All prompts that don't require user input go this path.
-
-**Interactive:** Photino hosts the React UI; Pty.Net spawns the CLI with full TTY support; xterm.js renders the terminal in-browser. Only used when the user needs to interact with the LLM session (e.g., answering clarifying questions during spec drafting).
-
-### Provider Abstraction
-
-The API uses a provider interface to abstract CLI differences:
-
-```csharp
-interface ILlmProvider
-{
-    Task<LlmResponse> Execute(string prompt, LlmOptions options);
-    Process SpawnInteractive(string prompt); // for PTY
-}
-```
-
-Implementations: `ClaudeCodeProvider`, `OpenCodeProvider` (future). The provider is selected via configuration, not hardcoded.
-
-### Desktop Dependencies
-
-| Component | Purpose | Package |
-|-----------|---------|---------|
-| Photino.NET | Native webview wrapper | `Photino.NET` |
-| Pty.Net | Cross-platform PTY | `Pty.Net` |
-| xterm.js | Terminal UI in browser | `@xterm/xterm` |
-
-Photino IPC bridges React ↔ .NET directly (no WebSocket needed):
-
-```csharp
-// .NET → JS
-window.SendWebMessage(ptyOutput);
-
-// JS → .NET
-window.RegisterWebMessageReceivedHandler((_, msg) => pty.Write(msg));
-```
-
-## Development Notes
-
-- **Cross-platform:** Windows, Linux, macOS (x64/arm64) — use `OperatingSystem.IsWindows()` etc. for platform-specific code
-- **Shell commands:** Use `/bin/sh` on macOS/Linux, `powershell` on Windows. Never use `cmd.exe` — PowerShell has better escaping, command substitution, and is available on all modern Windows.
-- **Do not run `dotnet publish`** after each change — the user will build periodically when needed
-- **Use pnpm** for the workbench (not npm or yarn)
-- **Enum serialization:** Always serialize enums as strings, never as integers. Use `JsonStringEnumConverter` for all JSON serialization.
-- **UI testing with playwriter:** When running via `dev.sh`, the workbench is available at `http://localhost:5173/`. Use the playwriter MCP to verify UI changes work correctly — navigate, click, fill inputs, take screenshots. Use sparingly (slow and token-heavy), but invaluable for debugging recurring issues or regressions where you need full-circle feedback.
+Templates use noun form and live under `{phase}/templates/`:
+- `shape/templates/` — spec output: `feature.md`, `bug.md`, `security.md`, `task.md`
+- `ground/templates/archetypes/` — product archetypes: `saas.md`, `marketplace.md`, etc.
+- `ground/templates/stacks/` — tech stack profiles: `web-react-node.md`, etc.
 
 ## Documentation Standards
 
-- **Diagrams must use Mermaid** — no ASCII art. Use fenced code blocks with `mermaid` language identifier.
+- **Diagrams must use Mermaid** — no ASCII art
 - Keep markdown files concise and scannable
-
-## Workbench UI
-
-### Library Categories
-
-The library organizes project knowledge into four categories. Each has a consistent color used across the UI (badges, icons, accents).
-
-| Category | Color | Tailwind | Purpose |
-|----------|-------|----------|---------|
-| **Personas** | Blue | `blue-400`, `blue-500/15` | Who you build for |
-| **Standards** | Emerald | `emerald-400`, `emerald-500/15` | How you build |
-| **Concepts** | Violet | `violet-400`, `violet-500/15` | Domain vocabulary |
-| **Design** | Pink | `pink-400`, `pink-500/15` | Visual language |
-
-Usage pattern for badges:
-```tsx
-const categoryColors: Record<LibraryCategory, string> = {
-  personas: 'bg-blue-500/15 text-blue-400',
-  standards: 'bg-emerald-500/15 text-emerald-400',
-  concepts: 'bg-violet-500/15 text-violet-400',
-  design: 'bg-pink-500/15 text-pink-400',
-}
-```
-
-### Accent Color
-
-Primary accent is `#ffcc00` (yellow). Use sparingly for:
-- Active/selected states
-- Primary actions
-- Key indicators (e.g., observations count in top bar)
-
-Avoid overusing accent color — it should draw attention to what matters.
-
-### Detail View Pattern
-
-For views with metadata header + scrollable content body, use the `DetailView` component:
-
-```tsx
-import { DetailView } from '@/components/ui/detail-view'
-
-<DetailView
-  header={<>badges, title, labels</>}
-  actions={<FloatingActionBar>...</FloatingActionBar>}
->
-  {/* scrollable content */}
-</DetailView>
-```
-
-- Header stays fixed at top
-- Body scrolls independently
-- Actions slot for FloatingActionBar (positioned at bottom)
