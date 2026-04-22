@@ -88,8 +88,8 @@ Ship takes a GitHub Issue and assembles a team to implement it:
 
 The process in four phases:
 
-1. **Setup** — create an isolated worktree, load spec + ground + domain guidance
-2. **Implement** — lead delegates to implementers with explicit file ownership; after completion, each implementer gets a bounded **polish pass** to clean up and self-review
+1. **Setup** — create an isolated worktree, load spec + domain guidance + ground knowledge (rules, patterns, decisions)
+2. **Implement** — lead delegates to implementers with explicit file ownership and ground rules; after completion, each implementer gets a bounded **polish pass** scoped to their diff — simplify, reduce nesting, clean dead comments, check ground rules, review every criterion
 3. **Verify** — an independent verifier checks the full diff against every criterion; rejects route back through the lead for iteration (governed by the spec's [Loop Contract](/spec#the-loop-contract), default 5 cycles)
 4. **Finalize** — create a PR linking to the spec issue, extract process learnings, clean up the worktree
 

@@ -38,11 +38,11 @@ Team size is driven by the spec's approach:
 
 1. **Launch** — mill reads the issue, parses the spec structure, validates everything needed is present
 2. **Isolate** — creates a worktree on a dedicated branch (`issue-47`). Your main branch stays untouched
-3. **Load context** — the spec, project context from `.mill/context.md`, ground knowledge, and domain guidance
+3. **Load context** — the spec, project context from `.mill/context.md`, domain guidance, and ground knowledge (rules, patterns, decisions)
 
 ### Phase 2: Implement
 
-4. **Delegate** — each implementer gets their portion of the spec, project context, domain guidance, and explicit file ownership:
+4. **Delegate** — each implementer gets their portion of the spec, project context, domain guidance, ground rules, and explicit file ownership:
 
 ```
 Backend implementer:  src/api/, src/models/, src/services/
@@ -52,7 +52,7 @@ Frontend implementer: src/components/, src/pages/, src/hooks/
 File ownership prevents conflicts when multiple implementers work in parallel. The lead manages cross-team contracts — if the backend implementer defines an API shape, the lead communicates that contract to the frontend implementer.
 
 5. **Build** — implementers work within their boundaries, committing as they go
-6. **Polish** — after completion, each implementer gets one bounded pass to clean up rough edges, check every spec criterion against their diff, and run tests. This raises the floor before the verifier sees the code.
+6. **Polish** — one bounded pass per implementer, scoped to their diff only. Simplify, reduce nesting, clean dead comments, check ground rules compliance, review every spec criterion. Behavior must not change — if a polish edit doesn't improve readability, revert it. This raises the floor before the verifier sees the code.
 
 ### Phase 3: Verify
 
