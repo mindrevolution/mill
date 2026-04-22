@@ -146,6 +146,7 @@ Implementation is complete. Before independent verification, one pass to:
 2. **Review** — check every spec criterion against the diff. Fix gaps found during review.
 3. **Test** — run test + verification commands. Failures here mean polish went too far.
 4. **Commit** — commit polish changes referencing the issue.
+5. **Observe** — note codebase improvements beyond this spec's scope as observations. Only write one if a future developer would genuinely benefit — not obvious things, not style preferences, not things already tracked.
 
 Last pass before independent verification.
 ```
