@@ -68,7 +68,7 @@ Part count drives team size — no override based on coupling assessment:
 
 ### Polish Pass
 
-After implementation completes, each implementer gets one bounded pass to polish and self-review before the verifier sees the code. Polish the code (simplify, clean up, improve naming), then review against every spec criterion. This raises the floor for the verifier and reduces rejection cycles.
+After implementation completes, each implementer gets one bounded pass to polish and self-review before the verifier sees the code. Only polish code in the diff — don't refactor adjacent code. Simplify, improve naming, remove dead code, reduce nesting, clean dead comments. Behavior must not change. Check ground rules (naming, conventions, patterns). Then review against every spec criterion. This raises the floor for the verifier and reduces rejection cycles.
 
 ### Structural Independence
 

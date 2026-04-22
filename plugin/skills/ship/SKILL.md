@@ -111,7 +111,7 @@ For each implementer, launch via `Task` (`subagent_type: "general-purpose"`). Lo
 | `{{DOMAIN_GUIDANCE}}` | Domain template content |
 | `{{TEST_COMMAND}}` | Detected test command |
 | `{{WORKTREE_PATH}}` | Absolute worktree path |
-| `{{ITERATION_FEEDBACK}}` | Cumulative iteration log (step 10). First run: `"First implementation pass — no prior iteration history."` |
+| `{{ITERATION_FEEDBACK}}` | Cumulative iteration log (step 11). First run: `"First implementation pass — no prior iteration history."` |
 | `{{VERIFICATION_COMMANDS}}` | From Loop Contract, or `echo "no additional verification commands"` |
 | `{{GROUND_KNOWLEDGE}}` | Concatenated rules, patterns, decisions from `.mill/ground/` |
 
@@ -127,7 +127,7 @@ Watch task completion. When implementers report:
 - **Stuck** → Lead redirects with specific guidance
 - **Done** → Proceed to polish pass when all complete
 
-### 8b. Polish Pass
+### 9. Polish Pass
 
 Re-launch each implementer once with all original placeholders, but set `{{ITERATION_FEEDBACK}}` to:
 
@@ -136,10 +136,13 @@ Re-launch each implementer once with all original placeholders, but set `{{ITERA
 
 Implementation is complete. Before independent verification, one pass to:
 
-1. **Polish** — `git diff {default_branch}...HEAD`. Simplify, improve naming, remove dead code.
-   Behavior must not change — only clarity and structure.
-   Don't over-consolidate: clarity over cleverness, no nested ternaries or dense one-liners.
-   Check ground rules — verify naming, conventions, patterns are honored.
+1. **Polish** — `git diff {default_branch}...HEAD`. Only polish code in the diff — don't refactor adjacent code.
+   - Simplify, improve naming, remove dead code. Reduce nesting (early returns, guard clauses).
+   - Clean dead comments: TODOs from implementation, debugging breadcrumbs, comments restating the obvious.
+   - Behavior must not change — only clarity and structure.
+   - Don't over-consolidate: clarity over cleverness, no nested ternaries or dense one-liners.
+   - Check ground rules — verify naming, conventions, patterns are honored.
+   - If a polish change doesn't clearly improve readability, revert it.
 2. **Review** — check every spec criterion against the diff. Fix gaps found during review.
 3. **Test** — run test + verification commands. Failures here mean polish went too far.
 4. **Commit** — commit polish changes referencing the issue.
@@ -149,7 +152,7 @@ Last pass before independent verification.
 
 Single bounded pass — not a loop. When done, proceed to verifier.
 
-### 9. Spawn Verifier
+### 10. Spawn Verifier
 
 Spawn a separate teammate with clean context. Load [templates/teammates/verifier.md](templates/teammates/verifier.md) and substitute same placeholders as step 7 (minus `{{ITERATION_FEEDBACK}}`), plus `{{DEFAULT_BRANCH}}`.
 
@@ -161,9 +164,9 @@ The verifier:
 - Checks each spec criterion
 - Reports: pass or reject with specific blockers
 
-### 10. Handle Verification Result
+### 11. Handle Verification Result
 
-**Pass** → Step 11.
+**Pass** → Step 12.
 
 **Reject** → Loop Contract-driven iteration:
 
@@ -191,9 +194,9 @@ For each rejection:
 
 Report to user via AskUserQuestion: Continue iterating (ask how many more) / Create PR as-is / Abort.
 
-If "Continue" → resume loop. If "PR as-is" → step 11 with issues noted. If "Abort" → skip to step 13.
+If "Continue" → resume loop. If "PR as-is" → step 12 with issues noted. If "Abort" → skip to step 14.
 
-### 11. Create PR
+### 12. Create PR
 
 ```bash
 git -C .mill/ship/work/issue-{N} push -u origin issue-{N}
@@ -225,7 +228,7 @@ gh pr create --title "#{N}: {spec title}" --body-file .mill/.prompt --head issue
 
 Parse PR URL. Clean up: `rm .mill/.prompt`
 
-### 12. Extract Learnings
+### 13. Extract Learnings
 
 After every ship session, extract process knowledge. The question: **"How can we do better next time?"**
 
@@ -258,7 +261,7 @@ Human decides final routing via `/mill:ground`.
 
 `Glob(".mill/observations/*.md")` — if observations exist, report: "{N} observations in the learning inbox. Review via `/mill:ground` or they'll surface at next `/mill:spec`."
 
-### 13. Cleanup
+### 14. Cleanup
 
 ```bash
 git worktree remove --force .mill/ship/work/issue-{N}
@@ -277,7 +280,7 @@ If agent teams unavailable (Task tool limited or experimental features disabled)
 3. Explicit verification phase: re-read spec, `git diff`, run tests, check each criterion
 4. Fix and re-verify (up to `max_iterations`, default 5)
 5. Create PR
-6. Extract learnings (same as step 12)
+6. Extract learnings (same as step 13)
 
 Report: "Running in single-session mode (agent teams not available)"
 
@@ -289,7 +292,7 @@ Teammates write observations during implementation:
 - Path: `.mill/observations/ship-{N}-{slug}.md`
 - Frontmatter: `source: ship`, `type: concern|discovery|suggestion`, `issue: {N}`
 
-After PR creation, the lead extracts learnings (step 12):
+After PR creation, the lead extracts learnings (step 13):
 - All learnings → `.mill/observations/ship-{N}-learnings.md` with `suggested:` routing hint
 - Human decides final routing via `/mill:ground`
 
