@@ -15,18 +15,16 @@ Transform user intent into a complete, loop-ready specification.
 
 ```yaml
 AskUserQuestion:
-  question: "What type of change is this?"
-  header: "Type"
+  question: "Which persona is this for?"
+  header: "Persona"
   options:
-    - label: "Feature"
-      description: "Add new capability"
-    - label: "Bug"
-      description: "Fix broken behavior"
-    - label: "Task"
-      description: "Refactor, migrate, cleanup"
+    - label: "Admin"
+      description: "Back-office management"
+    - label: "End user"
+      description: "Public-facing experience"
 ```
 
-All subsequent AskUserQuestion calls follow this format.
+All AskUserQuestion calls follow this format: 2-4 options plus free text.
 
 ## Principles
 
@@ -68,7 +66,7 @@ Read(".mill/context.md")                    # check context freshness
 ```
 
 Spec templates by type:
-- [templates/feature.md](templates/feature.md), [templates/bug.md](templates/bug.md), [templates/task.md](templates/task.md), [templates/security.md](templates/security.md)
+- [templates/feature.md](templates/feature.md), [templates/bug.md](templates/bug.md), [templates/chore.md](templates/chore.md), [templates/security.md](templates/security.md)
 
 ## Workflow
 
@@ -91,12 +89,16 @@ Load ground knowledge: `Glob(".mill/ground/**/*.md")` → read key files. Search
 
 ### 2. Classify Intent
 
+Infer type from the user's description — don't ask unless ambiguous.
+
 | Type | Signals | Label |
 |------|---------|-------|
 | Security | risk, vulnerability, threat | `security` |
 | Bug | broken, error, wrong | `bug` |
 | Feature | add, create, new | `feature` |
-| Task | refactor, update, migrate | `task` |
+| Chore | refactor, update, migrate, cleanup, debt | `chore` |
+
+**Chore vs Feature:** Does the user need to explore alternatives? If the work and approach are known, it's a chore. If there are real design choices, it's a feature — regardless of size.
 
 ### 2b. Classify Domain
 
@@ -186,7 +188,7 @@ One question at a time via AskUserQuestion:
 
 Add each to table with status (`core`, `must-have`, `nice-to-have`, `out`).
 
-### 4a. Forcing Questions (feature and task only)
+### 4a. Forcing Questions (feature only)
 
 Before jumping to approach, ask these via AskUserQuestion to sharpen the problem:
 
@@ -195,13 +197,13 @@ Before jumping to approach, ask these via AskUserQuestion to sharpen the problem
 | **Narrowest wedge** — "What's the smallest version of this that still matters?" | Prevents over-scoping. The answer often becomes the actual spec scope. |
 | **Demand evidence** — "Who already wants this, and how do they solve it today?" | Grounds the spec in real need. If nobody is working around the absence, question priority. |
 
-Skip for bug and security specs — the problem is already concrete.
+Skip for bug, chore, and security specs — the problem is already concrete.
 
 If the user's answers reveal the scope should shrink, update requirements accordingly before proceeding. Move deferred scope to **Out** with a note like "future spec."
 
-### 4b. Define Approaches (plural for feature/task)
+### 4b. Define Approaches (plural for feature only)
 
-**Feature and task specs require at least 2 approaches** before choosing one:
+**Feature specs require at least 2 approaches** before choosing one:
 
 1. Draft Approach A and Approach B (optionally C)
 2. Each approach: parts + mechanisms + brief tradeoff note
@@ -237,12 +239,12 @@ After selection, the chosen approach stays as `## Approach` and rejected ones co
 </details>
 ```
 
-**Bug and security specs** may skip alternatives — there's usually one obvious fix. Still flag if a meaningful alternative exists.
+**Bug, chore, and security specs** may skip alternatives — the approach is usually known. Still flag if a meaningful alternative exists.
 
 6. Flag unknowns with ⚠️ in the chosen approach
 7. Investigate ⚠️ before proceeding
 
-### 4c. Failure Modes (feature and task only)
+### 4c. Failure Modes (feature only)
 
 For each approach part that touches error paths, data, or external systems, add a failure mode table:
 
@@ -255,7 +257,7 @@ For each approach part that touches error paths, data, or external systems, add 
 
 Keep it proportional — a 2-part UI spec needs 0-1 rows. A 6-part backend spec might need 4-5.
 
-### 4d. Coverage Check
+### 4d. Coverage Check (feature only)
 
 Build R x A x C table:
 - Approach column: parts (A1, A2) or ❌ if not covered

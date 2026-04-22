@@ -106,7 +106,7 @@ mill checks your project context, loads ground knowledge, and begins the convers
 
 mill asks one question at a time, using structured options where sensible:
 
-1. **What type of change?** Feature / Bug / Task / Security
+1. **What type of change?** Feature / Bug / Chore / Security — inferred from your description, not asked
 2. **What domain?** Backend / Application / Website / Platform / Full-stack
 3. **What's the core problem?** (your words)
 4. **What must the solution achieve?** (requirements emerge)
@@ -217,9 +217,9 @@ C1: Given a $100 item with 10% discount and 8% tax, total is $97.20
 
 The most common type. Full R→A→C chain with coverage proving completeness. The [example above](#a-complete-example) is a feature spec.
 
-### Task Specs
+### Chore Specs
 
-Refactoring, migration, cleanup. Requirements are often simpler ("migrate from X to Y without regression"), but approach and before/after criteria are detailed.
+Known work, known approach — refactoring, migration, cleanup, dependency updates. Lighter ceremony: no forcing questions, no mandatory alternatives, no coverage matrix. Just what, why, approach, and acceptance criteria.
 
 ### Security Specs
 

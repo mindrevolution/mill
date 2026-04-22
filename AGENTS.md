@@ -153,7 +153,7 @@ Spec Review          → scored self-review + independent subagent review
 
 **Coverage (R x A x C)** proves the chain: every requirement has approach parts, and criteria verify them.
 
-Feature and task specs require **alternative approaches** — at least two options with tradeoffs before the user picks one. Rejected approaches are preserved in "Alternatives Considered." Bug and security specs may skip alternatives.
+Feature specs require **alternative approaches** — at least two options with tradeoffs before the user picks one. Rejected approaches are preserved in "Alternatives Considered." Bug, chore, and security specs may skip alternatives — the approach is usually known.
 
 Specs include a **Failure Modes** table (trigger → detection → response → recovery) proportional to complexity.
 

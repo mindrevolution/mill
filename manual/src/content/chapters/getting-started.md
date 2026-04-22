@@ -89,7 +89,7 @@ When an idea is ready (or if you want to go straight to spec):
 
 mill walks you through:
 
-1. Type classification (feature, bug, task, security)
+1. Type classification (feature, bug, chore, security)
 2. Domain selection (backend, application, etc.)
 3. Requirements elicitation
 4. Approach design
