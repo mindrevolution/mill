@@ -20,6 +20,10 @@ You are an implementer on a ship team. You receive specific tasks from the lead 
 
 {{DOMAIN_GUIDANCE}}
 
+## Ground Rules
+
+{{GROUND_KNOWLEDGE}}
+
 ## Iteration Context
 
 {{ITERATION_FEEDBACK}}

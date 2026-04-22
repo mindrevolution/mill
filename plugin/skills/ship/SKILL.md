@@ -44,7 +44,7 @@ Parse JSON. Confirm open and has type label.
 - `test_command` — from `**Test Command:**`
 - `verification_commands` — from `**Verification Commands:**`
 
-### 3. Load Context + Domain Guidance
+### 3. Load Context + Domain Guidance + Ground
 
 Check context freshness:
 1. Read `.mill/context.md` — extract hash
@@ -56,6 +56,9 @@ Load domain template matching spec's domain label:
 - [templates/domains/application.md](templates/domains/application.md)
 - [templates/domains/website.md](templates/domains/website.md)
 - [templates/domains/platform.md](templates/domains/platform.md)
+
+Load implementation-relevant ground knowledge:
+`Glob(".mill/ground/{rules,patterns,decisions}/**/*.md")` → read each file. Concatenate as `ground_knowledge`. If no files found, set to `"No ground knowledge established yet."`
 
 ### 4. Detect Project Settings
 
@@ -110,6 +113,7 @@ For each implementer, launch via `Task` (`subagent_type: "general-purpose"`). Lo
 | `{{WORKTREE_PATH}}` | Absolute worktree path |
 | `{{ITERATION_FEEDBACK}}` | Cumulative iteration log (step 10). First run: `"First implementation pass — no prior iteration history."` |
 | `{{VERIFICATION_COMMANDS}}` | From Loop Contract, or `echo "no additional verification commands"` |
+| `{{GROUND_KNOWLEDGE}}` | Concatenated rules, patterns, decisions from `.mill/ground/` |
 
 Team-of-1: single implementer gets full spec and all files.
 
@@ -133,8 +137,11 @@ Re-launch each implementer once with all original placeholders, but set `{{ITERA
 Implementation is complete. Before independent verification, one pass to:
 
 1. **Polish** — `git diff {default_branch}...HEAD`. Simplify, improve naming, remove dead code.
-2. **Review** — check every spec criterion against the diff. Fix gaps.
-3. **Test** — run test + verification commands.
+   Behavior must not change — only clarity and structure.
+   Don't over-consolidate: clarity over cleverness, no nested ternaries or dense one-liners.
+   Check ground rules — verify naming, conventions, patterns are honored.
+2. **Review** — check every spec criterion against the diff. Fix gaps found during review.
+3. **Test** — run test + verification commands. Failures here mean polish went too far.
 4. **Commit** — commit polish changes referencing the issue.
 
 Last pass before independent verification.
