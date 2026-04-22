@@ -52,7 +52,7 @@ Frontend implementer: src/components/, src/pages/, src/hooks/
 File ownership prevents conflicts when multiple implementers work in parallel. The lead manages cross-team contracts — if the backend implementer defines an API shape, the lead communicates that contract to the frontend implementer.
 
 5. **Build** — implementers work within their boundaries, committing as they go
-6. **Polish** — one bounded pass per implementer, scoped to their diff only. Simplify, reduce nesting, clean dead comments, check ground rules compliance, review every spec criterion. Behavior must not change — if a polish edit doesn't improve readability, revert it. This raises the floor before the verifier sees the code.
+6. **Polish** — one bounded pass per implementer, scoped to their diff only. Simplify, reduce nesting, clean dead comments, check ground rules compliance, review every spec criterion. Behavior must not change — if a polish edit doesn't improve readability, revert it. After committing, implementers actively note codebase improvements beyond the spec's scope as observations — feeding the learning loop at the moment of highest code familiarity.
 
 ### Phase 3: Verify
 
