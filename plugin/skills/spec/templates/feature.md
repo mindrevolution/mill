@@ -121,4 +121,4 @@ As a {{user_type}}, I want {{goal}} so that {{reason}}.
 
 ---
 
-*Built with mill*
+*Built with [mill](https://mill.mindrevolution.com)*

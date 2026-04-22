@@ -182,4 +182,4 @@ Expected: {{attack fails, appropriate response}}
 
 ---
 
-*Built with mill*
+*Built with [mill](https://mill.mindrevolution.com)*

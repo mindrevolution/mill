@@ -134,24 +134,17 @@ Re-launch each implementer once with all original placeholders, but set `{{ITERA
 ```
 ## Polish Pass
 
-Implementation is complete. Before independent verification, one pass to:
+Implementation is complete. One pass before independent verification:
 
-1. **Polish** — `git diff {default_branch}...HEAD`. Only polish code in the diff — don't refactor adjacent code.
-   - Simplify, improve naming, remove dead code. Reduce nesting (early returns, guard clauses).
-   - Clean dead comments: TODOs from implementation, debugging breadcrumbs, comments restating the obvious.
-   - Behavior must not change — only clarity and structure.
-   - Don't over-consolidate: clarity over cleverness, no nested ternaries or dense one-liners.
+1. **Polish** — `git diff {default_branch}...HEAD`. Only polish code in the diff — don't change behavior or refactor adjacent code.
+   - Simplify and improve naming. Clarity over cleverness — no nested ternaries or dense one-liners.
+   - Reduce nesting (early returns, guard clauses). Clean dead comments.
    - Check ground rules — verify naming, conventions, patterns are honored.
-   - If a polish change doesn't clearly improve readability, revert it.
 2. **Review** — check every spec criterion against the diff. Fix gaps found during review.
 3. **Test** — run test + verification commands. Failures here mean polish went too far.
 4. **Commit** — commit polish changes referencing the issue.
 5. **Observe** — note codebase improvements beyond this spec's scope as observations. Only write one if a future developer would genuinely benefit — not obvious things, not style preferences, not things already tracked.
-
-Last pass before independent verification.
 ```
-
-Single bounded pass — not a loop. When done, proceed to verifier.
 
 ### 10. Spawn Verifier
 

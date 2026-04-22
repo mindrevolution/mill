@@ -52,7 +52,7 @@ Spec produces a GitHub Issue with:
 - **Requirements (R)** — what the solution must achieve
 - **Approach (A)** — how we'll build it (parts + mechanisms)
 - **Criteria (C)** — testable verification conditions
-- **Coverage (R x A x C)** — proof chain: approach implements requirements, criteria verify them
+- **Coverage (R x A x C)** — proof chain (feature specs only)
 - **Loop Contract** — test command, max iterations, verification commands
 
 ## File Operations
@@ -70,13 +70,13 @@ Spec templates by type:
 
 ## Workflow
 
-### 0. Check Existing Drafts
+### 1. Check Existing Drafts
 
 `Glob(".mill/spec/drafts/*.md")` — read each for title and last-modified.
 
 If drafts exist, ask via AskUserQuestion: resume a draft or start new.
 
-### 1. Ensure Context
+### 2. Ensure Context
 
 **Check observations** — `Glob(".mill/observations/*.md")`. If any exist, report: "{N} observations in the learning inbox — consider `/mill:ground` before drafting." Continue without blocking.
 
@@ -87,7 +87,7 @@ If drafts exist, ask via AskUserQuestion: resume a draft or start new.
 
 Load ground knowledge: `Glob(".mill/ground/**/*.md")` → read key files. Search codebase for relevant files.
 
-### 2. Classify Intent
+### 3. Classify Intent
 
 Infer type from the user's description — don't ask unless ambiguous.
 
@@ -100,7 +100,7 @@ Infer type from the user's description — don't ask unless ambiguous.
 
 **Chore vs Feature:** Does the user need to explore alternatives? If the work and approach are known, it's a chore. If there are real design choices, it's a feature — regardless of size.
 
-### 2b. Classify Domain
+### 4. Classify Domain
 
 Ask via AskUserQuestion:
 
@@ -112,9 +112,11 @@ Ask via AskUserQuestion:
 | `platform` | Infrastructure, containers, CI/CD |
 | `fullstack` | Multiple layers |
 
-### 3. Create Draft Early
+### 5. Create Draft Early
 
-Write to `.mill/spec/drafts/{slug}.md`:
+Read `templates/{type}.md` and use it as the draft structure. Write to `.mill/spec/drafts/{slug}.md`.
+
+Feature draft example:
 
 ```markdown
 ---
@@ -178,7 +180,7 @@ approach: A
 **Verification Commands:** {additional checks}
 ```
 
-### 4. Elicit Requirements
+### 6. Elicit Requirements
 
 One question at a time via AskUserQuestion:
 1. Problem — what pain exists?
@@ -188,7 +190,7 @@ One question at a time via AskUserQuestion:
 
 Add each to table with status (`core`, `must-have`, `nice-to-have`, `out`).
 
-### 4a. Forcing Questions (feature only)
+### 7. Forcing Questions (feature only)
 
 Before jumping to approach, ask these via AskUserQuestion to sharpen the problem:
 
@@ -197,11 +199,9 @@ Before jumping to approach, ask these via AskUserQuestion to sharpen the problem
 | **Narrowest wedge** — "What's the smallest version of this that still matters?" | Prevents over-scoping. The answer often becomes the actual spec scope. |
 | **Demand evidence** — "Who already wants this, and how do they solve it today?" | Grounds the spec in real need. If nobody is working around the absence, question priority. |
 
-Skip for bug, chore, and security specs — the problem is already concrete.
-
 If the user's answers reveal the scope should shrink, update requirements accordingly before proceeding. Move deferred scope to **Out** with a note like "future spec."
 
-### 4b. Define Approaches (plural for feature only)
+### 8. Define Approaches (feature only)
 
 **Feature specs require at least 2 approaches** before choosing one:
 
@@ -239,12 +239,12 @@ After selection, the chosen approach stays as `## Approach` and rejected ones co
 </details>
 ```
 
-**Bug, chore, and security specs** may skip alternatives — the approach is usually known. Still flag if a meaningful alternative exists.
+Still flag if a meaningful alternative exists for any type.
 
 6. Flag unknowns with ⚠️ in the chosen approach
 7. Investigate ⚠️ before proceeding
 
-### 4c. Failure Modes (feature only)
+### 9. Failure Modes (feature only)
 
 For each approach part that touches error paths, data, or external systems, add a failure mode table:
 
@@ -257,7 +257,7 @@ For each approach part that touches error paths, data, or external systems, add 
 
 Keep it proportional — a 2-part UI spec needs 0-1 rows. A 6-part backend spec might need 4-5.
 
-### 4d. Coverage Check (feature only)
+### 10. Coverage Check (feature only)
 
 Build R x A x C table:
 - Approach column: parts (A1, A2) or ❌ if not covered
@@ -265,21 +265,24 @@ Build R x A x C table:
 
 All `core` and `must-have` requirements need both approach parts and criteria.
 
-### 5. Validate
+### 11. Validate
 
 **Principles:** Self-Containment, Language Independence, Decision Completeness, Explicit Non-Applicability — all must pass.
 
-**Structure:**
-- All core/must-have requirements have approach parts (no ❌)
-- All core/must-have requirements have criteria (no —)
-- No ⚠️ flags remain
+**All types:**
 - All criteria are testable conditions
+- No ⚠️ flags remain
 - Scope clear (in/out)
 - Loop Contract present with concrete values
 
+**Feature only:**
+- All core/must-have requirements have approach parts (no ❌)
+- All core/must-have requirements have criteria (no —)
+- Coverage matrix complete
+
 Set `status: ready` only when all checks pass.
 
-### 6. Self-Review (scored dimensions)
+### 12. Self-Review (scored dimensions)
 
 **Always runs** — not just for complex specs.
 
@@ -295,7 +298,7 @@ Score the draft on 5 dimensions (1-10). Any dimension below 7 must be fixed befo
 
 Present scores to user. For any below 7, explain the gap and fix it.
 
-### 7. Independent Spec Review (subagent)
+### 13. Independent Spec Review (subagent)
 
 Launch a **spec-review subagent** that receives only:
 - The draft spec markdown
@@ -328,7 +331,7 @@ The subagent returns a structured review:
 
 If the subagent returns "Needs revision," fix the blocking findings, update the draft, and re-run only the subagent (not the full self-review).
 
-### 8. Confirm and Publish
+### 14. Confirm and Publish
 
 **Open the draft as a rendered preview** using the [Preview Template](#preview-template):
 
@@ -342,7 +345,7 @@ Present a brief validation summary inline (principles passed, coverage completen
 
 **Wait for explicit approval.**
 
-### 9. Publish
+### 15. Publish
 
 1. Read draft, extract frontmatter
 2. Write body to `.mill/.prompt`

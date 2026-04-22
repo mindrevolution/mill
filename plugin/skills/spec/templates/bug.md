@@ -106,4 +106,4 @@ Then: {{should NOT exhibit bug behavior}}
 
 ---
 
-*Built with mill*
+*Built with [mill](https://mill.mindrevolution.com)*
